@@ -41,12 +41,12 @@ public class LocalPlayer extends Player {
 
     private final NostrSigner signer;
 
-    protected LocalPlayer(PlayerManagerComponent mng, NostrSigner signer) throws InterruptedException, ExecutionException {
+    protected LocalPlayer(PlayerManagerComponent mng, NostrSigner signer) throws Exception {
         super(mng, signer.getPublicKey().await());
         this.signer = signer;
     }
 
-    protected LocalPlayer(Player player, NostrSigner signer) throws InterruptedException, ExecutionException {
+    protected LocalPlayer(Player player, NostrSigner signer) throws Exception {
         this(player.playerManager, signer);
         this.pubkey = player.pubkey;
         this.gamerTag = player.gamerTag;
