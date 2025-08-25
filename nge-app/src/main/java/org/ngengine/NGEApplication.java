@@ -39,9 +39,13 @@ import com.jme3.system.JmeSystem;
 import com.jme3.system.Platform;
 import com.jme3.util.res.Resources;
 import com.simsilica.lemur.GuiGlobals;
+
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.ngengine.ads.ImmersiveAdComponent;
 import org.ngengine.auth.AuthSelectionWindow;
 import org.ngengine.auth.AuthStrategy;
 import org.ngengine.components.ComponentManager;
@@ -52,14 +56,22 @@ import org.ngengine.components.jme3.AppViewPortComponentUpdater;
 import org.ngengine.components.jme3.ComponentManagerAppState;
 import org.ngengine.gui.NGEStyle;
 import org.ngengine.gui.win.NWindowManagerComponent;
+import org.ngengine.nostr4j.keypair.NostrPrivateKey;
+import org.ngengine.nostr4j.keypair.NostrPublicKey;
 
 public class NGEApplication {
 
     private static final Logger logger = Logger.getLogger(NGEApplication.class.getName());
 
     private final Jme3Application app;
+    private final String defaultAppId = "npub146wutmuxfmnlx9fcty0lkns2rpwhnl57kpes26mmt4hygalsakrsdllryz";
+    private final List<String> defaultAdsRelays = List.of(
+        "wss://relay.ngengine.org",
+        "wss://relay2.ngengine.org",
+        "wss://nostr.rblb.it"
+    );
 
-    private static class Jme3Application extends SimpleApplication {
+    public static class Jme3Application extends SimpleApplication {
 
         private final Runnable ready;
 
@@ -68,8 +80,15 @@ public class NGEApplication {
             this.ready = ready;
         }
 
+        public void setFlyCamEnabled(boolean enabled) {
+            flyCam.setMoveSpeed(200);
+            flyCam.setEnabled(enabled);
+        }
+
         @Override
         public void simpleInitApp() {
+            getRenderManager().setSinglePassLightBatchSize(16);
+ 
             flyCam.setEnabled(false);
 
             ComponentManagerAppState cmng = new ComponentManagerAppState(this);
@@ -97,6 +116,7 @@ public class NGEApplication {
             cmng.addUpdater(new AppViewPortComponentUpdater(this));
             cmng.addUpdater(new AppComponentUpdater(this));
             cmng.addLoader(new AppComponentLoader(this));
+            
 
             DevMode.registerForReload(rootNode);
 
@@ -104,11 +124,15 @@ public class NGEApplication {
         }
     }
 
-    NGEApplication(Consumer<NGEApplication> onReady) {
-        this(null, onReady);
+    NGEApplication( NostrPublicKey appId, Consumer<NGEApplication> onReady) {
+        this(appId,null, onReady);
     }
 
-    NGEApplication(AppSettings settings, Consumer<NGEApplication> onReady) {
+    NGEApplication(
+        NostrPublicKey appId,
+        AppSettings settings, 
+        Consumer<NGEApplication> onReady
+    ) {
         AppSettings baseSettings = new AppSettings(true);
         baseSettings.setRenderer(AppSettings.LWJGL_OPENGL32);
         baseSettings.setWidth(1280);
@@ -123,6 +147,7 @@ public class NGEApplication {
         if (settings != null) {
             baseSettings.copyFrom(settings);
         }
+        baseSettings.put("appId", appId != null ? appId.asHex() : defaultAppId);
 
         app =
             new Jme3Application(() -> {
@@ -132,7 +157,10 @@ public class NGEApplication {
         app.setShowSettings(false);
         app.setPauseOnLostFocus(false);
         app.setLostFocusBehavior(LostFocusBehavior.Disabled);
+
+   
     }
+
 
     public Jme3Application getJme3App() {
         return app;
@@ -165,14 +193,52 @@ public class NGEApplication {
             app.start();
         }
     }
+    public ImmersiveAdComponent enableAds(){
+        return enableAds(null, null);
+    }
 
-    public static Runnable createApp(AppSettings settings, Consumer<NGEApplication> onReady) {
-        NGEApplication app = new NGEApplication(settings, onReady);
+
+    public ImmersiveAdComponent enableAds(List<String> relays) {
+        return enableAds(null, relays);
+    }
+
+    public ImmersiveAdComponent enableAds(NostrPrivateKey userAdsKey) {
+        return enableAds(userAdsKey, null);
+    }
+
+    public ImmersiveAdComponent enableAds(NostrPrivateKey userAdsKey, List<String> relays) {
+        String appId = (String) app.getContext().getSettings().get("appId");
+        NostrPublicKey appKey = appId.startsWith("npub")?NostrPublicKey.fromBech32(appId):NostrPublicKey.fromHex(appId);
+        ImmersiveAdComponent ads = getComponentManager().getComponent(ImmersiveAdComponent.class);
+        if(ads==null){
+            getComponentManager().addAndEnableComponent(ads = new ImmersiveAdComponent(
+                relays != null && !relays.isEmpty() ? relays : defaultAdsRelays,
+                appKey, 
+                userAdsKey
+            ));
+        }
+        return ads;
+    }
+
+    public void disableAds(){
+        getComponentManager().removeComponent(getComponentManager().getComponent(ImmersiveAdComponent.class));
+    }
+
+    public static Runnable createApp(NostrPublicKey appId, AppSettings settings, Consumer<NGEApplication> onReady) {
+        NGEApplication app = new NGEApplication(appId, settings, onReady);
         return () -> app.start();
     }
 
-    public static Runnable createApp(Consumer<NGEApplication> onReady) {
-        NGEApplication app = new NGEApplication(onReady);
+    public static Runnable createApp(NostrPublicKey appId, Consumer<NGEApplication> onReady) {
+        NGEApplication app = new NGEApplication(appId, onReady);
         return () -> app.start();
+    }
+
+    public static Runnable createApp(AppSettings settings, Consumer<NGEApplication> onReady) {
+        return createApp(null, settings, onReady);
+    }
+
+    public static Runnable createApp( Consumer<NGEApplication> onReady) {
+        return createApp(null, null, onReady);
     }
 }
