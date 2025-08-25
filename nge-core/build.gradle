@@ -4,6 +4,7 @@ dependencies {
     api project(':jme3-core')
     api "org.ngengine:nostr4j:${nostr4jVersion}"
     api "org.ngengine:nge-platform-common:${ngePlatformVersion}"
+    api "jakarta.annotation:jakarta.annotation-api:2.1.1"
 
 }
 
