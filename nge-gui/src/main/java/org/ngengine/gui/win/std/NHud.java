@@ -31,9 +31,12 @@
  */
 package org.ngengine.gui.win.std;
 
+import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.component.BorderLayout;
 import com.simsilica.lemur.component.DynamicInsetsComponent;
+import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.style.ElementId;
 import org.ngengine.gui.components.containers.NColumn;
 import org.ngengine.gui.components.containers.NPanel;
@@ -72,6 +75,8 @@ public class NHud extends NWindow<Void> {
         bottom.setInsetsComponent(new DynamicInsetsComponent(1, 0, 0, 0));
 
         centerCenter = new NColumn();
+        centerCenter.setFillMode(FillMode.Even,FillMode.Even);
+
         centerLeft = new NColumn();
         centerLeft.setInsetsComponent(new DynamicInsetsComponent(0, 0, 0, 1));
 
@@ -118,6 +123,7 @@ public class NHud extends NWindow<Void> {
         setPreferredSize(new Vector3f(getManager().getWidth(), 0f, getManager().getHeight()));
 
         NPanel content = getContent();
+
         content.addChild(top, BorderLayout.Position.North);
         content.addChild(center, BorderLayout.Position.Center);
         content.addChild(bottom, BorderLayout.Position.South);

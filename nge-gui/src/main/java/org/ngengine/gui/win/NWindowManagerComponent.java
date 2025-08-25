@@ -31,6 +31,7 @@
  */
 package org.ngengine.gui.win;
 
+import com.jme3.input.InputManager;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
@@ -59,7 +60,7 @@ import org.ngengine.gui.win.std.NErrorWindow;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
-public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment {
+public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment{
 
     private static final Logger log = Logger.getLogger(NWindowManagerComponent.class.getName());
     private final ArrayList<NWindow<?>> windowsStack = new ArrayList<>();
@@ -71,6 +72,16 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
     private Container toastContainer;
     private Runner dispatcher;
     private DataStoreProvider dataStoreProvider;
+    private InputManager inputManager;
+
+    @Override
+    public void receiveInputManager(InputManager inputManager) {
+        this.inputManager=inputManager;
+    }
+
+    public void showCursor(boolean v){
+        inputManager.setCursorVisible(v);
+    }
 
     @Override
     public void onAttached(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider) {
@@ -379,6 +390,27 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
                     toast.close();
                 }
             }
+        }
+    }
+
+    public void back(){
+        if(windowsStack.size()>0){
+            closeWindow(windowsStack.get(windowsStack.size()-1));
+        }
+    }
+
+    public void action(int id){
+        if(windowsStack.size()>0){
+            NWindow<?> window = windowsStack.get(windowsStack.size()-1);
+            window.onAction(id);
+        }
+    }
+
+
+    public void toastAction(int id){
+        if(toastsStack.size()>0){
+            NToast toast = toastsStack.get(toastsStack.size()-1);
+            toast.onAction(id);
         }
     }
 }

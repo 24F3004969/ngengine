@@ -38,6 +38,10 @@ import com.simsilica.lemur.component.DynamicInsetsComponent;
 import com.simsilica.lemur.style.ElementId;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+
 import org.ngengine.gui.components.NIconButton;
 
 public class NToast extends Container {
@@ -57,6 +61,8 @@ public class NToast extends Container {
     protected NWindowManagerComponent appState;
     protected boolean closeable = false;
     protected NIconButton closeBtn;
+    protected List<Runnable> closeListeners = new CopyOnWriteArrayList<>();
+    protected List<Consumer<Integer>> actionListeners = new CopyOnWriteArrayList<>();
 
     protected NToast(ToastType type, String message, Duration duration) {
         super(new BorderLayout(), new ElementId(type.name().toLowerCase() + "." + ELEMENT_ID));
@@ -81,6 +87,11 @@ public class NToast extends Container {
         setCloseAction(() -> {
             close();
         });
+    }
+
+
+    public void addCloseListener(Runnable listener) {
+        closeListeners.add(listener);
     }
 
     public void setCloseable(boolean closeable) {
@@ -108,6 +119,9 @@ public class NToast extends Container {
             appState.closeToast(this);
         } else {
             removeFromParent();
+        }
+        for (Runnable listener : closeListeners) {
+            listener.run();
         }
     }
 
@@ -152,5 +166,13 @@ public class NToast extends Container {
 
     public String getMessage() {
         return message.getText();
+    }
+
+    public void onAction(int id){
+        actionListeners.forEach(l -> l.accept(id));
+    }
+
+    public void addActionListener(Consumer<Integer> listener){
+        actionListeners.add(listener);
     }
 }
