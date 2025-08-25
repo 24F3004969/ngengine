@@ -55,12 +55,13 @@ import java.util.logging.Logger;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.GuiViewPortFragment;
+import org.ngengine.components.fragments.InputHandlerFragment;
 import org.ngengine.gui.win.NToast.ToastType;
 import org.ngengine.gui.win.std.NErrorWindow;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
-public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment{
+public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment, InputHandlerFragment{
 
     private static final Logger log = Logger.getLogger(NWindowManagerComponent.class.getName());
     private final ArrayList<NWindow<?>> windowsStack = new ArrayList<>();
