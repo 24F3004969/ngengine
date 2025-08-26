@@ -31,12 +31,10 @@
  */
 package org.ngengine.components.fragments;
 
+import com.jme3.asset.AssetManager;
 import java.util.function.Consumer;
-
 import org.ngengine.components.ComponentManager;
 import org.ngengine.store.DataStore;
-
-import com.jme3.asset.AssetManager;
 
 /**
  * A fragment that loads assets using the provided AssetManager. This is like the
@@ -46,9 +44,6 @@ import com.jme3.asset.AssetManager;
  * blocking the main thread if the asset loading takes too long.
  */
 public interface AssetLoadingFragment extends Fragment {
-  
-
-
     /**
      * Load assets using the provided AssetManager.
      *

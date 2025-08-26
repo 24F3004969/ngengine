@@ -31,9 +31,8 @@
  */
 package org.ngengine.components.fragments;
 
-import org.ngengine.components.ComponentManager;
-
 import com.jme3.renderer.RenderManager;
+import org.ngengine.components.ComponentManager;
 
 /**
  * A fragment that can receive a RenderManager instance and is called every frame during the render phase. It

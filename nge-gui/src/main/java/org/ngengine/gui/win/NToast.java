@@ -41,7 +41,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
-
 import org.ngengine.gui.components.NIconButton;
 
 public class NToast extends Container {
@@ -88,7 +87,6 @@ public class NToast extends Container {
             close();
         });
     }
-
 
     public void addCloseListener(Runnable listener) {
         closeListeners.add(listener);
@@ -168,11 +166,11 @@ public class NToast extends Container {
         return message.getText();
     }
 
-    public void onAction(int id){
+    public void onAction(int id) {
         actionListeners.forEach(l -> l.accept(id));
     }
 
-    public void addActionListener(Consumer<Integer> listener){
+    public void addActionListener(Consumer<Integer> listener) {
         actionListeners.add(listener);
     }
 }

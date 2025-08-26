@@ -63,8 +63,8 @@ public class AppComponentInitializer implements ComponentInitializer {
         this.assetManager = AsyncAssetManager.of(app.getAssetManager(), app);
     }
 
-    @Deprecated(forRemoval =true)
-    public int deprecatedInitialize(ComponentManager mng, Component fragment, Runnable markReady){
+    @Deprecated(forRemoval = true)
+    public int deprecatedInitialize(ComponentManager mng, Component fragment, Runnable markReady) {
         int i = 0;
         if (fragment instanceof AppFragment) {
             i++;

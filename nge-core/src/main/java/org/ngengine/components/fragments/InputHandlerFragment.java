@@ -121,10 +121,8 @@ public interface InputHandlerFragment extends Fragment {
         }
     }
 
- 
     @Deprecated
     default void receiveInputManager(InputManager inputManager) {}
- 
 
     default void beginInput(ComponentManager mng) {}
 

@@ -291,7 +291,5 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
             });
     }
 
-    public void onAction(int id){
-
-    }
+    public void onAction(int id) {}
 }

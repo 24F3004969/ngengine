@@ -116,14 +116,14 @@ public class DataStore {
         BinaryImporter importer = BinaryImporter.getInstance();
         importer.setAssetManager(assetManager);
         Object out = importer.load(is);
-        if(out instanceof SavableWrapSerializable){
-            out = ((SavableWrapSerializable)out).get();
+        if (out instanceof SavableWrapSerializable) {
+            out = ((SavableWrapSerializable) out).get();
         }
         if (out instanceof SerializableEntry) {
             SerializableEntry entry = (SerializableEntry) out;
             out = entry.value;
         }
- 
+
         return (T) out;
     }
 

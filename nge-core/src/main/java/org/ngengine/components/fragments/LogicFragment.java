@@ -41,9 +41,6 @@ import org.ngengine.components.ComponentManager;
  * attaching and using controls or other components, etc.
  */
 public interface LogicFragment extends Fragment {
- 
-
-
     /**
      * Called by the application logic update loop.
      * This method is called every frame before the render phase.

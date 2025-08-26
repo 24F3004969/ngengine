@@ -31,19 +31,15 @@
  */
 package org.ngengine.player;
 
-import com.jme3.asset.AssetManager;
 import com.jme3.network.HostedConnection;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.function.Consumer;
 import java.util.logging.Logger;
-
 import org.ngengine.AsyncAssetManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
-import org.ngengine.components.fragments.AssetLoadingFragment;
 import org.ngengine.network.P2PChannel;
 import org.ngengine.network.RemotePeer;
 import org.ngengine.nostr4j.NostrPool;
@@ -52,7 +48,6 @@ import org.ngengine.nostr4j.keypair.NostrPublicKey;
 import org.ngengine.nostr4j.signer.NostrSigner;
 import org.ngengine.platform.VStore;
 import org.ngengine.runner.Runner;
-import org.ngengine.store.DataStore;
 import org.ngengine.store.DataStoreProvider;
 
 public class PlayerManagerComponent implements Component<Object> {
@@ -131,7 +126,6 @@ public class PlayerManagerComponent implements Component<Object> {
             }
         }
     }
-
 
     public AsyncAssetManager getAssetManager() {
         return this.mng.getGlobalInstance(AsyncAssetManager.class);

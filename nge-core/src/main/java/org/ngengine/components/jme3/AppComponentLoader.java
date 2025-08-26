@@ -35,10 +35,8 @@ import com.jme3.app.Application;
 import com.jme3.material.Material;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.renderer.RenderManager;
-import com.jme3.renderer.TextureUnitException;
 import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -66,25 +64,25 @@ public class AppComponentLoader implements ComponentLoader {
     private final AsyncAssetManager assetManager;
     private final Runner mainRunner;
 
-    public AppComponentLoader( Application app) {
+    public AppComponentLoader(Application app) {
         this.app = app;
-        this.mainRunner =  MainThreadRunner.of(app);
+        this.mainRunner = MainThreadRunner.of(app);
         this.assetManager = AsyncAssetManager.of(app.getAssetManager(), app);
     }
 
-    protected void preload(Object obj){
+    protected void preload(Object obj) {
         try {
             RenderManager rm = app.getRenderManager();
-            if(obj instanceof Texture){
-                rm.preload((Texture) obj);                                
-            } else if (obj instanceof Material){
-                rm.preload((Material)obj);
-            } else if (obj instanceof Spatial){
-                rm.preload((Spatial)obj);
+            if (obj instanceof Texture) {
+                rm.preload((Texture) obj);
+            } else if (obj instanceof Material) {
+                rm.preload((Material) obj);
+            } else if (obj instanceof Spatial) {
+                rm.preload((Spatial) obj);
             }
         } catch (Exception e) {
             log.log(Level.WARNING, "Failed to preload asset: " + obj, e);
-        }    
+        }
     }
 
     @Override
@@ -94,21 +92,20 @@ public class AppComponentLoader implements ComponentLoader {
         DataStoreProvider dsp = mng.getDataStoreProvider();
         DataStore assetCache = dsp.getCacheStore("assetCache");
 
-
         Consumer<Object> preload = obj -> {
             // i.incrementAndGet();
-            this.mainRunner.run(()->{
-                if (obj != null) {
-                    preload(obj);
-                }
-                // markReady.run();
-            });
+            this.mainRunner.run(() -> {
+                    if (obj != null) {
+                        preload(obj);
+                    }
+                    // markReady.run();
+                });
         };
 
         if (fragment instanceof AssetLoadingFragment) {
             i.incrementAndGet();
             AssetLoadingFragment f = (AssetLoadingFragment) fragment;
-           
+
             f.loadAssets(mng, assetManager, assetCache, preload);
             markReady.run();
         }
@@ -116,8 +113,7 @@ public class AppComponentLoader implements ComponentLoader {
             i.incrementAndGet();
             AsyncAssetLoadingFragment f = (AsyncAssetLoadingFragment) fragment;
             assetManager.runInLoaderThread(
-                am -> {                    
-      
+                am -> {
                     f.loadAssetsAsync(mng, assetManager, assetCache, preload);
 
                     return null;

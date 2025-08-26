@@ -31,7 +31,6 @@
  */
 package org.ngengine.player;
 
-import java.util.concurrent.ExecutionException;
 import org.ngengine.nostr4j.event.UnsignedNostrEvent;
 import org.ngengine.nostr4j.nip24.Nip24ExtraMetadata;
 import org.ngengine.nostr4j.nip39.Nip39ExternalIdentities;

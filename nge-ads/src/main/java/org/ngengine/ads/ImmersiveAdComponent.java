@@ -1,5 +1,39 @@
+/**
+ * Copyright (c) 2025, Nostr Game Engine
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
+ * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ */
 package org.ngengine.ads;
 
+import com.jme3.asset.AssetManager;
+import com.jme3.renderer.RenderManager;
+import jakarta.annotation.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -8,7 +42,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
-
 import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
@@ -33,20 +66,14 @@ import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStore;
 import org.ngengine.store.DataStoreProvider;
 
-import com.jme3.asset.AssetManager;
- 
-import jakarta.annotation.Nullable;
-
-import com.jme3.renderer.RenderManager;
-
-
 public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
+
     private static final Logger logger = Logger.getLogger(ImmersiveAdComponent.class.getName());
     private AdsDisplayClient displayClient;
     private AdTaxonomy taxonomy;
     private List<WeakReference<ImmersiveAdGroup>> groups = new ArrayList<>();
     private Runner mainRunner;
-     
+
     private final NostrPublicKey appKey;
 
     private final CopyOnWriteArrayList<ImmersiveAdListener> listeners = new CopyOnWriteArrayList<>();
@@ -61,20 +88,14 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     private final NostrPool pool;
     private ImmersiveAdViewer viewer;
 
-    public ImmersiveAdComponent(
-        List<String> relays,
-        NostrPublicKey appKey,
-        @Nullable NostrPrivateKey userAdKey 
-    ){
+    public ImmersiveAdComponent(List<String> relays, NostrPublicKey appKey, @Nullable NostrPrivateKey userAdKey) {
         this.appKey = appKey;
         this.userAdKey = userAdKey;
         this.pool = new NostrPool();
-        for(String relay : relays) {
+        for (String relay : relays) {
             pool.connectRelay(new NostrRelay(relay));
         }
-
     }
-
 
     public void setViewer(ImmersiveAdViewer viewer) {
         this.viewer = viewer;
@@ -88,8 +109,8 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         listeners.remove(listener);
     }
 
-    public void refreshAll(){
-          for(WeakReference<ImmersiveAdGroup> ref : groups) {
+    public void refreshAll() {
+        for (WeakReference<ImmersiveAdGroup> ref : groups) {
             ImmersiveAdGroup group = ref.get();
             if (group != null) {
                 for (ImmersiveAdSpace space : group.getSpaces()) {
@@ -122,32 +143,38 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         refreshAll();
     }
 
-
-    
-
-    protected Adspace getAdSpace(ImmersiveAdSpace space){
+    protected Adspace getAdSpace(ImmersiveAdSpace space) {
         AdSize size = space.getSize();
-     
+
         List<NostrPublicKey> whiteList = space.getAdvertisersWhitelist();
-        if(whiteList==null&&!isAdvertiserListBlack)whiteList = advertisersList;
-        
+        if (whiteList == null && !isAdvertiserListBlack) whiteList = advertisersList;
+
         List<String> langs = space.getLanguages();
         List<AdTaxonomy.Term> cats = space.getCategories(taxonomy);
-        if(langs==null)langs=defaultLanguages;        
-        if(cats==null)   cats = defaultCategories;
+        if (langs == null) langs = defaultLanguages;
+        if (cats == null) cats = defaultCategories;
 
-        Adspace ispace = adspaceCache.computeIfAbsent(space, (k)->{
-            for(ImmersiveAdListener listener : listeners) {
-                try{
-                    listener.onNewImmersiveAdspace(space);
-                } catch(Exception e){
-                    logger.warning("Error in listener: " + e.getMessage());
+        Adspace ispace = adspaceCache.computeIfAbsent(
+            space,
+            k -> {
+                for (ImmersiveAdListener listener : listeners) {
+                    try {
+                        listener.onNewImmersiveAdspace(space);
+                    } catch (Exception e) {
+                        logger.warning("Error in listener: " + e.getMessage());
+                    }
                 }
+                AdPriceSlot priceSlot = space.getPriceSlot();
+                if (priceSlot == null) priceSlot = defaultPriceSlot;
+                return new Adspace(
+                    appKey,
+                    userAdKey.getPublicKey(),
+                    size.getAspectRatio(),
+                    priceSlot,
+                    space.getSupportedMimeTypes()
+                );
             }
-            AdPriceSlot priceSlot = space.getPriceSlot();        
-            if(priceSlot==null) priceSlot = defaultPriceSlot;
-            return new Adspace(appKey, userAdKey.getPublicKey(), size.getAspectRatio(), priceSlot,  space.getSupportedMimeTypes());
-        });
+        );
 
         ispace.setAdvertisersWhitelist(whiteList);
         ispace.setLanguages(langs);
@@ -156,19 +183,16 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         return ispace;
     }
 
-    public void register(ImmersiveAdGroup group){
+    public void register(ImmersiveAdGroup group) {
         groups.add(new WeakReference<ImmersiveAdGroup>(group));
     }
 
-    public void unregister(ImmersiveAdGroup group){
+    public void unregister(ImmersiveAdGroup group) {
         groups.removeIf(ref -> ref.get() == null || ref.get() == group);
     }
- 
 
- 
     @Override
     public void updateAppLogic(ComponentManager mng, float tpf) {
-
         RenderManager renderManager = mng.getGlobalInstance(RenderManager.class);
         AssetManager assetManager = mng.getGlobalInstance(AssetManager.class);
 
@@ -186,79 +210,77 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
             }
 
             List<ImmersiveAdSpace> spaces = group.getSpaces();
-            for(int i=0;i<spaces.size();i++){
-
+            for (int i = 0; i < spaces.size(); i++) {
                 ImmersiveAdSpace space = spaces.get(i);
-                if(!viewer.isVisible(space)) {
+                if (!viewer.isVisible(space)) {
                     continue; // Skip if not visible
                 }
 
-                if(space.getCurrentOfferId()!=null){
+                if (space.getCurrentOfferId() != null) {
                     viewer.select(space);
                 }
 
-                if(space.isUpdateNeeded()&&!space.isLoading()) { 
+                if (space.isUpdateNeeded() && !space.isLoading()) {
                     space.markLoading();
 
                     Adspace aspace = getAdSpace(space);
                     this.displayClient.registerAdspace(aspace);
-                    
+
                     this.displayClient.loadNextAd(
-                        aspace, 
-                        space.getSize().getWidth(), 
-                        space.getSize().getHeight(), 
-                    (bid)->{
-                        NostrPublicKey bidAuthor = bid.getPubkey();
-                        if(isAdvertiserListBlack&&advertisersList!=null&&advertisersList.contains(bidAuthor)){
-                            return NGEPlatform.get().wrapPromise((res,rej)->{
-                                res.accept(false);
-                            });
-                        } 
-                        return NGEPlatform.get().wrapPromise((res,rej)->{
-                            res.accept(true);
-                        });
-                    }, ( bidEvent,  offer)->{         
-                        return NGEPlatform.get().wrapPromise((res, rej)->{
-                            mainRunner.run(() -> {
-                                for(ImmersiveAdListener listener : listeners) {
-                                    try{
-                                        listener.onBidAssigned(space, bidEvent);
-                                    } catch(Exception e){
-                                        logger.warning("Error in listener: " + e.getMessage());
-                                    }
+                            aspace,
+                            space.getSize().getWidth(),
+                            space.getSize().getHeight(),
+                            bid -> {
+                                NostrPublicKey bidAuthor = bid.getPubkey();
+                                if (isAdvertiserListBlack && advertisersList != null && advertisersList.contains(bidAuthor)) {
+                                    return NGEPlatform
+                                        .get()
+                                        .wrapPromise((res, rej) -> {
+                                            res.accept(false);
+                                        });
                                 }
-                                space.setCurrentOffer(offer.getId(),s->res.accept(s));
-                                space.set(renderManager, assetManager, bidEvent, mainRunner);
-                                space.clearUpdateNeeded();
-                            });                        
+                                return NGEPlatform
+                                    .get()
+                                    .wrapPromise((res, rej) -> {
+                                        res.accept(true);
+                                    });
+                            },
+                            (bidEvent, offer) -> {
+                                return NGEPlatform
+                                    .get()
+                                    .wrapPromise((res, rej) -> {
+                                        mainRunner.run(() -> {
+                                            for (ImmersiveAdListener listener : listeners) {
+                                                try {
+                                                    listener.onBidAssigned(space, bidEvent);
+                                                } catch (Exception e) {
+                                                    logger.warning("Error in listener: " + e.getMessage());
+                                                }
+                                            }
+                                            space.setCurrentOffer(offer.getId(), s -> res.accept(s));
+                                            space.set(renderManager, assetManager, bidEvent, mainRunner);
+                                            space.clearUpdateNeeded();
+                                        });
+                                    });
+                            },
+                            (neg, offer, success, message) -> {}
+                        )
+                        .catchException(err -> {
+                            space.setUpdateNeeded();
                         });
-                    }, ( neg,  offer,  success,  message)->{
-                    }).catchException((err)->{
-                        space.setUpdateNeeded();
-                    });
                 }
             }
-            
         }
         viewer.endUpdate();
 
         ImmersiveAdSpace space = viewer.endSelection();
-        AdBidEvent currentBid = space==null?null:space.get();
+        AdBidEvent currentBid = space == null ? null : space.get();
 
-        if(currentBid!=null){
-            viewer.showInfo(
-                space,
-                currentBid.getDescription(),
-                currentBid.getCallToAction()
-            );
+        if (currentBid != null) {
+            viewer.showInfo(space, currentBid.getDescription(), currentBid.getCallToAction());
         } else {
-            viewer.showInfo(
-                null,
-                "",
-                ""
-            );                
+            viewer.showInfo(null, "", "");
         }
-    
     }
 
     @Override
@@ -266,22 +288,23 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         this.mainRunner = runner;
         DataStore store = dataStore.getDataStore("nostrads");
 
-       if(viewer == null){
-            viewer = new ImmersiveAdCameraView(mng, mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera());
+        if (viewer == null) {
+            viewer =
+                new ImmersiveAdCameraView(mng, mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera());
         }
 
         AdTaxonomy taxonomy = new AdTaxonomy();
 
-        if(userAdKey==null){
-            try{
-                if(store.exists("adkey")){
+        if (userAdKey == null) {
+            try {
+                if (store.exists("adkey")) {
                     userAdKey = NostrPrivateKey.fromHex(store.read("adkey"));
-                } 
-            }catch(Exception e){
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
             }
 
-            if(userAdKey == null){
+            if (userAdKey == null) {
                 userAdKey = NostrPrivateKey.generate();
                 try {
                     store.write("adkey", userAdKey.asHex());
@@ -293,11 +316,16 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
 
         NostrKeyPairSigner signer = new NostrKeyPairSigner(new NostrKeyPair(userAdKey));
         PenaltyStorage penaltyStorage = new PenaltyStorage(store.getVStore());
-        displayClient = new AdsDisplayClient(pool, signer, taxonomy, penaltyStorage, (neg, offer, reason) -> {
-            onAdRefresh(neg, offer, reason);
-        });
-        
-    
+        displayClient =
+            new AdsDisplayClient(
+                pool,
+                signer,
+                taxonomy,
+                penaltyStorage,
+                (neg, offer, reason) -> {
+                    onAdRefresh(neg, offer, reason);
+                }
+            );
     }
 
     @Override
@@ -324,13 +352,10 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
                     spaceIt.remove();
                     continue;
                 }
-                if(space.getCurrentOfferId() == offer.getId()){
+                if (space.getCurrentOfferId() == offer.getId()) {
                     space.setUpdateNeeded();
                 }
             }
         }
-       
     }
-
-    
 }

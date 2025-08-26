@@ -39,7 +39,6 @@ import com.jme3.input.InputManager;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -50,9 +49,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
-
-import javax.swing.text.View;
-
 import org.ngengine.AsyncAssetManager;
 import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
@@ -157,11 +153,10 @@ public class ComponentManagerAppState extends BaseAppState implements ComponentM
     public DataStoreProvider getDataStoreProvider() {
         if (dataStoreProvider == null) {
             String id = this.app.getContext().getSettings().getString("appId");
-            if(id == null || id.isEmpty()) {
+            if (id == null || id.isEmpty()) {
                 id = this.app.getContext().getSettings().getTitle();
             }
-            dataStoreProvider =
-                new DataStoreProvider(id, this.app.getAssetManager());
+            dataStoreProvider = new DataStoreProvider(id, this.app.getAssetManager());
         }
         return dataStoreProvider;
     }
@@ -538,41 +533,40 @@ public class ComponentManagerAppState extends BaseAppState implements ComponentM
     }
 
     @Override
-    public <T> T getGlobalInstance(Class<T> type){
-        if(type == InputManager.class){
-            return (T)app.getInputManager();
+    public <T> T getGlobalInstance(Class<T> type) {
+        if (type == InputManager.class) {
+            return (T) app.getInputManager();
         }
-        if(type == Application.class){
-            return (T)app;
+        if (type == Application.class) {
+            return (T) app;
         }
-        if(type==ComponentManager.class){
-            return (T)this;
+        if (type == ComponentManager.class) {
+            return (T) this;
         }
-        if(type==Camera.class){
-            return (T)app.getCamera();
+        if (type == Camera.class) {
+            return (T) app.getCamera();
         }
-        if(type==RenderManager.class){
-            return (T)app.getRenderManager();
+        if (type == RenderManager.class) {
+            return (T) app.getRenderManager();
         }
-        if(type==AppStateManager.class){
-            return (T)app.getStateManager();
+        if (type == AppStateManager.class) {
+            return (T) app.getStateManager();
         }
-        if(type==DataStoreProvider.class){
-            return (T)getDataStoreProvider();
+        if (type == DataStoreProvider.class) {
+            return (T) getDataStoreProvider();
         }
-        if(type==ViewPort.class){
-            return (T)app.getViewPort();
+        if (type == ViewPort.class) {
+            return (T) app.getViewPort();
         }
-        if(type==AssetManager.class){
-            return (T)app.getAssetManager();
+        if (type == AssetManager.class) {
+            return (T) app.getAssetManager();
         }
-        if(type==AsyncAssetManager.class){
-            return (T)AsyncAssetManager.of(app.getAssetManager(), app);
+        if (type == AsyncAssetManager.class) {
+            return (T) AsyncAssetManager.of(app.getAssetManager(), app);
         }
-        if(type==ViewPortManager.class){
-            return (T)new Jme3ViewPortManager(app);
+        if (type == ViewPortManager.class) {
+            return (T) new Jme3ViewPortManager(app);
         }
-
 
         return null;
     }

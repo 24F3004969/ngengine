@@ -61,7 +61,7 @@ import org.ngengine.gui.win.std.NErrorWindow;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
-public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment, InputHandlerFragment{
+public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment, InputHandlerFragment {
 
     private static final Logger log = Logger.getLogger(NWindowManagerComponent.class.getName());
     private final ArrayList<NWindow<?>> windowsStack = new ArrayList<>();
@@ -77,10 +77,10 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
 
     @Override
     public void receiveInputManager(InputManager inputManager) {
-        this.inputManager=inputManager;
+        this.inputManager = inputManager;
     }
 
-    public void showCursor(boolean v){
+    public void showCursor(boolean v) {
         inputManager.setCursorVisible(v);
     }
 
@@ -394,23 +394,22 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
         }
     }
 
-    public void back(){
-        if(windowsStack.size()>0){
-            closeWindow(windowsStack.get(windowsStack.size()-1));
+    public void back() {
+        if (windowsStack.size() > 0) {
+            closeWindow(windowsStack.get(windowsStack.size() - 1));
         }
     }
 
-    public void action(int id){
-        if(windowsStack.size()>0){
-            NWindow<?> window = windowsStack.get(windowsStack.size()-1);
+    public void action(int id) {
+        if (windowsStack.size() > 0) {
+            NWindow<?> window = windowsStack.get(windowsStack.size() - 1);
             window.onAction(id);
         }
     }
 
-
-    public void toastAction(int id){
-        if(toastsStack.size()>0){
-            NToast toast = toastsStack.get(toastsStack.size()-1);
+    public void toastAction(int id) {
+        if (toastsStack.size() > 0) {
+            NToast toast = toastsStack.get(toastsStack.size() - 1);
             toast.onAction(id);
         }
     }
