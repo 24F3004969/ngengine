@@ -53,97 +53,92 @@ import org.ngengine.components.ComponentManager;
  * {@link InputHandlerFragment#receiveInputManager(InputManager)} method can be overridden to receive the
  * {@link InputManager} instance and register additional input listeners.
  */
-public interface InputHandlerFragment extends Fragment, RawInputListener {
+public interface InputHandlerFragment extends Fragment {
     class Wrapper implements RawInputListener {
 
         private final InputHandlerFragment fragment;
-        private final ComponentManager fragmentManager;
+        private final ComponentManager mng;
 
         public Wrapper(ComponentManager fragmentManager, InputHandlerFragment fragment) {
             this.fragment = fragment;
-            this.fragmentManager = fragmentManager;
+            this.mng = fragmentManager;
         }
 
         @Override
         public void beginInput() {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.beginInput();
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.beginInput(mng);
             }
         }
 
         @Override
         public void endInput() {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.endInput();
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.endInput(mng);
             }
         }
 
         @Override
         public void onJoyAxisEvent(JoyAxisEvent evt) {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.onJoyAxisEvent(evt);
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onJoyAxisEvent(mng, evt);
             }
         }
 
         @Override
         public void onJoyButtonEvent(JoyButtonEvent evt) {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.onJoyButtonEvent(evt);
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onJoyButtonEvent(mng, evt);
             }
         }
 
         @Override
         public void onMouseMotionEvent(MouseMotionEvent evt) {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.onMouseMotionEvent(evt);
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onMouseMotionEvent(mng, evt);
             }
         }
 
         @Override
         public void onMouseButtonEvent(MouseButtonEvent evt) {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.onMouseButtonEvent(evt);
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onMouseButtonEvent(mng, evt);
             }
         }
 
         @Override
         public void onKeyEvent(KeyInputEvent evt) {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.onKeyEvent(evt);
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onKeyEvent(mng, evt);
             }
         }
 
         @Override
         public void onTouchEvent(TouchEvent evt) {
-            if (!(fragment instanceof Component) || fragmentManager.isComponentEnabled((Component) fragment)) {
-                fragment.onTouchEvent(evt);
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onTouchEvent(mng, evt);
             }
         }
     }
 
-    @Override
-    default void beginInput() {}
-
-    @Override
-    default void endInput() {}
-
-    /**
-     * Receives the InputManager instance when the component is initialized. This method can be overridden to
-     * register additional input listeners.
-     *
-     * The reference to the InputManager can be stored and used later in the component logic.
-     */
+ 
+    @Deprecated
     default void receiveInputManager(InputManager inputManager) {}
+ 
 
-    default void onJoyAxisEvent(JoyAxisEvent evt) {}
+    default void beginInput(ComponentManager mng) {}
 
-    default void onJoyButtonEvent(JoyButtonEvent evt) {}
+    default void endInput(ComponentManager mng) {}
 
-    default void onMouseMotionEvent(MouseMotionEvent evt) {}
+    default void onJoyAxisEvent(ComponentManager mng, JoyAxisEvent evt) {}
 
-    default void onMouseButtonEvent(MouseButtonEvent evt) {}
+    default void onJoyButtonEvent(ComponentManager mng, JoyButtonEvent evt) {}
 
-    default void onKeyEvent(KeyInputEvent evt) {}
+    default void onMouseMotionEvent(ComponentManager mng, MouseMotionEvent evt) {}
 
-    default void onTouchEvent(TouchEvent evt) {}
+    default void onMouseButtonEvent(ComponentManager mng, MouseButtonEvent evt) {}
+
+    default void onKeyEvent(ComponentManager mng, KeyInputEvent evt) {}
+
+    default void onTouchEvent(ComponentManager mng, TouchEvent evt) {}
 }

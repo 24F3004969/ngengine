@@ -33,6 +33,7 @@ package org.ngengine.components.fragments;
 
 import java.util.function.Consumer;
 
+import org.ngengine.components.ComponentManager;
 import org.ngengine.store.DataStore;
 
 import com.jme3.asset.AssetManager;
@@ -45,11 +46,15 @@ import com.jme3.asset.AssetManager;
  * blocking the main thread if the asset loading takes too long.
  */
 public interface AssetLoadingFragment extends Fragment {
+  
+
+
     /**
      * Load assets using the provided AssetManager.
      *
      * The reference to the AssetManager can be stored and used later in the component logic.
      *
+     * @param mng the ComponentManager instance
      * @param assetManager
      *            the AssetManager instance
      * @param assetCache
@@ -58,5 +63,5 @@ public interface AssetLoadingFragment extends Fragment {
      *            a consumer that can be called for each assets to preload. It will start uploading the asset to the gpu
      *            as soon as possible.
      */
-    void loadAssets(AssetManager assetManager, DataStore assetCache, Consumer<Object> preload);
+    void loadAssets(ComponentManager mng, AssetManager assetManager, DataStore assetCache, Consumer<Object> preload);
 }

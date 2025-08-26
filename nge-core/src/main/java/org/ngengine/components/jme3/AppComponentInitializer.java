@@ -63,8 +63,8 @@ public class AppComponentInitializer implements ComponentInitializer {
         this.assetManager = AsyncAssetManager.of(app.getAssetManager(), app);
     }
 
-    @Override
-    public int initialize(ComponentManager mng, Component fragment, Runnable markReady) {
+    @Deprecated(forRemoval =true)
+    public int deprecatedInitialize(ComponentManager mng, Component fragment, Runnable markReady){
         int i = 0;
         if (fragment instanceof AppFragment) {
             i++;
@@ -97,9 +97,6 @@ public class AppComponentInitializer implements ComponentInitializer {
             i++;
             InputHandlerFragment f = (InputHandlerFragment) fragment;
             f.receiveInputManager(app.getInputManager());
-            InputHandlerFragment.Wrapper wrapper = new InputHandlerFragment.Wrapper(mng, f);
-            inputHandlerWrappers.put(f, wrapper);
-            app.getInputManager().addRawInputListener(wrapper);
             markReady.run();
         }
 
@@ -107,6 +104,20 @@ public class AppComponentInitializer implements ComponentInitializer {
             i++;
             RenderFragment f = (RenderFragment) fragment;
             f.receiveRenderManager(app.getRenderManager());
+            markReady.run();
+        }
+        return i;
+    }
+
+    @Override
+    public int initialize(ComponentManager mng, Component fragment, Runnable markReady) {
+        int i = deprecatedInitialize(mng, fragment, markReady);
+        if (fragment instanceof InputHandlerFragment) {
+            i++;
+            InputHandlerFragment f = (InputHandlerFragment) fragment;
+            InputHandlerFragment.Wrapper wrapper = new InputHandlerFragment.Wrapper(mng, f);
+            inputHandlerWrappers.put(f, wrapper);
+            app.getInputManager().addRawInputListener(wrapper);
             markReady.run();
         }
 

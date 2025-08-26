@@ -7,15 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
-import org.ngengine.components.fragments.AssetLoadingFragment;
 import org.ngengine.components.fragments.LogicFragment;
-import org.ngengine.components.fragments.MainViewPortFragment;
-import org.ngengine.components.fragments.RenderFragment;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
@@ -37,21 +34,17 @@ import org.ngengine.store.DataStore;
 import org.ngengine.store.DataStoreProvider;
 
 import com.jme3.asset.AssetManager;
-import com.jme3.renderer.Camera;
-import com.jme3.renderer.ViewPort;
-
+ 
 import jakarta.annotation.Nullable;
 
 import com.jme3.renderer.RenderManager;
 
 
-public class ImmersiveAdComponent implements Component<Object>, LogicFragment, AssetLoadingFragment, MainViewPortFragment , RenderFragment{
+public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     private static final Logger logger = Logger.getLogger(ImmersiveAdComponent.class.getName());
     private AdsDisplayClient displayClient;
     private AdTaxonomy taxonomy;
     private List<WeakReference<ImmersiveAdGroup>> groups = new ArrayList<>();
-    private AssetManager assetManager;
-    private Camera mainCamera;
     private Runner mainRunner;
      
     private final NostrPublicKey appKey;
@@ -67,7 +60,6 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment, A
     private List<String> defaultLanguages;
     private final NostrPool pool;
     private ImmersiveAdViewer viewer;
-    private RenderManager renderManager;
 
     public ImmersiveAdComponent(
         List<String> relays,
@@ -83,10 +75,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment, A
 
     }
 
-    public void receiveRenderManager(RenderManager renderer) {
-        this.renderManager = renderer;
-      
-    }
+
     public void setViewer(ImmersiveAdViewer viewer) {
         this.viewer = viewer;
     }
@@ -175,20 +164,14 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment, A
         groups.removeIf(ref -> ref.get() == null || ref.get() == group);
     }
  
-    @Override
-    public void loadAssets(AssetManager assetManager, DataStore assetCache, Consumer<Object> preload) {
-        this.assetManager = assetManager;
-    }
 
-    @Override
-    public void receiveMainViewPort(ViewPort viewPort) {
-        mainCamera = viewPort.getCamera();
-       
-        
-    }
  
     @Override
-    public void updateAppLogic(float tpf) {
+    public void updateAppLogic(ComponentManager mng, float tpf) {
+
+        RenderManager renderManager = mng.getGlobalInstance(RenderManager.class);
+        AssetManager assetManager = mng.getGlobalInstance(AssetManager.class);
+
         // update and select ad in a single pass
         viewer.beginUpdate();
         viewer.beginSelection();
@@ -284,7 +267,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment, A
         DataStore store = dataStore.getDataStore("nostrads");
 
        if(viewer == null){
-            viewer = new ImmersiveAdCameraView(mng, mainCamera);
+            viewer = new ImmersiveAdCameraView(mng, mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera());
         }
 
         AdTaxonomy taxonomy = new AdTaxonomy();

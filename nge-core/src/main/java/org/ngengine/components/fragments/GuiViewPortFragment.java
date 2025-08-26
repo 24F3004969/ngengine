@@ -38,6 +38,7 @@ import com.jme3.scene.Node;
  * A fragment that provides access to a GUI ViewPort. A GUI ViewPort is an object that contains the camera and
  * scene to be rendered for the GUI.
  */
+@Deprecated
 public interface GuiViewPortFragment extends Fragment {
     /**
      * Get the first scene node of the GUI ViewPort. This is usually the root node of the GUI scene graph.

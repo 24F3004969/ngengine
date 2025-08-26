@@ -32,8 +32,14 @@
 package org.ngengine.components.jme3;
 
 import com.jme3.app.Application;
+import com.jme3.app.state.AppStateManager;
 import com.jme3.app.state.BaseAppState;
+import com.jme3.asset.AssetManager;
+import com.jme3.input.InputManager;
+import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -44,6 +50,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
+
+import javax.swing.text.View;
+
+import org.ngengine.AsyncAssetManager;
+import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentInitializer;
 import org.ngengine.components.ComponentLoader;
@@ -524,5 +535,45 @@ public class ComponentManagerAppState extends BaseAppState implements ComponentM
             throw new IllegalArgumentException("Circular dependency detected for fragment: " + fragment.getId());
         }
         mount.deps = deps;
+    }
+
+    @Override
+    public <T> T getGlobalInstance(Class<T> type){
+        if(type == InputManager.class){
+            return (T)app.getInputManager();
+        }
+        if(type == Application.class){
+            return (T)app;
+        }
+        if(type==ComponentManager.class){
+            return (T)this;
+        }
+        if(type==Camera.class){
+            return (T)app.getCamera();
+        }
+        if(type==RenderManager.class){
+            return (T)app.getRenderManager();
+        }
+        if(type==AppStateManager.class){
+            return (T)app.getStateManager();
+        }
+        if(type==DataStoreProvider.class){
+            return (T)getDataStoreProvider();
+        }
+        if(type==ViewPort.class){
+            return (T)app.getViewPort();
+        }
+        if(type==AssetManager.class){
+            return (T)app.getAssetManager();
+        }
+        if(type==AsyncAssetManager.class){
+            return (T)AsyncAssetManager.of(app.getAssetManager(), app);
+        }
+        if(type==ViewPortManager.class){
+            return (T)new Jme3ViewPortManager(app);
+        }
+
+
+        return null;
     }
 }

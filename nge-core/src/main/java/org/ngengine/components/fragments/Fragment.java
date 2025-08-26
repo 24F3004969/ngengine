@@ -59,8 +59,6 @@ package org.ngengine.components.fragments;
  *
  * Fragments follow a specific execution sequence:
  * <ol>
- * <li><strong>Initialization Phase:</strong> All {@code receiveXXX} methods (like {@code receiveViewPort},
- * {@code receiveInputManager}) are called when the component is first initialized.</li>
  * <li><strong>Loading Phase:</strong> All {@code load} methods (like {@code loadAssetsAsync}) are called
  * right before the component would be enabled. The component remains in pending state until all load methods
  * complete.</li>

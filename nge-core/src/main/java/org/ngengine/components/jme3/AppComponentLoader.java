@@ -108,7 +108,8 @@ public class AppComponentLoader implements ComponentLoader {
         if (fragment instanceof AssetLoadingFragment) {
             i.incrementAndGet();
             AssetLoadingFragment f = (AssetLoadingFragment) fragment;
-            f.loadAssets(assetManager, assetCache, preload);
+           
+            f.loadAssets(mng, assetManager, assetCache, preload);
             markReady.run();
         }
         if ((fragment instanceof AsyncAssetLoadingFragment)) {
@@ -116,7 +117,9 @@ public class AppComponentLoader implements ComponentLoader {
             AsyncAssetLoadingFragment f = (AsyncAssetLoadingFragment) fragment;
             assetManager.runInLoaderThread(
                 am -> {                    
-                    f.loadAssetsAsync(assetManager, assetCache, preload);
+      
+                    f.loadAssetsAsync(mng, assetManager, assetCache, preload);
+
                     return null;
                 },
                 (d, err) -> {

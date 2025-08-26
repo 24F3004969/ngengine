@@ -31,6 +31,8 @@
  */
 package org.ngengine.components.fragments;
 
+import org.ngengine.components.ComponentManager;
+
 import com.jme3.renderer.RenderManager;
 
 /**
@@ -39,13 +41,7 @@ import com.jme3.renderer.RenderManager;
  * {@link LogicFragment} or {@link MainViewPortFragment}.
  */
 public interface RenderFragment extends Fragment {
-    /**
-     * Receive a RenderManager instance as soon as it is available. The reference to the RenderManager can be
-     * stored and used later in the component logic.
-     *
-     * @param renderer
-     *            the RenderManager instance
-     */
+    @Deprecated
     default void receiveRenderManager(RenderManager renderer) {}
 
     /**
@@ -53,5 +49,5 @@ public interface RenderFragment extends Fragment {
      * @param renderer the RenderManager instance
      * @param tpf time per frame
      */
-    default void updateRender(RenderManager renderer) {}
+    void updateRender(ComponentManager mng, RenderManager renderer);
 }

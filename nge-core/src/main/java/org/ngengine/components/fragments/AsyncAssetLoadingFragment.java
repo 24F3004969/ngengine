@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.ngengine.AsyncAssetManager;
+import org.ngengine.components.ComponentManager;
 import org.ngengine.store.DataStore;
 
 /**
@@ -42,6 +43,8 @@ import org.ngengine.store.DataStore;
  * components that need to load assets without blocking the main thread.
  */
 public interface AsyncAssetLoadingFragment extends Fragment {
+
+
     /**
      * This method is called from the asset loader thread and can be used to load and transform assets
      * asynchronously, without blocking the main thread.
@@ -58,6 +61,7 @@ public interface AsyncAssetLoadingFragment extends Fragment {
      * method using class fields.
      * </p>
      *
+     * @param mng the ComponentManager instance
      * @param assetManager
      *            the AsyncAssetManager instance to use for loading assets
      * @param assetCache
@@ -66,5 +70,5 @@ public interface AsyncAssetLoadingFragment extends Fragment {
      *            a consumer that can be called for each assets to preload. It will start uploading the asset to the gpu
      *            as soon as possible.
      */
-    void loadAssetsAsync(AsyncAssetManager assetManager, DataStore assetCache, Consumer<Object> preload);
+    void loadAssetsAsync(ComponentManager mng, AsyncAssetManager assetManager, DataStore assetCache, Consumer<Object> preload);
 }

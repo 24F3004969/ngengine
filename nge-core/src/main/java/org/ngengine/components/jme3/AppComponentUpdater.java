@@ -55,18 +55,18 @@ public class AppComponentUpdater implements ComponentUpdater {
     }
 
     @Override
-    public void update(ComponentManager fragmentManager, Component component, float tpf) {
+    public void update(ComponentManager mng, Component component, float tpf) {
         if (component instanceof LogicFragment) {
             LogicFragment appFragment = (LogicFragment) component;
-            appFragment.updateAppLogic(tpf);
+            appFragment.updateAppLogic(mng, tpf);
         }
     }
 
     @Override
-    public void render(ComponentManager fragmentManager, Component component) {
+    public void render(ComponentManager mng, Component component) {
         if (component instanceof RenderFragment) {
             RenderFragment renderFragment = (RenderFragment) component;
-            renderFragment.updateRender(app.getRenderManager());
+            renderFragment.updateRender(mng, app.getRenderManager());
         }
     }
 }

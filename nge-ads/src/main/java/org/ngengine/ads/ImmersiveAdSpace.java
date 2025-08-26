@@ -179,7 +179,6 @@ public class ImmersiveAdSpace  {
             case IMAGE_JPEG:
             case IMAGE_PNG: {
                 String url = bid.getPayload();
-                System.out.println("Loading ad texture from URL: " + url);
                 NGEPlatform.get().httpRequest("GET", url, null, null, null).then(res->{
                     byte[] data = res.body();
                     try(ByteArrayInputStream bais = new ByteArrayInputStream(data)) {

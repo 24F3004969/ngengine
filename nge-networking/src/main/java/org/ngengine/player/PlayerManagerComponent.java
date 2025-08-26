@@ -39,6 +39,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
+
+import org.ngengine.AsyncAssetManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.AssetLoadingFragment;
@@ -53,7 +55,7 @@ import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStore;
 import org.ngengine.store.DataStoreProvider;
 
-public class PlayerManagerComponent implements Component<Object>, AssetLoadingFragment {
+public class PlayerManagerComponent implements Component<Object> {
 
     public static final List<String> DEFAULT_ID_RELAYS = List.of(
         "wss://relay.ngengine.org",
@@ -70,7 +72,7 @@ public class PlayerManagerComponent implements Component<Object>, AssetLoadingFr
     protected Map<NostrPublicKey, Player> players = new WeakHashMap<>();
     protected Map<NostrPublicKey, LocalPlayer> localPlayers = new WeakHashMap<>();
     protected Runner runner;
-    protected AssetManager assetManager;
+    protected ComponentManager mng;
 
     public PlayerManagerComponent() {}
 
@@ -100,6 +102,7 @@ public class PlayerManagerComponent implements Component<Object>, AssetLoadingFr
         boolean firstTime,
         Object slot
     ) {
+        this.mng = mng;
         if (!externalPool) {
             this.nostrPool = new NostrPool();
             if (connectToRelays == null) {
@@ -129,13 +132,9 @@ public class PlayerManagerComponent implements Component<Object>, AssetLoadingFr
         }
     }
 
-    @Override
-    public void loadAssets(AssetManager assetManager, DataStore cache, Consumer<Object> preload) {
-        this.assetManager = assetManager;
-    }
 
-    public AssetManager getAssetManager() {
-        return assetManager;
+    public AsyncAssetManager getAssetManager() {
+        return this.mng.getGlobalInstance(AsyncAssetManager.class);
     }
 
     @Override

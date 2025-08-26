@@ -305,4 +305,7 @@ public interface ComponentManager {
 
     DataStoreProvider getDataStoreProvider();
 
+
+    <T> T getGlobalInstance(Class<T> type);
+
 }

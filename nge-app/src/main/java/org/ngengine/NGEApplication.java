@@ -74,10 +74,12 @@ public class NGEApplication {
     public static class Jme3Application extends SimpleApplication {
 
         private final Runnable ready;
+        private final NGEApplication ngeapp;
 
-        public Jme3Application(Runnable ready) {
+        public Jme3Application(NGEApplication ngeapp, Runnable ready) {
             super();
             this.ready = ready;
+            this.ngeapp = ngeapp;
         }
 
         public void setFlyCamEnabled(boolean enabled) {
@@ -150,7 +152,7 @@ public class NGEApplication {
         baseSettings.put("appId", appId != null ? appId.asHex() : defaultAppId);
 
         app =
-            new Jme3Application(() -> {
+            new Jme3Application(this,() -> {
                 onReady.accept(this);
             });
         app.setSettings(baseSettings);

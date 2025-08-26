@@ -40,6 +40,7 @@ import com.jme3.scene.Node;
  * A fragment that provides access to a ViewPort. A ViewPort is an object that contains the camera and scene
  * to be rendered.
  */
+@Deprecated
 public interface MainViewPortFragment extends Fragment {
     /**
      * Get the first scene node of the ViewPort. This is usually the root node of the scene graph.

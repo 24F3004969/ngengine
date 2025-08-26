@@ -41,6 +41,7 @@ import com.jme3.app.Application;
  *
  * This is mostly useful for backwards compatibility with existing jmonkeyengine code.
  */
+@Deprecated
 public interface AppFragment extends Fragment {
     /**
      * Receive the application instance as soon as it is available. The reference to the application can be
