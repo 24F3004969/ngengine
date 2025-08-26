@@ -39,7 +39,6 @@ import com.jme3.export.Savable;
 import com.jme3.math.FastMath;
 import com.jme3.renderer.Caps;
 import com.jme3.renderer.Renderer;
-import com.jme3.system.Experimental;
 import com.jme3.texture.image.ColorSpace;
 import com.jme3.texture.image.LastTextureState;
 import com.jme3.util.BufferUtils;
@@ -613,7 +612,6 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
     protected boolean mipsWereGenerated = false;
     protected boolean needGeneratedMips = false;
     protected LastTextureState lastTextureState = new LastTextureState();
-    protected boolean async = false;
 
     /**
      * Internal use only.
@@ -1307,15 +1305,4 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         }
     }
 
-    @Deprecated(forRemoval = false)
-    @Experimental
-    public void setAsync(boolean async) {
-        this.async = async;
-    }
-
-    @Deprecated(forRemoval = false)
-    @Experimental
-    public boolean isAsync() {
-        return async;
-    }
 }

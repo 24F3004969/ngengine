@@ -218,7 +218,6 @@ public class ImmersiveAdSpace {
                             try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
                                 TextureKey k = new TextureKey(url, false);
                                 Texture tx = am.loadAssetFromStream(k, bais);
-                                tx.getImage().setAsync(true);
                                 MipMapGenerator.generateMipMaps(tx.getImage());
 
                                 runner.enqueue(() -> {

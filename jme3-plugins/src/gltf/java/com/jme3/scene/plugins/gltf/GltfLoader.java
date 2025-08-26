@@ -804,7 +804,6 @@ public class GltfLoader implements AssetLoader {
             Texture tex = info.getManager().loadTexture(key);
             result = (Texture2D) tex;
         }
-        result.getImage().setAsync(true);
         return result;
     }
 
