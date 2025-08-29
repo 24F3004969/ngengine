@@ -790,30 +790,46 @@ public class J3MLoader implements AssetLoader {
 
     @Override
     public Object load(AssetInfo info) throws IOException {
-        this.assetManager = info.getManager();
+        try{
+            this.assetManager = info.getManager();
 
-        InputStream in = info.openStream();
-        try {
-            key = info.getKey();
-            if (key.getExtension().equals("j3m") && !(key instanceof MaterialKey)) {
-                throw new IOException("Material instances must be loaded via MaterialKey");
-            } else if (key.getExtension().equals("j3md") && key instanceof MaterialKey) {
-                throw new IOException("Material definitions must be loaded via AssetKey");
+            InputStream in = info.openStream();
+            try {
+                key = info.getKey();
+                if (key.getExtension().equals("j3m") && !(key instanceof MaterialKey)) {
+                    throw new IOException("Material instances must be loaded via MaterialKey");
+                } else if (key.getExtension().equals("j3md") && key instanceof MaterialKey) {
+                    throw new IOException("Material definitions must be loaded via AssetKey");
+                }
+                in = Preprocessor.apply(in);
+                loadFromRoot(BlockLanguageParser.parse(in));
+            } finally {
+                if (in != null){
+                    in.close();
+                }
             }
-            in = Preprocessor.apply(in);
-            loadFromRoot(BlockLanguageParser.parse(in));
-        } finally {
-            if (in != null){
-                in.close();
-            }
-        }
 
-        if (material != null){
-            // material implementation
-            return material;
-        }else{
-            // material definition
-            return materialDef;
+            if (material != null){
+                // material implementation
+                return material;
+            }else{
+                // material definition
+                return materialDef;
+            }
+        } finally{
+            material = null;
+            materialDef = null;
+            technique = null;
+            renderState = null;
+            presetDefines.clear();
+            shaderLanguages.clear();
+            shaderNames.clear();
+            langSize = 0;
+            key = null;
+            isUseNodes = false;
+            if (nodesLoaderDelegate != null) {
+                nodesLoaderDelegate.clear();
+            }
         }
     }
 
