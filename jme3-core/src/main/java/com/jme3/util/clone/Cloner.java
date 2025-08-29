@@ -438,8 +438,15 @@ public class Cloner {
         index.put(object, clone);
 
         if (elementType.isPrimitive()) {
-            // Then our job is a bit easier
-            System.arraycopy(object, 0, clone, 0, size);
+            try{
+                // Then our job is a bit easier
+                System.arraycopy(object, 0, clone, 0, size);
+            } catch(Exception e){
+                // WORKAROUND teavm confusion with primitive wrappers
+                for(int i=0; i < size; i++){
+                    Array.set(clone, i, Array.get(object, i));
+                }
+            }
         } else {
             // Else it's an object array, so we'll clone it and its children.
             for (int i = 0; i < size; i++) {
