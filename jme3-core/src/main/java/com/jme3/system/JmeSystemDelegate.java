@@ -154,11 +154,11 @@ public abstract class JmeSystemDelegate {
         return softTextDialogInput;
     }
 
-    public final AssetManager newAssetManager(URL configFile) {
+    public AssetManager newAssetManager(URL configFile) {
         return new DesktopAssetManager(configFile);
     }
 
-    public final AssetManager newAssetManager() {
+    public AssetManager newAssetManager() {
         return new DesktopAssetManager(null);
     }
     
