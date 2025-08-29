@@ -1,0 +1,257 @@
+
+plugins {
+    id "java"
+    id "war"
+    id "org.teavm" version "${teaVmVersion}"
+}
+
+import java.security.MessageDigest
+import java.nio.file.Files
+import java.nio.file.Paths
+ 
+configurations {
+    withResources {
+        canBeResolved = true
+    }
+}
+ 
+ 
+
+dependencies {
+    implementation "org.teavm:teavm-jso:${teaVmVersion}"
+    implementation "org.teavm:teavm-jso-apis:${teaVmVersion}"
+    implementation "org.teavm:teavm-metaprogramming-api:${teaVmVersion}"
+    implementation "org.teavm:teavm-classlib:${teaVmVersion}"
+    implementation "org.teavm:teavm-tooling:${teaVmVersion}"
+    implementation "org.teavm:teavm-core:${teaVmVersion}"
+    
+    implementation project(':nge-web')
+    implementation project(':nge-app')
+    implementation project(':nge-auth')
+    implementation project(':nge-core')
+    implementation project(':nge-gui')
+    implementation project(':jme3-core')
+    implementation project(':jme3-testdata')
+    implementation project(':jme3-effects')
+    implementation project(':jme3-terrain')
+    implementation project(':jme3-testdata')
+    implementation project(':jme3-jogg')
+
+    implementation( project(':jme3-plugins')){
+        exclude group: 'com.google.code.gson', module: 'gson'
+        exclude module: 'jme3-plugins-json-gson'
+
+    }
+    implementation project(':jme3-plugins-json')
+   
+
+    withResources project(':nge-web')
+    withResources project(':nge-app')
+    withResources project(':nge-auth')
+    withResources project(':nge-core')
+    withResources project(':nge-gui')
+    withResources project(':jme3-core')
+    withResources project(':jme3-testdata')
+    withResources project(':jme3-effects')
+    withResources project(':jme3-terrain')
+    withResources project(':jme3-testdata')
+    withResources project(':jme3-jogg')
+    withResources project(':jme3-plugins')
+ 
+}
+
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+sourceSets {
+    test {
+        resources {
+            srcDirs = ['src/test/resources', 'src/main/resources']            
+        }
+    }
+}
+
+def binaryExclusions = [
+    '**/*.class',
+    '**/*.dll',
+    '**/*.so',
+    '**/*.dylib',
+    '**/package.html',
+    "**/*.kotlin_builtins",
+    "**/build.data",
+]
+task copyAllResources {
+    description = "Copy all resources to the TeaVM output directory"
+    group = "build"
+    
+    dependsOn configurations.withResources.getAllDependencies().withType(ProjectDependency).collect { 
+        "${it.dependencyProject.path}:jar"
+    }
+
+    dependsOn 'compileTeavmJava', 'compileTeavmGroovy', 'processTeavmResources'
+
+    doFirst {
+        delete "$buildDir/generated/teavm/js"
+    }
+
+    doLast {
+        def dest = file("$buildDir/generated/teavm/js")
+        dest.mkdirs()
+
+        // helper to perform a copy with binary exclusions
+        def safeCopy = { spec ->
+            copy {
+                into dest
+                from spec
+                exclude(*binaryExclusions)
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+                includeEmptyDirs = false  // Don't include empty directories
+            }
+        }
+
+        safeCopy('src/main/resources')
+
+        configurations.withResources.getAllDependencies().withType(ProjectDependency).each { pd ->
+            def jarTask = pd.dependencyProject.tasks.findByName('jar')
+            if (jarTask != null) {
+                def jarFile = jarTask.archiveFile.get().asFile
+                if (jarFile.exists()) {
+                    safeCopy(project.zipTree(jarFile))
+                } else {
+                    safeCopy(pd.dependencyProject.sourceSets.main.output)
+                }
+            }
+        }
+    }
+}
+task generateResourcesIndex {
+    dependsOn copyAllResources
+
+    doLast {
+        def outputDir = file("$buildDir/generated/teavm/js/")
+        def outputFile = file("$buildDir/generated/teavm/js/resourcesIndex.txt")
+
+        outputFile.text = generateHashes(outputDir)
+    }
+}
+
+def generateHashes(File dir) {
+    def hashes = []
+    Files.walk(Paths.get(dir.toURI())).filter { 
+        Files.isRegularFile(it) 
+    }.forEach { file ->
+        def relativePath = dir.toPath().relativize(file).toString()
+        if(relativePath.endsWith(".class")) return;
+        if(relativePath.endsWith(".java")) return;
+        def hash = generateSHA256(file.toFile())
+        hashes << "$hash $relativePath"
+    }
+    return hashes.join('\n')
+}
+
+def generateSHA256(file) {
+    def messageDigest = MessageDigest.getInstance("SHA-256")
+    file.eachByte(4096) { bytes, len ->
+        messageDigest.update(bytes, 0, len)
+    }
+    return messageDigest.digest().collect { String.format("%02x", it) }.join()
+}
+
+
+task buildWebApp {
+    group = 'web'
+    description = 'Compile, generate JS, copy resources and produce resources index.'
+    dependsOn 'compileJava',  'generateJavaScript', 'copyAllResources', 'generateResourcesIndex'
+ 
+}
+
+task runWebApp(type: Exec) {
+    group = 'web'
+    description = "Runs a simple HTTP server serving $buildDir/generated/teavm/js (port 8000)."
+
+    dependsOn buildWebApp
+
+    workingDir = file("$buildDir/generated/teavm/js")
+
+    commandLine = ['python3', '-m', 'http.server', '8000']
+    standardInput = System.in
+}
+teavm.js {
+     addedToWebApp = true
+    mainClass = "com.jme3.web.WebApp"
+    obfuscated = false
+    debugInformation = true
+    strict= false
+    outOfProcess=false
+    // processMemory=6000
+    // fastGlobalAnalysis=false
+    optimization=org.teavm.gradle.api.OptimizationLevel.NONE
+    sourceMap=true
+    
+    def classesToPreserve=[
+        "**/J3MLoader.java",
+        "**/WAVLoader.java",
+        "**/CursorLoader.java",
+        "**/WebLocator.java",
+        "**/*Logic.java",
+        "**/*AssetCache.java",
+        "**/*Processor.java",
+        "**/StbImageLoader.java",
+        "**/GLSLLoader.java",
+        "**/CloneableAssetProcessor.java",
+        "**/BinaryLoader.java",
+                "**/ShaderNodeDefinitionLoader.java",
+        "**/HeapAllocator.java",
+        "**/SinglePassAndImageBasedLightingLogic.java",
+          "**/OGGLoader.java",
+        //  "**/OBJLoader.java",
+        //  "**/MTLLoader.java",
+
+         "**/GltfLoader.java",
+         "**/BinLoader.java",
+         "**/GlbLoader.java",
+
+        "**/HDRLoader.java",
+         "**/TGALoader.java",
+         "**/DDSLoader.java",
+
+        "**/BitmapFontLoader.java",
+        // "**/SkeletonLoader.java",
+        // "**/MaterialLoader.java",
+        // "**/SceneLoader.java",
+        // "**/MeshLoader.java",
+
+
+    ]
+    def projects = [
+        project(':jme3-core'),
+        project(':nge-web'),
+        project(':nge-web-demo'),
+        project(':jme3-jogg'),
+        project(':jme3-effects'),
+        project(':jme3-terrain'),
+        project(':jme3-plugins'),
+    ]
+
+    for(def project in projects) {
+       def mainJavaDirs = project.sourceSets.main.java.srcDirs.iterator();
+       while(true){
+            if(!mainJavaDirs.hasNext()) break;
+            def mainJavaDir=mainJavaDirs.next();
+            
+            fileTree(mainJavaDir).matching {
+                include classesToPreserve
+            }.forEach { file ->
+                def filePath = file.path.replaceAll('\\.java$', '').replaceAll('/', '.').substring(mainJavaDir.path.length() + 1)
+                System.out.println("preserve " + filePath)
+                preservedClasses.add(filePath)
+            }
+       }
+    }
+    targetFileName = "jmeapp.js"
+}

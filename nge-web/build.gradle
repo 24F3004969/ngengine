@@ -1,0 +1,44 @@
+
+plugins {
+    id 'java-library'
+    id "war"
+}
+
+ 
+ 
+ 
+ 
+
+ 
+
+dependencies {
+    implementation project(':nge-core')
+    implementation project(':jme3-core')
+    implementation project(':jme3-plugins')
+    implementation project(':jme3-plugins-json')
+    implementation project(':jme3-jogg')
+    implementation project(':jme3-terrain')
+    implementation project(':jme3-effects')
+    implementation "org.teavm:teavm-jso:${teaVmVersion}"
+    implementation "org.teavm:teavm-jso-apis:${teaVmVersion}"
+    implementation "org.teavm:teavm-metaprogramming-api:${teaVmVersion}"
+    implementation "org.teavm:teavm-classlib:${teaVmVersion}"
+    implementation "org.teavm:teavm-tooling:${teaVmVersion}"
+    implementation "org.teavm:teavm-core:${teaVmVersion}"
+}
+
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+sourceSets {
+    test {
+        resources {
+            srcDirs = ['src/test/resources', 'src/main/resources']            
+        }
+    }
+}
