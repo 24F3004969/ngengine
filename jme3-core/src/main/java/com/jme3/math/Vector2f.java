@@ -33,8 +33,6 @@ package com.jme3.math;
 
 import com.jme3.export.*;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.logging.Logger;
 
 /**
@@ -826,39 +824,6 @@ public final class Vector2f implements Savable, Cloneable, java.io.Serializable 
     @Override
     public String toString() {
         return "(" + x + ", " + y + ")";
-    }
-
-    /**
-     * Sets the vector from an {@code ObjectInput} object.
-     *
-     * <p>Used with serialization. Shouldn't be invoked directly by application
-     * code.
-     *
-     * @param in the object to read from (not null)
-     * @throws IOException if the ObjectInput cannot read a float
-     * @throws ClassNotFoundException never
-     * @see java.io.Externalizable
-     */
-    public void readExternal(ObjectInput in) throws IOException,
-            ClassNotFoundException {
-        x = in.readFloat();
-        y = in.readFloat();
-    }
-
-    /**
-     * Writes the vector to an {@code ObjectOutput} object. The current instance
-     * is unaffected.
-     *
-     * <p>Used with serialization. Shouldn't be invoked directly by application
-     * code.
-     *
-     * @param out the object to write to (not null)
-     * @throws IOException if the ObjectOuput cannot write a float
-     * @see java.io.Externalizable
-     */
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeFloat(x);
-        out.writeFloat(y);
     }
 
     /**

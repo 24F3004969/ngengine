@@ -1463,39 +1463,6 @@ public final class Quaternion implements Savable, Cloneable, java.io.Serializabl
 
     }
 
-    /**
-     * Sets the quaternion from an {@code ObjectInput} object.
-     *
-     * <p>Used with serialization. Should not be invoked directly by application
-     * code.
-     *
-     * @param in the object to read from (not null)
-     * @throws IOException if the ObjectInput cannot read a float
-     * @see java.io.Externalizable
-     */
-    public void readExternal(ObjectInput in) throws IOException {
-        x = in.readFloat();
-        y = in.readFloat();
-        z = in.readFloat();
-        w = in.readFloat();
-    }
-
-    /**
-     * Writes the quaternion to an {@code ObjectOutput} object.
-     *
-     * <p>Used with serialization. Should not be invoked directly by application
-     * code.
-     *
-     * @param out the object to write to (not null)
-     * @throws IOException if the ObjectOutput cannot write a float
-     * @see java.io.Externalizable
-     */
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeFloat(x);
-        out.writeFloat(y);
-        out.writeFloat(z);
-        out.writeFloat(w);
-    }
 
     /**
      * Convenience method to set the quaternion based on a "look" (Z-axis)
