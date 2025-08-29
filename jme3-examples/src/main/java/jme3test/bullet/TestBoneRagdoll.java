@@ -176,12 +176,12 @@ public class TestBoneRagdoll
         composer = model.getControl(AnimComposer.class);
         composer.setCurrentAction("Dance");
 
-        // Action standUpFront = composer.action("StandUpFront");
-        // composer.actionSequence("FrontOnce",
-        //         standUpFront, Tweens.callMethod(this, "onStandDone"));
-        // Action standUpBack = composer.action("StandUpBack");
-        // composer.actionSequence("BackOnce",
-        //         standUpBack, Tweens.callMethod(this, "onStandDone"));
+        Action standUpFront = composer.action("StandUpFront");
+        composer.actionSequence("FrontOnce",
+                standUpFront, Tweens.callMethod(this, "onStandDone"));
+        Action standUpBack = composer.action("StandUpBack");
+        composer.actionSequence("BackOnce",
+                standUpBack, Tweens.callMethod(this, "onStandDone"));
 
         ragdoll = new DynamicAnimControl();
         TestRagdollCharacter.setupSinbad(ragdoll);

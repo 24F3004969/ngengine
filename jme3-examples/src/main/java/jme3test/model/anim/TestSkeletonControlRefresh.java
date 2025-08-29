@@ -100,8 +100,8 @@ public class TestSkeletonControlRefresh extends SimpleApplication implements Act
                         = model.getControl(AnimComposer.class);
                 for (AnimClip animClip : animComposer.getAnimClips()) {
                     Action action = animComposer.action(animClip.getName());
-                    // animComposer.addAction(animClip.getName(), new BaseAction(
-                    //         Tweens.sequence(action, Tweens.callMethod(animComposer, "removeCurrentAction", AnimComposer.DEFAULT_LAYER))));
+                    animComposer.addAction(animClip.getName(), new BaseAction(
+                            Tweens.sequence(action, Tweens.callMethod(animComposer, "removeCurrentAction", AnimComposer.DEFAULT_LAYER))));
                 }
                 animComposer.setCurrentAction(new ArrayList<>(animComposer.getAnimClips()).get((i + j) % 4).getName());
 

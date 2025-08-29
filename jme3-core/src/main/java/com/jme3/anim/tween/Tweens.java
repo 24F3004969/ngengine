@@ -140,6 +140,46 @@ public class Tweens {
     }
 
     /**
+     * Creates a Tween that will call the specified method and optional arguments
+     * whenever supplied a time value greater than or equal to 0.  This creates
+     * an "instant" tween of length 0.
+     *
+     * @param target object on which the method is to be invoked
+     * @param method name of the method to be invoked
+     * @param args arguments to be passed to the method
+     * @return a new instance
+     */
+    public static Tween callMethod(Object target, String method, Object... args) {
+        return new CallMethod(target, method, args);
+    }
+
+    /**
+     * Creates a Tween that will call the specified method and optional arguments,
+     * including the time value scaled between 0 and 1.  The method must take
+     * a float or double value as its first or last argument, in addition to whatever
+     * optional arguments are specified.
+     *
+     * <p>For example:</p>
+     * <pre>Tweens.callTweenMethod(1, myObject, "foo", "bar")</pre>
+     * <p>Would work for any of the following method signatures:</p>
+     * <pre>
+     *    void foo(float t, String arg)
+     *    void foo(double t, String arg)
+     *    void foo(String arg, float t)
+     *    void foo(String arg, double t)
+     * </pre>
+     *
+     * @param length the desired duration (in seconds)
+     * @param target object on which the method is to be invoked
+     * @param method name of the method to be invoked
+     * @param args additional arguments to be passed to the method
+     * @return a new instance
+     */
+    public static Tween callTweenMethod(double length, Object target, String method, Object... args) {
+        return new CallTweenMethod(length, target, method, args);
+    }
+
+    /**
      * Creates a tween that loops the specified delegate tween or tweens
      * to the desired count.  If more than one tween is specified then they
      * are wrapped in a sequence using the sequence() method.
@@ -464,7 +504,202 @@ public class Tweens {
         }
     }
 
+    private static class CallMethod extends AbstractTween {
 
+        private Object target;
+        private Method method;
+        private Object[] args;
+
+        public CallMethod(Object target, String methodName, Object... args) {
+            super(0);
+            if (target == null) {
+                throw new IllegalArgumentException("Target cannot be null.");
+            }
+            this.target = target;
+            this.args = args;
+
+            // Lookup the method
+            if (args == null) {
+                this.method = findMethod(target.getClass(), methodName);
+            } else {
+                this.method = findMethod(target.getClass(), methodName, args);
+            }
+            if (this.method == null) {
+                throw new IllegalArgumentException("Method not found for:" + methodName + " on type:" + target.getClass());
+            }
+            this.method.setAccessible(true);
+        }
+
+        @SuppressWarnings("unchecked")
+        private static Method findMethod(Class type, String name, Object... args) {
+            for (Method m : type.getDeclaredMethods()) {
+                if (!Objects.equals(m.getName(), name)) {
+                    continue;
+                }
+                Class[] paramTypes = m.getParameterTypes();
+                if (paramTypes.length != args.length) {
+                    continue;
+                }
+                int matches = 0;
+                for (int i = 0; i < args.length; i++) {
+                    if (paramTypes[i].isInstance(args[i])
+                            || Primitives.wrap(paramTypes[i]).isInstance(args[i])) {
+                        matches++;
+                    }
+                }
+                if (matches == args.length) {
+                    return m;
+                }
+            }
+            if (type.getSuperclass() != null) {
+                return findMethod(type.getSuperclass(), name, args);
+            }
+            return null;
+        }
+
+        @Override
+        protected void doInterpolate(double t) {
+            try {
+                method.invoke(target, args);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException("Error running method:" + method + " for object:" + target, e);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "[method=" + method + ", parms=" + Arrays.asList(args) + "]";
+        }
+    }
+
+    private static class CallTweenMethod extends AbstractTween {
+
+        private Object target;
+        private Method method;
+        private Object[] args;
+        private int tIndex = -1;
+        private boolean isFloat = false;
+
+        public CallTweenMethod(double length, Object target, String methodName, Object... args) {
+            super(length);
+            if (target == null) {
+                throw new IllegalArgumentException("Target cannot be null.");
+            }
+            this.target = target;
+
+            // Lookup the method
+            this.method = findMethod(target.getClass(), methodName, args);
+            if (this.method == null) {
+                throw new IllegalArgumentException("Method not found for:" + methodName + " on type:" + target.getClass());
+            }
+            this.method.setAccessible(true);
+
+            // So now set up the real args list.
+            this.args = new Object[args.length + 1];
+            if (tIndex == 0) {
+                for (int i = 0; i < args.length; i++) {
+                    this.args[i + 1] = args[i];
+                }
+            } else {
+                for (int i = 0; i < args.length; i++) {
+                    this.args[i] = args[i];
+                }
+            }
+        }
+
+        private static boolean isFloatType(Class type) {
+            return type == Float.TYPE || type == Float.class;
+        }
+
+        private static boolean isDoubleType(Class type) {
+            return type == Double.TYPE || type == Double.class;
+        }
+
+        private Method findMethod(Class type, String name, Object... args) {
+            for (Method m : type.getDeclaredMethods()) {
+                if (!Objects.equals(m.getName(), name)) {
+                    continue;
+                }
+                Class[] paramTypes = m.getParameterTypes();
+                if (paramTypes.length != args.length + 1) {
+                    if (log.isLoggable(Level.FINE)) {
+                        log.log(Level.FINE, "Param lengths of [" + m + "] differ.  method arg count:" + paramTypes.length + "  looking for:" + (args.length + 1));
+                    }
+                    continue;
+                }
+
+                // We accept the 't' parameter as either first or last,
+                // so we'll see which one matches.
+                if (isFloatType(paramTypes[0]) || isDoubleType(paramTypes[0])) {
+                    // Try it as the first parameter
+                    int matches = 0;
+
+                    for (int i = 1; i < paramTypes.length; i++) {
+                        if (paramTypes[i].isInstance(args[i - 1])) {
+                            matches++;
+                        }
+                    }
+                    if (matches == args.length) {
+                        // Then this is our method and this is how we are configured
+                        tIndex = 0;
+                        isFloat = isFloatType(paramTypes[0]);
+                    } else {
+                        if (log.isLoggable(Level.FINE)) {
+                            log.log(Level.FINE, m + " Leading float check failed because of type mismatches, for:" + m);
+                        }
+                    }
+                }
+                if (tIndex >= 0) {
+                    return m;
+                }
+
+                // Else try it at the end
+                int last = paramTypes.length - 1;
+                if (isFloatType(paramTypes[last]) || isDoubleType(paramTypes[last])) {
+                    int matches = 0;
+
+                    for (int i = 0; i < last; i++) {
+                        if (paramTypes[i].isInstance(args[i])) {
+                            matches++;
+                        }
+                    }
+                    if (matches == args.length) {
+                        // Then this is our method and this is how we are configured
+                        tIndex = last;
+                        isFloat = isFloatType(paramTypes[last]);
+                        return m;
+                    } else {
+                        if (log.isLoggable(Level.FINE)) {
+                            log.log(Level.FINE, "Trailing float check failed because of type mismatches, for:" + m);
+                        }
+                    }
+                }
+            }
+            if (type.getSuperclass() != null) {
+                return findMethod(type.getSuperclass(), name, args);
+            }
+            return null;
+        }
+
+        @Override
+        protected void doInterpolate(double t) {
+            try {
+                if (isFloat) {
+                    args[tIndex] = (float) t;
+                } else {
+                    args[tIndex] = t;
+                }
+                method.invoke(target, args);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException("Error running method:" + method + " for object:" + target, e);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "[method=" + method + ", parms=" + Arrays.asList(args) + "]";
+        }
+    }
 
     private static class Loop implements Tween, ContainsTweens {
 
