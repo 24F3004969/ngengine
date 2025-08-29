@@ -43,7 +43,9 @@ import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.light.LightProbe;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.Caps;
 import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.Renderer;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
@@ -287,7 +289,15 @@ public class EnvironmentProbeControl extends LightProbe implements Control {
     }
 
     void rebakeNow(RenderManager renderManager) {
-        IBLHybridEnvBakerLight baker = new IBLGLEnvBakerLight(renderManager, assetManager, Format.RGB16F,
+        Renderer r = renderManager.getRenderer();
+        Format fbFormat= Format.RGB8;
+        if(r.getCaps().contains(Caps.FloatColorBufferRGB)){
+            fbFormat = Format.RGB16F;
+        } else if(r.getCaps().contains(Caps.FloatColorBufferRGBA)){
+            fbFormat = Format.RGBA16F;
+        }  
+        
+        IBLHybridEnvBakerLight baker = new IBLGLEnvBakerLight(renderManager, assetManager, fbFormat,
                 Format.Depth,
                         envMapSize, envMapSize);
                     

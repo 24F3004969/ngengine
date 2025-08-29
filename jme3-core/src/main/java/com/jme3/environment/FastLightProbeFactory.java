@@ -37,7 +37,9 @@ import com.jme3.environment.baker.IBLHybridEnvBakerLight;
 import com.jme3.environment.util.EnvMapUtils;
 import com.jme3.light.LightProbe;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.Caps;
 import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.Renderer;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.texture.Image.Format;
@@ -75,7 +77,15 @@ public class FastLightProbeFactory {
      * @return The baked LightProbe
      */
     public static LightProbe makeProbe(RenderManager rm, AssetManager am, int size, Vector3f pos, float frustumNear, float frustumFar, Spatial scene) {
-        IBLHybridEnvBakerLight baker = new IBLGLEnvBakerLight(rm, am, Format.RGB16F, Format.Depth, size,
+        Renderer r = rm.getRenderer();
+        Format fbFormat= Format.RGB8;
+        if(r.getCaps().contains(Caps.FloatColorBufferRGB)){
+            fbFormat = Format.RGB16F;
+        } else if(r.getCaps().contains(Caps.FloatColorBufferRGBA)){
+            fbFormat = Format.RGBA16F;
+        }  
+
+        IBLHybridEnvBakerLight baker = new IBLGLEnvBakerLight(rm, am, fbFormat, Format.Depth, size,
                         size);
 
         baker.setTexturePulling(true);
