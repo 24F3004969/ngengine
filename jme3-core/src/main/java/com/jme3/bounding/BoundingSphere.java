@@ -672,7 +672,7 @@ public class BoundingSphere extends BoundingVolume {
         }
 
         BoundingSphere otherBoundingSphere = (BoundingSphere) other;
-        if (Float.compare(radius, otherBoundingSphere.getRadius()) != 0) {
+        if (FastMath.compare(radius, otherBoundingSphere.getRadius()) != 0) {
             return false;
         } else {
             return super.equals(otherBoundingSphere);
@@ -705,7 +705,7 @@ public class BoundingSphere extends BoundingVolume {
     public boolean isSimilar(BoundingSphere sphere, float epsilon) {
         if (sphere == null) {
             return false;
-        } else if (Float.compare(Math.abs(sphere.getRadius() - radius), epsilon) > 0) {
+        } else if (FastMath.compare(Math.abs(sphere.getRadius() - radius), epsilon) > 0) {
             return false;
         } else if (!center.isSimilar(sphere.getCenter(), epsilon)) {
             return false;

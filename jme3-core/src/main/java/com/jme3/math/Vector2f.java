@@ -784,10 +784,10 @@ public final class Vector2f implements Savable, Cloneable, java.io.Serializable 
         }
 
         Vector2f comp = (Vector2f) o;
-        if (Float.compare(x, comp.x) != 0) {
+        if (FastMath.compare(x, comp.x) != 0) {
             return false;
         }
-        if (Float.compare(y, comp.y) != 0) {
+        if (FastMath.compare(y, comp.y) != 0) {
             return false;
         }
         return true;
@@ -806,10 +806,10 @@ public final class Vector2f implements Savable, Cloneable, java.io.Serializable 
         if (other == null) {
             return false;
         }
-        if (Float.compare(Math.abs(other.x - x), epsilon) > 0) {
+        if (FastMath.compare(Math.abs(other.x - x), epsilon) > 0) {
             return false;
         }
-        if (Float.compare(Math.abs(other.y - y), epsilon) > 0) {
+        if (FastMath.compare(Math.abs(other.y - y), epsilon) > 0) {
             return false;
         }
         return true;

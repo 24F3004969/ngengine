@@ -34,6 +34,7 @@ package org.ngengine.network.protocol;
 import static org.junit.Assert.*;
 
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.FastMath;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Matrix4f;
 import com.jme3.math.Vector2f;
@@ -136,7 +137,7 @@ public class TestDynamicSerializerProtocol {
             TestMessage that = (TestMessage) obj;
             return (
                 intValue == that.intValue &&
-                Float.compare(that.floatValue, floatValue) == 0 &&
+                FastMath.compare(that.floatValue, floatValue) == 0 &&
                 boolValue == that.boolValue &&
                 Objects.equals(stringValue, that.stringValue) &&
                 Objects.equals(listValue, that.listValue) &&

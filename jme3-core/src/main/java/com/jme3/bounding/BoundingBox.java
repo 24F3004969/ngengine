@@ -608,11 +608,11 @@ public class BoundingBox extends BoundingVolume {
         }
 
         BoundingBox otherBoundingBox = (BoundingBox) other;
-        if (Float.compare(xExtent, otherBoundingBox.xExtent) != 0) {
+        if (FastMath.compare(xExtent, otherBoundingBox.xExtent) != 0) {
             return false;
-        } else if (Float.compare(yExtent, otherBoundingBox.yExtent) != 0) {
+        } else if (FastMath.compare(yExtent, otherBoundingBox.yExtent) != 0) {
             return false;
-        } else if (Float.compare(zExtent, otherBoundingBox.zExtent) != 0) {
+        } else if (FastMath.compare(zExtent, otherBoundingBox.zExtent) != 0) {
             return false;
         } else {
             return super.equals(otherBoundingBox);
@@ -645,11 +645,11 @@ public class BoundingBox extends BoundingVolume {
     public boolean isSimilar(BoundingBox aabb, float epsilon) {
         if (aabb == null) {
             return false;
-        } else if (Float.compare(Math.abs(aabb.xExtent - xExtent), epsilon) > 0) {
+        } else if (FastMath.compare(Math.abs(aabb.xExtent - xExtent), epsilon) > 0) {
             return false;
-        } else if (Float.compare(Math.abs(aabb.yExtent - yExtent), epsilon) > 0) {
+        } else if (FastMath.compare(Math.abs(aabb.yExtent - yExtent), epsilon) > 0) {
             return false;
-        } else if (Float.compare(Math.abs(aabb.zExtent - zExtent), epsilon) > 0) {
+        } else if (FastMath.compare(Math.abs(aabb.zExtent - zExtent), epsilon) > 0) {
             return false;
         } else if (!center.isSimilar(aabb.getCenter(), epsilon)) {
             return false;
