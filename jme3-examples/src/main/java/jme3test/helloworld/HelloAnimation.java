@@ -88,8 +88,8 @@ public class HelloAnimation extends SimpleApplication {
     /* Compose an animation action named "advance"
        that walks for one cycle, then halts, then invokes onAdvanceDone(). */
     Action walk = control.action("Walk");
-    Tween doneTween = Tweens.callMethod(this, "onAdvanceDone");
-    advance = control.actionSequence("advance", walk, halt, doneTween);
+    // Tween doneTween = Tweens.callMethod(this, "onAdvanceDone");
+    // advance = control.actionSequence("advance", walk, halt, doneTween);
   }
 
   /**

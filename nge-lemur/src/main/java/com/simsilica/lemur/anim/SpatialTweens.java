@@ -108,31 +108,6 @@ public class SpatialTweens {
         return new ScaleSpatial(target, from, to, length);
     }
  
-    /**
-     *  Creates a Tween that will detach the specified spatial when executed
-     *  with any value of t greater than or equal to 0.
-     *  (Note: internally this just calls Tweens.callMethod().)
-     */   
-    public static Tween detach( Spatial target ) {
-        return Tweens.callMethod(target, "removeFromParent");
-    }
-    
-    /**
-     *  Creates a Tween that will attach the specified spatial to the specified
-     *  parent when executed with any value of t greater than or equal to 0.
-     *  (Note: internally this just calls Tweens.callMethod().)
-     */   
-    public static Tween attach( Spatial target, Spatial parent ) {
-        return Tweens.callMethod(parent, "attachChild", target);
-    }
-    
-    /**
-     *  Sets the focus to the specified spatial.
-     */   
-    public static Tween focusOn( Spatial target ) {        
-        return Tweens.callMethod(GuiGlobals.getInstance().getFocusManagerState(), "setFocus", target);
-    }
-    
     private static class MoveSpatial extends AbstractTween {
 
         private final Spatial target;

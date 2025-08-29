@@ -82,7 +82,7 @@ public class TestOgreAnim extends SimpleApplication implements ActionListener {
         for (AnimClip animClip : animComposer.getAnimClips()) {
             Action action = animComposer.action(animClip.getName());
             if(!"stand".equals(animClip.getName())) {
-                action = new BaseAction(Tweens.sequence(action, Tweens.callMethod(this, "backToStand", animComposer)));
+                // action = new BaseAction(Tweens.sequence(action, Tweens.callMethod(this, "backToStand", animComposer)));
             }
             animComposer.addAction(animClip.getName(), action);
         }

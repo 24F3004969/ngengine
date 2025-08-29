@@ -315,8 +315,8 @@ public class TestWalkingChar extends SimpleApplication
          * that performs the "Dodge" action one time only.
          */
         Action dodgeAction = composer.action("Dodge");
-        Tween doneTween = Tweens.callMethod(this, "onShootDone");
-        composer.actionSequence("shootOnce", dodgeAction, doneTween);
+        // Tween doneTween = Tweens.callMethod(this, "onShootDone");
+        // composer.actionSequence("shootOnce", dodgeAction, doneTween);
         /*
          * Define a shooting animation layer
          * that animates only the joints of the right arm.

@@ -94,9 +94,9 @@ public class TestAttachmentsNode extends SimpleApplication
          * animation for one cycle before returning to idle.
          */
         Action punches = control.action("Punches");
-        Tween doneTween
-                = Tweens.callMethod(control, "setCurrentAction", "Idle");
-        punchesOnce = control.actionSequence("PunchesOnce", punches, doneTween);
+        // Tween doneTween
+        //         = Tweens.callMethod(control, "setCurrentAction", "Idle");
+        // punchesOnce = control.actionSequence("PunchesOnce", punches, doneTween);
 
         model.center();
         model.setLocalScale(5f);

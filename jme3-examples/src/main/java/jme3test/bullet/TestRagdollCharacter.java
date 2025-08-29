@@ -168,9 +168,9 @@ public class TestRagdollCharacter
         composer = model.getControl(AnimComposer.class);
         composer.setCurrentAction("IdleTop");
 
-        Action slice = composer.action("SliceHorizontal");
-        composer.actionSequence("SliceOnce",
-                slice, Tweens.callMethod(this, "onSliceDone"));
+        // Action slice = composer.action("SliceHorizontal");
+        // composer.actionSequence("SliceOnce",
+        //         slice, Tweens.callMethod(this, "onSliceDone"));
 
         DynamicAnimControl ragdoll = new DynamicAnimControl();
         setupSinbad(ragdoll);
