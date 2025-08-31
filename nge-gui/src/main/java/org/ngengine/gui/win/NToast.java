@@ -123,6 +123,10 @@ public class NToast extends Container {
         }
     }
 
+    public boolean isClosed(){
+        return getParent() == null;
+    }
+
     protected void initialize(NWindowManagerComponent appState) {
         this.appState = appState;
     }

@@ -386,9 +386,12 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
             while (it.hasNext()) {
                 NToast toast = it.next();
                 boolean expired = toast.getCreationTime().plus(toast.getDuration()).isBefore(now);
+                boolean closed = toast.isClosed();
                 if (expired) {
-                    it.remove();
                     toast.close();
+                }
+                if(closed){
+                    it.remove();
                 }
             }
         }
