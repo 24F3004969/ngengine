@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import java.util.logging.Logger;
 import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
@@ -87,6 +88,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     private List<String> defaultLanguages;
     private final NostrPool pool;
     private ImmersiveAdViewer viewer;
+    private Function<AdBidEvent, Boolean> filter = (bid)->true;
 
     public ImmersiveAdComponent(List<String> relays, NostrPublicKey appKey, @Nullable NostrPrivateKey userAdKey) {
         this.appKey = appKey;
@@ -95,6 +97,10 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         for (String relay : relays) {
             pool.connectRelay(new NostrRelay(relay));
         }
+    }
+
+    public void setFilter(Function<AdBidEvent, Boolean> filter) {
+        this.filter = filter;
     }
 
     public void setViewer(ImmersiveAdViewer viewer) {
@@ -166,13 +172,19 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
                 }
                 AdPriceSlot priceSlot = space.getPriceSlot();
                 if (priceSlot == null) priceSlot = defaultPriceSlot;
-                return new Adspace(
+                Adspace aspace = new Adspace(
                     appKey,
                     userAdKey.getPublicKey(),
                     size.getAspectRatio(),
                     priceSlot,
                     space.getSupportedMimeTypes()
                 );
+                this.displayClient.registerAdspace(aspace);
+                NGEPlatform.get().registerFinalizer(space, ()->{
+                    this.displayClient.unregisterAdspace(aspace);
+                });
+                return aspace;
+
             }
         );
 
@@ -224,25 +236,23 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
                     space.markLoading();
 
                     Adspace aspace = getAdSpace(space);
-                    this.displayClient.registerAdspace(aspace);
+
+                    Function<AdBidEvent, Boolean> filter = space.getFilter() != null ? space.getFilter() : this.filter;
 
                     this.displayClient.loadNextAd(
                             aspace,
                             space.getSize().getWidth(),
                             space.getSize().getHeight(),
                             bid -> {
-                                NostrPublicKey bidAuthor = bid.getPubkey();
-                                if (isAdvertiserListBlack && advertisersList != null && advertisersList.contains(bidAuthor)) {
-                                    return NGEPlatform
-                                        .get()
-                                        .wrapPromise((res, rej) -> {
-                                            res.accept(false);
-                                        });
-                                }
+                                NostrPublicKey bidAuthor = bid.getPubkey();        
                                 return NGEPlatform
                                     .get()
                                     .wrapPromise((res, rej) -> {
-                                        res.accept(true);
+                                      
+                                        res.accept(
+                                            !(isAdvertiserListBlack && advertisersList != null && advertisersList.contains(bidAuthor))
+                                            && (filter == null || filter.apply(bid))                                            
+                                        );
                                     });
                             },
                             (bidEvent, offer) -> {

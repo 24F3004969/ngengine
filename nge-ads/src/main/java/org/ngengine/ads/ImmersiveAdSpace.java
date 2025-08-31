@@ -70,6 +70,7 @@ public class ImmersiveAdSpace {
     protected final Supplier<BoundingVolume> boundSupplier;
     protected final Function<String, String> getProperty;
     protected final Consumer<Texture> applyTexture;
+    protected final Function<AdBidEvent, Boolean> filter;
 
     protected Duration loadingTimeout = Duration.ofSeconds(30);
 
@@ -82,11 +83,18 @@ public class ImmersiveAdSpace {
     public ImmersiveAdSpace(
         Supplier<BoundingVolume> boundSupplier,
         Consumer<Texture> applyTexture,
-        Function<String, String> getProperty
+        Function<String, String> getProperty,
+        Function<AdBidEvent, Boolean>  filter
     ) {
         this.boundSupplier = boundSupplier;
         this.applyTexture = applyTexture;
         this.getProperty = getProperty;
+        this.filter = filter;
+    }
+
+
+    public Function<AdBidEvent, Boolean> getFilter() {
+        return filter;
     }
 
     public BoundingVolume getBounds() {

@@ -54,8 +54,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.ngengine.nostrads.protocol.AdBidEvent;
 import org.ngengine.nostrads.protocol.types.AdSize;
 import org.ngengine.nostrads.protocol.types.AdTaxonomy;
 
@@ -76,6 +79,7 @@ public class ImmersiveAdControl extends AbstractControl implements ImmersiveAdGr
     private boolean replaceActiveMaterial = true;
     private boolean replaceDeactiveMaterial = true;
     private AssetManager assetManager;
+    private Function<AdBidEvent, Boolean> filter = null;
 
     private transient List<ImmersiveAdSpace> adSpaces = new ArrayList<>();
 
@@ -92,6 +96,10 @@ public class ImmersiveAdControl extends AbstractControl implements ImmersiveAdGr
         this.context = context;
     }
 
+    public void setFilter(Function<AdBidEvent, Boolean>  filter) {
+        this.filter = filter;
+    }
+    
     public ImmersiveAdControl(@Nonnull AssetManager assetManager) {
         this.assetManager = assetManager;
     }
@@ -245,7 +253,8 @@ public class ImmersiveAdControl extends AbstractControl implements ImmersiveAdGr
                             tx.setName("AdTexture_" + sp.getName() + "_" + size.toString());
                             applyTexture(sp, tx);
                         },
-                        key -> getSpatialProperty(sp, key)
+                        key -> getSpatialProperty(sp, key),
+                        filter
                     );
 
                     spaces.add(adSpace);
