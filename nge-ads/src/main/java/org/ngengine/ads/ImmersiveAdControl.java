@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.ads;
 
@@ -58,7 +58,6 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
 import org.ngengine.nostrads.protocol.AdBidEvent;
 import org.ngengine.nostrads.protocol.types.AdSize;
 import org.ngengine.nostrads.protocol.types.AdTaxonomy;
@@ -92,15 +91,16 @@ public class ImmersiveAdControl extends AbstractControl implements ImmersiveAdGr
         @Nullable String context
     ) {
         if (languages != null) this.languages = String.join(",", languages);
-        if (categoryIds != null) this.categoryIds = String.join(",", categoryIds.stream().map(t -> t.id()).collect(Collectors.toList()));
+        if (categoryIds != null) this.categoryIds =
+            String.join(",", categoryIds.stream().map(t -> t.id()).collect(Collectors.toList()));
         this.priceSlot = priceSlot;
         this.context = context;
     }
 
-    public void setFilter(Function<AdBidEvent, Boolean>  filter) {
+    public void setFilter(Function<AdBidEvent, Boolean> filter) {
         this.filter = filter;
     }
-    
+
     public ImmersiveAdControl(@Nonnull AssetManager assetManager) {
         this.assetManager = assetManager;
     }

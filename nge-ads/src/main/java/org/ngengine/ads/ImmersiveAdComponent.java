@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.ads;
 
@@ -88,7 +88,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     private List<String> defaultLanguages;
     private final NostrPool pool;
     private ImmersiveAdViewer viewer;
-    private Function<AdBidEvent, Boolean> filter = (bid)->true;
+    private Function<AdBidEvent, Boolean> filter = bid -> true;
 
     public ImmersiveAdComponent(List<String> relays, NostrPublicKey appKey, @Nullable NostrPrivateKey userAdKey) {
         this.appKey = appKey;
@@ -180,11 +180,15 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
                     space.getSupportedMimeTypes()
                 );
                 this.displayClient.registerAdspace(aspace);
-                NGEPlatform.get().registerFinalizer(space, ()->{
-                    this.displayClient.unregisterAdspace(aspace);
-                });
+                NGEPlatform
+                    .get()
+                    .registerFinalizer(
+                        space,
+                        () -> {
+                            this.displayClient.unregisterAdspace(aspace);
+                        }
+                    );
                 return aspace;
-
             }
         );
 
@@ -244,14 +248,17 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
                             space.getSize().getWidth(),
                             space.getSize().getHeight(),
                             bid -> {
-                                NostrPublicKey bidAuthor = bid.getPubkey();        
+                                NostrPublicKey bidAuthor = bid.getPubkey();
                                 return NGEPlatform
                                     .get()
                                     .wrapPromise((res, rej) -> {
-                                      
                                         res.accept(
-                                            !(isAdvertiserListBlack && advertisersList != null && advertisersList.contains(bidAuthor))
-                                            && (filter == null || filter.apply(bid))                                            
+                                            !(
+                                                isAdvertiserListBlack &&
+                                                advertisersList != null &&
+                                                advertisersList.contains(bidAuthor)
+                                            ) &&
+                                            (filter == null || filter.apply(bid))
                                         );
                                     });
                             },

@@ -27,20 +27,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.network.protocol.serializers;
 
+import com.jme3.util.BufferInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-
 import org.ngengine.network.protocol.GrowableByteBuffer;
 import org.ngengine.network.protocol.GrowableByteBufferOutputStream;
-
-import com.jme3.util.BufferInputStream;
 
 /**
  * Serializes uses Java built-in method. ! potentially dangerous, use with caution !

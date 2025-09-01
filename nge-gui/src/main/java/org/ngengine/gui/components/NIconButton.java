@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.gui.components;
 
@@ -67,7 +67,7 @@ public class NIconButton extends Button {
     @Override
     public void setColor(ColorRGBA color) {
         super.setColor(color);
-        if (getIcon() instanceof IconComponent ) {
+        if (getIcon() instanceof IconComponent) {
             IconComponent icon = (IconComponent) getIcon();
             icon.setColor(color);
         }

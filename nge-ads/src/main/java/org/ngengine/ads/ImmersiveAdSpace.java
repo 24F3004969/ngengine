@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.ads;
 
@@ -84,14 +84,13 @@ public class ImmersiveAdSpace {
         Supplier<BoundingVolume> boundSupplier,
         Consumer<Texture> applyTexture,
         Function<String, String> getProperty,
-        Function<AdBidEvent, Boolean>  filter
+        Function<AdBidEvent, Boolean> filter
     ) {
         this.boundSupplier = boundSupplier;
         this.applyTexture = applyTexture;
         this.getProperty = getProperty;
         this.filter = filter;
     }
-
 
     public Function<AdBidEvent, Boolean> getFilter() {
         return filter;

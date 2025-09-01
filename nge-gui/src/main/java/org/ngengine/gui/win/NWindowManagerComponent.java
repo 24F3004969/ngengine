@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.gui.win;
 
@@ -390,7 +390,7 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
                 if (expired) {
                     toast.close();
                 }
-                if(closed){
+                if (closed) {
                     it.remove();
                 }
             }

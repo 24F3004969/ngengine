@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine.network;
 
@@ -47,7 +47,6 @@ import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
 import org.ngengine.nostr4j.NostrFilter;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
@@ -291,7 +290,8 @@ public class LobbyManager implements Closeable {
                         }
 
                         return true;
-                    }).collect(Collectors.toList());
+                    })
+                    .collect(Collectors.toList());
                 this.dispatcher.run(() -> {
                         callback.accept(filteredLobbies, null);
                     });

@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
- * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+ * the BSD 3-Clause License. 
  */
 package org.ngengine;
 
@@ -41,7 +41,6 @@ import com.jme3.util.res.Resources;
 import com.simsilica.lemur.GuiGlobals;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.ngengine.ads.ImmersiveAdComponent;
@@ -146,12 +145,10 @@ public class NGEApplication {
         }
 
         String sappId = appId != null ? appId.asHex() : defaultAppId;
-        baseSettings.put( "appId", sappId);
+        baseSettings.put("appId", sappId);
 
         this.settings = baseSettings;
-        logger.info("Starting app "+ sappId+" with settings "+ baseSettings);
-        
-
+        logger.info("Starting app " + sappId + " with settings " + baseSettings);
 
         app =
             new Jme3Application(
@@ -237,12 +234,11 @@ public class NGEApplication {
     }
 
     public interface NGEAppRunner extends Runnable {
+        NGEApplication app();
 
-        public NGEApplication app();
+        NGEApplication start();
 
-        public NGEApplication start();
-        
-        public default void run(){
+        default void run() {
             start();
         }
     }
@@ -265,7 +261,7 @@ public class NGEApplication {
 
     public static NGEAppRunner createApp(NostrPublicKey appId, Consumer<NGEApplication> onReady) {
         NGEApplication app = new NGEApplication(appId, onReady);
-          return new NGEAppRunner() {
+        return new NGEAppRunner() {
             @Override
             public NGEApplication app() {
                 return app;
