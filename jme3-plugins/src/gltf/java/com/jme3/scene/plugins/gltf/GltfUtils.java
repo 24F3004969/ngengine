@@ -1010,15 +1010,12 @@ public class GltfUtils {
         int start = byteOffset;
         int bytes = stride * count;
 
-        // Full-range duplicate so absolute offsets are correct
-        ByteBuffer dup = source.duplicate();
-        dup.clear(); // pos=0, limit=capacity
 
         boolean tightlyPacked = (stride == elemSize);
 
         if (tightlyPacked) {
             // Narrow the view to the accessor range and set LE order
-            ByteBuffer view = dup.duplicate();
+            ByteBuffer view = source.duplicate();
             view.position(start).limit(start + bytes);
             view = view.slice().order(ByteOrder.LITTLE_ENDIAN);
 
@@ -1078,25 +1075,25 @@ public class GltfUtils {
             case Byte:
             case UnsignedByte: {
                 ByteBuffer out = BufferUtils.createByteBuffer(elements);
-                populateBuffer(out, dup, count, byteOffset, byteStride, numComponents, originalFormat);
+                populateBuffer(out, source, count, byteOffset, byteStride, numComponents, originalFormat);
                 return out;
             }
             case Short:
             case UnsignedShort: {
                 ShortBuffer out = BufferUtils.createShortBuffer(elements);
-                populateBuffer(out, dup, count, byteOffset, byteStride, numComponents, originalFormat);
+                populateBuffer(out, source, count, byteOffset, byteStride, numComponents, originalFormat);
                 return out;
             }
             case Int:
             case UnsignedInt: {
                 IntBuffer out = BufferUtils.createIntBuffer(elements);
-                populateBuffer(out, dup, count, byteOffset, byteStride, numComponents, originalFormat);
+                populateBuffer(out, source, count, byteOffset, byteStride, numComponents, originalFormat);
                 return out;
             }
             case Float: {
                 // Handles normalized integer sources via readAsFloat(...)
                 FloatBuffer out = BufferUtils.createFloatBuffer(elements);
-                populateBuffer(out, dup, count, byteOffset, byteStride, numComponents, originalFormat);
+                populateBuffer(out, source, count, byteOffset, byteStride, numComponents, originalFormat);
                 return out;
             }
             case Double:
