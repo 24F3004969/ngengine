@@ -41,6 +41,7 @@ import com.jme3.util.res.Resources;
 import com.simsilica.lemur.GuiGlobals;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.ngengine.ads.ImmersiveAdComponent;
@@ -68,6 +69,7 @@ public class NGEApplication {
         "wss://relay2.ngengine.org",
         "wss://nostr.rblb.it"
     );
+    private final AppSettings settings;
 
     public static class Jme3Application extends SimpleApplication {
 
@@ -142,7 +144,14 @@ public class NGEApplication {
         if (settings != null) {
             baseSettings.copyFrom(settings);
         }
-        baseSettings.put("appId", appId != null ? appId.asHex() : defaultAppId);
+
+        String sappId = appId != null ? appId.asHex() : defaultAppId;
+        baseSettings.put( "appId", sappId);
+
+        this.settings = baseSettings;
+        logger.info("Starting app "+ sappId+" with settings "+ baseSettings);
+        
+
 
         app =
             new Jme3Application(
@@ -155,6 +164,10 @@ public class NGEApplication {
         app.setShowSettings(false);
         app.setPauseOnLostFocus(false);
         app.setLostFocusBehavior(LostFocusBehavior.Disabled);
+    }
+
+    public AppSettings getSettings() {
+        return settings;
     }
 
     public Jme3Application getJme3App() {
@@ -223,21 +236,54 @@ public class NGEApplication {
         getComponentManager().removeComponent(getComponentManager().getComponent(ImmersiveAdComponent.class));
     }
 
-    public static Runnable createApp(NostrPublicKey appId, AppSettings settings, Consumer<NGEApplication> onReady) {
+    public interface NGEAppRunner extends Runnable {
+
+        public NGEApplication app();
+
+        public NGEApplication start();
+        
+        public default void run(){
+            start();
+        }
+    }
+
+    public static NGEAppRunner createApp(NostrPublicKey appId, AppSettings settings, Consumer<NGEApplication> onReady) {
         NGEApplication app = new NGEApplication(appId, settings, onReady);
-        return () -> app.start();
+        return new NGEAppRunner() {
+            @Override
+            public NGEApplication app() {
+                return app;
+            }
+
+            @Override
+            public NGEApplication start() {
+                app.start();
+                return app;
+            }
+        };
     }
 
-    public static Runnable createApp(NostrPublicKey appId, Consumer<NGEApplication> onReady) {
+    public static NGEAppRunner createApp(NostrPublicKey appId, Consumer<NGEApplication> onReady) {
         NGEApplication app = new NGEApplication(appId, onReady);
-        return () -> app.start();
+          return new NGEAppRunner() {
+            @Override
+            public NGEApplication app() {
+                return app;
+            }
+
+            @Override
+            public NGEApplication start() {
+                app.start();
+                return app;
+            }
+        };
     }
 
-    public static Runnable createApp(AppSettings settings, Consumer<NGEApplication> onReady) {
+    public static NGEAppRunner createApp(AppSettings settings, Consumer<NGEApplication> onReady) {
         return createApp(null, settings, onReady);
     }
 
-    public static Runnable createApp(Consumer<NGEApplication> onReady) {
+    public static NGEAppRunner createApp(Consumer<NGEApplication> onReady) {
         return createApp(null, null, onReady);
     }
 }

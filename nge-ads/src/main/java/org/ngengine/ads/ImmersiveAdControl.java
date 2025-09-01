@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.ngengine.nostrads.protocol.AdBidEvent;
 import org.ngengine.nostrads.protocol.types.AdSize;
@@ -91,7 +92,7 @@ public class ImmersiveAdControl extends AbstractControl implements ImmersiveAdGr
         @Nullable String context
     ) {
         if (languages != null) this.languages = String.join(",", languages);
-        if (categoryIds != null) this.categoryIds = String.join(",", categoryIds.stream().map(t -> t.id()).toList());
+        if (categoryIds != null) this.categoryIds = String.join(",", categoryIds.stream().map(t -> t.id()).collect(Collectors.toList()));
         this.priceSlot = priceSlot;
         this.context = context;
     }

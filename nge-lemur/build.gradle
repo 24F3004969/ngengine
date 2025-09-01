@@ -1,9 +1,7 @@
 
 
 dependencies {
-    api project(':jme3-core')
-        implementation project(':jme3-core')
-    implementation project(':jme3-desktop')
+    implementation project(':jme3-core')
 
 }
 

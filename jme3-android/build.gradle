@@ -6,6 +6,7 @@ dependencies {
     compileOnly libs.androidx.lifecycle.common
     api project(':jme3-core')
     compileOnly 'android:android'
+    implementation 'com.caverock:androidsvg:1.4'
 }
 
 compileJava {

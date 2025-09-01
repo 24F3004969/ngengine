@@ -46,6 +46,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import org.ngengine.nostr4j.NostrFilter;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
@@ -289,8 +291,7 @@ public class LobbyManager implements Closeable {
                         }
 
                         return true;
-                    })
-                    .toList();
+                    }).collect(Collectors.toList());
                 this.dispatcher.run(() -> {
                         callback.accept(filteredLobbies, null);
                     });

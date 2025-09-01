@@ -43,8 +43,9 @@ public class ByteMessageSerializer extends DynamicSerializer {
         try {
             ByteDataMessage message = (ByteDataMessage) c.getDeclaredConstructor().newInstance();
             int length = buffer.getInt();
-            ByteBuffer bbf = buffer.slice(buffer.position(), length);
-            message.setData(bbf);
+            ByteBuffer bbf = buffer.slice();
+            bbf.limit(length);
+            message.setData(bbf.slice());
             return (T) message;
         } catch (Exception e) {
             throw new IOException("Error deserializing ByteMessage", e);

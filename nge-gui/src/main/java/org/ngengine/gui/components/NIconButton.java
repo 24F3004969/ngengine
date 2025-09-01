@@ -67,7 +67,8 @@ public class NIconButton extends Button {
     @Override
     public void setColor(ColorRGBA color) {
         super.setColor(color);
-        if (getIcon() instanceof IconComponent icon) {
+        if (getIcon() instanceof IconComponent ) {
+            IconComponent icon = (IconComponent) getIcon();
             icon.setColor(color);
         }
     }
