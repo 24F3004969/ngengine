@@ -36,9 +36,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import org.ngengine.network.protocol.BufferInputStream;
+
 import org.ngengine.network.protocol.GrowableByteBuffer;
 import org.ngengine.network.protocol.GrowableByteBufferOutputStream;
+
+import com.jme3.util.BufferInputStream;
 
 /**
  * Serializes uses Java built-in method. ! potentially dangerous, use with caution !

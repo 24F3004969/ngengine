@@ -29,34 +29,32 @@
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
  * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
  */
-package org.ngengine.network.protocol;
+package com.jme3.util;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-public class BufferInputStream extends InputStream {
+public class BufferOutputStream extends OutputStream {
 
-    ByteBuffer input;
+    ByteBuffer output;
 
-    public BufferInputStream(ByteBuffer input) {
-        this.input = input;
+    public BufferOutputStream(ByteBuffer output) {
+        this.output = output;
     }
 
     @Override
-    public int read() throws IOException {
-        if (input.remaining() == 0) return -1; else return input.get() & 0xff;
+    public void write(int b) throws IOException {
+        output.put((byte) b);
     }
 
     @Override
-    public int read(byte[] b) {
-        return read(b, 0, b.length);
+    public void write(byte[] b) {
+        output.put(b);
     }
 
     @Override
-    public int read(byte[] b, int off, int len) {
-        int toRead = len > input.remaining() ? input.remaining() : len;
-        input.get(b, off, toRead);
-        return toRead;
+    public void write(byte[] b, int off, int len) {
+        output.put(b, off, len);
     }
 }

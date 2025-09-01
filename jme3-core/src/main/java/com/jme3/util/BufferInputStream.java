@@ -29,32 +29,44 @@
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
  * the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
  */
-package org.ngengine.network.protocol;
+package com.jme3.util;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class BufferOutputStream extends OutputStream {
+public class BufferInputStream extends InputStream {
 
-    ByteBuffer output;
+    ByteBuffer input;
 
-    public BufferOutputStream(ByteBuffer output) {
-        this.output = output;
+    public BufferInputStream(ByteBuffer input) {
+        this.input = input;
     }
 
     @Override
-    public void write(int b) throws IOException {
-        output.put((byte) b);
+    public int read() throws IOException {
+        if (input.remaining() == 0) return -1; else return input.get() & 0xff;
     }
 
     @Override
-    public void write(byte[] b) {
-        output.put(b);
+    public int read(byte[] b) {
+        return read(b, 0, b.length);
     }
 
     @Override
-    public void write(byte[] b, int off, int len) {
-        output.put(b, off, len);
+    public int read(byte[] b, int off, int len) {
+        if (b == null) throw new NullPointerException("b == null");
+        if (off < 0 || len < 0 || len > b.length - off) throw new IndexOutOfBoundsException();
+        if (len == 0) return 0;
+        if (!input.hasRemaining()) return -1;
+
+        int toRead = Math.min(len, input.remaining());
+        input.get(b, off, toRead);
+        return toRead;
+    }
+
+    @Override
+    public int available() {
+        return input.remaining();
     }
 }
