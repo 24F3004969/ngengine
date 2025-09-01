@@ -29,7 +29,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
-the BSD 3-Clause License. The original jMonkeyEngine license is as follows:
+the BSD 3-Clause License. 
 
 jMonkeyEngine License
 --------------------------------------------------------------------------------
