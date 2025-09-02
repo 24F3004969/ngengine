@@ -29,13 +29,13 @@
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
  * the BSD 3-Clause License. 
  */
-package org.ngengine.webp;
+package com.jme3.texture.plugins;
 
 import com.jme3.asset.AssetInfo;
 import com.jme3.asset.AssetLoader;
 import com.jme3.asset.TextureKey;
 import com.jme3.texture.Image;
-import com.jme3.texture.plugins.AWTLoader;
+
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;

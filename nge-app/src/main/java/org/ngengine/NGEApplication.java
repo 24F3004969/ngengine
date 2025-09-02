@@ -97,7 +97,7 @@ public class NGEApplication {
             AsyncAssetManager assetManager = AsyncAssetManager.of(this.assetManager, this);
 
             try {
-                String resPath = "org/ngengine/NGE.cfg";
+                String resPath = "com/jme3/awt.cfg";
                 if (JmeSystem.getPlatform().getOs() == Platform.Os.MacOS && JmeSystem.getPlatform().isGraalVM()) {
                     // macos dislikes AWT, expecially on GraalVM
                     logger.log(Level.WARNING, "Running on MacOS with GraalVM, using no-awt configuration");
