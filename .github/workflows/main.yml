@@ -76,16 +76,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        jdk: [21]
         include:
           - os: ubuntu-latest
             osName: linux
             deploy: true
-            jdk: 21
           - os: windows-latest
             osName: windows
             deploy: false
-            jdk: 21
           - os: macOS-latest
             osName: mac
             deploy: false
@@ -95,11 +92,17 @@ jobs:
         uses: actions/checkout@v4
 
 
-      - name: Setup the java environment
+      - name: Setup the java 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: ${{ matrix.jdk }}
+          java-version: '11'
+
+      - name: Setup the java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Download natives for android
         uses: actions/download-artifact@master
