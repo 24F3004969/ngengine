@@ -16,10 +16,15 @@ group = 'org.ngengine'
 version = jmeFullVersion
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+
+tasks.named('compileTestJava') {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
