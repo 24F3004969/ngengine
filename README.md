@@ -8,3 +8,31 @@ A game engine and framework for building games and applications integrated with 
 - Roadmap: https://ngengine.org/
 - Release: [mavenCentral](https://central.sonatype.com/search?namespace=org.ngengine)
 - Documentation: https://ngengine.org/docs 
+
+## Runtime Requirements
+
+### Linux, Windows, macOS (portable jar)
+- Java 21 or higher
+- OpenGL 3.2+ 
+
+### Linux, Windows, macOS (GraalVM native build)
+- OpenGL 3.2+
+
+### Android
+- Android API level 33 or higher
+- OpenGL ES 3.0
+
+## Buildtime Requirements
+
+### Linux, Windows, macOS (portable jar)
+- Java 21 or higher
+- Gradle 8.13+ (or included gradlew wrapper)
+
+### Linux, Windows, macOS (GraalVM native build)
+- GraalVM 24+
+- Gradle 8.13+ (or included gradlew wrapper)
+
+### Android
+- Android Sdk 33 or higher
+- Android NDK
+- Gradle 8.13+ (or included gradlew wrapper)
