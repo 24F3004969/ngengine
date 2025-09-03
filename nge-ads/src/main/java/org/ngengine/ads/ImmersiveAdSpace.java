@@ -79,6 +79,7 @@ public class ImmersiveAdSpace {
     protected volatile Consumer<Boolean> offerCallback = null;
     protected volatile AdBidEvent currentBid = null;
     protected volatile Instant loadingSince;
+    protected volatile boolean confirmed = false;
 
     public ImmersiveAdSpace(
         Supplier<BoundingVolume> boundSupplier,
@@ -172,6 +173,8 @@ public class ImmersiveAdSpace {
     }
 
     public void confirm() {
+        if(confirmed) return;
+        confirmed = true;
         if (offerCallback != null) {
             offerCallback.accept(true);
             offerCallback = null;

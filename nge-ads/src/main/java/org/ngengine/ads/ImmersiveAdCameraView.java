@@ -41,6 +41,8 @@ import org.ngengine.components.ComponentManager;
 import org.ngengine.gui.win.NToast;
 import org.ngengine.gui.win.NToast.ToastType;
 import org.ngengine.gui.win.NWindowManagerComponent;
+import org.ngengine.nostrads.protocol.AdBidEvent;
+import org.ngengine.nostrads.protocol.types.AdActionType;
 import org.ngengine.picker.CameraPicker;
 import org.ngengine.picker.CameraPickerBehavior;
 import org.ngengine.picker.CloserVisibleCameraPickerBehavior;
@@ -80,8 +82,14 @@ public class ImmersiveAdCameraView implements ImmersiveAdViewer {
     public void showInfo(ImmersiveAdSpace space, String description, String callToAction) {
         NWindowManagerComponent windowManager = mng.getComponent(NWindowManagerComponent.class);
         if (windowManager != null && lastSpace != space) {
-            if (currentToast != null) currentToast.removeFromParent();
+            if (currentToast != null) {
+                currentToast.removeFromParent();
+            }
             if (space != null) {
+                AdActionType actionType = space.get().getActionType();
+                if(actionType==AdActionType.ATTENTION){
+                    space.confirm();
+                }
                 windowManager.showToast(
                     ToastType.INFO,
                     description + "\n    " + calloutPrefix + " " + callToAction,
@@ -89,6 +97,9 @@ public class ImmersiveAdCameraView implements ImmersiveAdViewer {
                     (toast, err) -> {
                         toast.addActionListener(id -> {
                             space.openLink();
+                            if(actionType==AdActionType.ACTION){
+                               space.confirm();
+                            }
                         });
                         currentToast = toast;
                     }
@@ -124,6 +135,11 @@ public class ImmersiveAdCameraView implements ImmersiveAdViewer {
                         return ray;
                     }
                 };
+        }
+
+        AdBidEvent bid = space.get();
+        if(bid.getActionType()==AdActionType.VIEW){
+            space.confirm();
         }
 
         CollisionResult res = CameraPicker.pick(space.getBounds(), cam, pickerBehavior);
