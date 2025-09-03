@@ -66,7 +66,10 @@ public class NGEApplication {
     private final List<String> defaultAdsRelays = List.of(
         "wss://relay.ngengine.org",
         "wss://relay2.ngengine.org",
-        "wss://nostr.rblb.it"
+        "wss://nostr.rblb.it",
+        "wss://relay.damus.io",
+        "wss://relay.primal.net",
+        "wss://relay.nostr.band"
     );
     private final AppSettings settings;
 
