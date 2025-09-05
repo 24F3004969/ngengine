@@ -73,7 +73,9 @@ def mergedJavadocSubprojects = [
         ":nge-auth",
         ":nge-lemur",
         ":nge-networking",
-        ":nge-gui",        
+        ":nge-gui",       
+        ":nge-ads"
+
 ]
 
 def ragDocProjects = [
@@ -85,7 +87,8 @@ def ragDocProjects = [
         ":nge-app",
         ":nge-auth",
         ":nge-networking",
-        ":nge-gui"   
+        ":nge-gui",
+        ":nge-ads"
 ]
 
 // Set the license for IDEs that understand this

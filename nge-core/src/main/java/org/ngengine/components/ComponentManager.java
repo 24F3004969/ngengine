@@ -305,5 +305,11 @@ public interface ComponentManager {
 
     DataStoreProvider getDataStoreProvider();
 
+    /**
+     * Retrieves a global object for the current application context.
+     * 
+     * @param type         The class of the global object to retrieve
+     * @return The global object of the specified type, or null if not found
+     */
     <T> T getGlobalInstance(Class<T> type);
 }
