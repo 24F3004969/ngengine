@@ -59,6 +59,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.ngengine.nostrads.protocol.AdBidEvent;
+import org.ngengine.nostrads.protocol.types.AdPriceSlot;
 import org.ngengine.nostrads.protocol.types.AdSize;
 import org.ngengine.nostrads.protocol.types.AdTaxonomy;
 
@@ -87,13 +88,13 @@ public class ImmersiveAdControl extends AbstractControl implements ImmersiveAdGr
         @Nonnull AssetManager assetManager,
         @Nullable List<AdTaxonomy.Term> categoryIds,
         @Nullable List<String> languages,
-        @Nullable String priceSlot,
+        @Nullable AdPriceSlot priceSlot,
         @Nullable String context
     ) {
         if (languages != null) this.languages = String.join(",", languages);
         if (categoryIds != null) this.categoryIds =
             String.join(",", categoryIds.stream().map(t -> t.id()).collect(Collectors.toList()));
-        this.priceSlot = priceSlot;
+        this.priceSlot = priceSlot.toString();
         this.context = context;
     }
 
