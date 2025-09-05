@@ -97,6 +97,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         for (String relay : relays) {
             pool.connectRelay(new NostrRelay(relay));
         }
+        this.taxonomy = new AdTaxonomy();
     }
 
     public void setFilter(Function<AdBidEvent, Boolean> filter) {
@@ -300,6 +301,11 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         }
     }
 
+
+    public AdTaxonomy getTaxonomy() {
+        return taxonomy;
+    }
+
     @Override
     public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStore, boolean firstTime, Object arg) {
         this.mainRunner = runner;
@@ -309,8 +315,6 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
             viewer =
                 new ImmersiveAdCameraView(mng, mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera());
         }
-
-        AdTaxonomy taxonomy = new AdTaxonomy();
 
         if (userAdKey == null) {
             try {
