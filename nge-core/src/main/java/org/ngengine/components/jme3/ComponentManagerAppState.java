@@ -567,6 +567,9 @@ public class ComponentManagerAppState extends BaseAppState implements ComponentM
         if (type == ViewPortManager.class) {
             return (T) new Jme3ViewPortManager(app);
         }
+        if (type==MainThreadRunner.class){
+            return (T) MainThreadRunner.of(app);
+        }
 
         return null;
     }
