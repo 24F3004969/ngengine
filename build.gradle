@@ -9,6 +9,7 @@ buildscript {
         maven {
             url "https://plugins.gradle.org/m2/"
         }
+        maven { url = uri("https://teavm.org/maven/repository") }
     }
     dependencies {
         classpath libs.android.build.gradle
@@ -39,6 +40,7 @@ if(System.getenv("SONATYPE_USERNAME") || project.findProperty("sonatypeUsername"
     }
 }
 
+
 allprojects {
     group = 'org.ngengine'
     version = jmeFullVersion
@@ -50,6 +52,7 @@ allprojects {
            url = uri("https://central.sonatype.com/repository/maven-snapshots")
         }
         google()
+        maven { url = uri("https://teavm.org/maven/repository") }
     }
     tasks.withType(Jar) {
         duplicatesStrategy = 'include'

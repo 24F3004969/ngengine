@@ -1,7 +1,16 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url = uri("https://teavm.org/maven/repository") }
+    }
+}
+
 /**
  * This is the global settings file used by all subprojects.
  **/
 rootProject.name = 'NostrGameEngine'
+
 
 // Core classes, should work on all java platforms
 include 'jme3-core'
@@ -48,3 +57,5 @@ include 'nge-gui'
 include 'nge-auth'
 include 'nge-app'
 include 'nge-ads'
+include 'nge-web'
+include 'nge-web-demo'
