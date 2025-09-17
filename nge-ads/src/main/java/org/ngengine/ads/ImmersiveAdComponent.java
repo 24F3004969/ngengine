@@ -47,6 +47,7 @@ import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.LogicFragment;
+import org.ngengine.export.NostrPrivateKeySavableWrapper;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
@@ -319,7 +320,8 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         if (userAdKey == null) {
             try {
                 if (store.exists("adkey")) {
-                    userAdKey = NostrPrivateKey.fromHex(store.read("adkey"));
+                    NostrPrivateKeySavableWrapper wrapper = (NostrPrivateKeySavableWrapper)  store.read("adkey");
+                    userAdKey = wrapper.get();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -328,7 +330,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
             if (userAdKey == null) {
                 userAdKey = NostrPrivateKey.generate();
                 try {
-                    store.write("adkey", userAdKey.asHex());
+                    store.write("adkey", new NostrPrivateKeySavableWrapper(userAdKey));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
