@@ -39,10 +39,7 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.prefs.BackingStoreException;
-import java.util.prefs.Preferences;
 
 /**
  * <code>AppSettings</code> provides a store of configuration
@@ -50,10 +47,6 @@ import java.util.prefs.Preferences;
  * <p>
  * By default only the {@link JmeContext context} uses the configuration,
  * however the user may set and retrieve the settings as well.
- * The settings can be stored either in the Java preferences
- * (using {@link #save(java.lang.String) }) or
- * a .properties file (using {@link #save(java.io.OutputStream) }).
- *
  * @author Kirill Vainer
  */
 public final class AppSettings extends HashMap<String, Object> {
@@ -411,97 +404,7 @@ public final class AppSettings extends HashMap<String, Object> {
         }
         props.store(out, "jME3 AppSettings");
     }
-
-    /**
-     * Loads settings previously saved in the Java preferences.
-     *
-     * @param preferencesKey The preferencesKey previously used to save the settings.
-     * @throws BackingStoreException If an exception occurs with the preferences
-     *
-     * @see #save(java.lang.String)
-     */
-    public void load(String preferencesKey) throws BackingStoreException {
-        Preferences prefs = Preferences.userRoot().node(preferencesKey);
-        String[] keys = prefs.keys();
-        if (keys != null) {
-            for (String key : keys) {
-                if (key.charAt(1) == '_') {
-                    // Try loading using new method
-                    switch (key.charAt(0)) {
-                        case 'I':
-                            put(key.substring(2), prefs.getInt(key, 0));
-                            break;
-                        case 'F':
-                            put(key.substring(2), prefs.getFloat(key, 0f));
-                            break;
-                        case 'S':
-                            put(key.substring(2), prefs.get(key, null));
-                            break;
-                        case 'B':
-                            put(key.substring(2), prefs.getBoolean(key, false));
-                            break;
-                        default:
-                            throw new UnsupportedOperationException(
-                                "Undefined setting type: " + key.charAt(0)
-                            );
-                    }
-                } else {
-                    // Use old method for compatibility with older preferences
-                    // TODO: Remove when no longer necessary
-                    Object defaultValue = defaults.get(key);
-                    if (defaultValue instanceof Integer) {
-                        put(key, prefs.getInt(key, (Integer) defaultValue));
-                    } else if (defaultValue instanceof String) {
-                        put(key, prefs.get(key, (String) defaultValue));
-                    } else if (defaultValue instanceof Boolean) {
-                        put(key, prefs.getBoolean(key, (Boolean) defaultValue));
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Saves settings into the Java preferences.
-     * <p>
-     * On the Windows operating system, the preferences are saved in the registry
-     * at the following key:<br>
-     * <code>HKEY_CURRENT_USER\Software\JavaSoft\Prefs\[preferencesKey]</code>
-     *
-     * @param preferencesKey The preferences key to save at. Generally the
-     * application's unique name.
-     *
-     * @throws BackingStoreException If an exception occurs with the preferences
-     */
-    public void save(String preferencesKey) throws BackingStoreException {
-        Preferences prefs = Preferences.userRoot().node(preferencesKey);
-
-        // Clear any previous settings set before saving, this will
-        // purge any other parameters set in older versions of the app, so
-        // that they don't leak onto the AppSettings of newer versions.
-        prefs.clear();
-
-        for (String key : keySet()) {
-            Object val = get(key);
-            if (val instanceof Integer) {
-                prefs.putInt("I_" + key, (Integer) val);
-            } else if (val instanceof Float) {
-                prefs.putFloat("F_" + key, (Float) val);
-            } else if (val instanceof String) {
-                prefs.put("S_" + key, (String) val);
-            } else if (val instanceof Boolean) {
-                prefs.putBoolean("B_" + key, (Boolean) val);
-            }
-            // NOTE: Ignore any parameters of unsupported types instead
-            // of throwing exception. This is specifically for handling
-            // BufferedImage which is used in setIcons(), as you do not
-            // want to export such data in the preferences.
-        }
-
-        // Ensure the data is properly written into preferences before
-        // continuing.
-        prefs.sync();
-    }
+    
 
     /**
      * Get an integer from the settings.
@@ -1565,30 +1468,6 @@ public final class AppSettings extends HashMap<String, Object> {
         putInteger("Display", mon);
     }
 
-    /**
-     * Prints all key-value pairs stored under a given preferences key
-     * in the Java Preferences API to standard output.
-     *
-     * @param preferencesKey The preferences key (node path) to inspect.
-     * @throws BackingStoreException If an exception occurs while accessing the preferences.
-     */
-    public static void printPreferences(String preferencesKey) throws BackingStoreException {
-        Preferences prefs = Preferences.userRoot().node(preferencesKey);
-        String[] keys = prefs.keys();
-
-        if (keys == null || keys.length == 0) {
-            logger.log(Level.WARNING, "No Preferences found under key: {0}", preferencesKey);
-        } else {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Preferences for key: ").append(preferencesKey);
-            for (String key : keys) {
-                // Retrieve the value as a String (default fallback for Preferences API)
-                String value = prefs.get(key, "[Value Not Found]");
-                sb.append("\n * ").append(key).append(" = ").append(value);
-            }
-            logger.log(Level.INFO, sb.toString());
-        }
-    }
     /**
      * Sets the preferred native platform for creating the GL context on Linux distributions.
      * <p>

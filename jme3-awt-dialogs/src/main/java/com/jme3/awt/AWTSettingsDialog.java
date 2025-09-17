@@ -53,7 +53,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.prefs.BackingStoreException;
 import javax.swing.*;
 
 /**
@@ -68,6 +67,7 @@ import javax.swing.*;
  * @author Eric Woroshow
  * @author Joshua Slack - reworked for proper use of GL commands.
  */
+@Deprecated
 public final class AWTSettingsDialog extends JFrame {
 
     /**
@@ -288,15 +288,7 @@ public final class AWTSettingsDialog extends JFrame {
         minWidth = source.getMinWidth();
         minHeight = source.getMinHeight();
 
-        try {
-            logger.log(Level.INFO, "Loading AppSettings from PreferenceKey: {0}", appTitle);
-            registrySettings.load(appTitle);
-            AppSettings.printPreferences(appTitle);
-
-        } catch (BackingStoreException ex) {
-            logger.log(Level.WARNING, "Failed to load settings", ex);
-        }
-
+       
         if (loadSettings) {
             source.copyFrom(registrySettings);
         } else if (!registrySettings.isEmpty()) {
@@ -726,14 +718,7 @@ public final class AWTSettingsDialog extends JFrame {
 
             String appTitle = source.getTitle();
 
-            try {
-                logger.log(Level.INFO, "Saving AppSettings to PreferencesKey: {0}", appTitle);
-                source.save(appTitle);
-                AppSettings.printPreferences(appTitle);
-
-            } catch (BackingStoreException ex) {
-                logger.log(Level.WARNING, "Failed to save setting changes", ex);
-            }
+             
         } else {
             showError(this, resourceBundle.getString("error.unsupportedmode"));
         }
