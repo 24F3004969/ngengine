@@ -57,6 +57,7 @@ import java.util.Objects;
  * @version $Id: BoundingBox.java,v 1.50 2007/09/22 16:46:35 irrisor Exp $
  */
 public class BoundingBox extends BoundingVolume {
+    private static final float EPSILON = 1e-6f;
     /**
      * the X-extent of the box (>=0, may be +Infinity)
      */
@@ -1016,7 +1017,7 @@ public class BoundingBox extends BoundingVolume {
         // Return value is 'true' if line segment intersects the current test
         // plane. Otherwise, 'false' is returned, in which case the line segment
         // is entirely clipped.
-        if (denom > 0.0f) {
+        if (denom > EPSILON) {
             // This is the old if statement...
             // if (numerator > denom * t[1]) {
             //
@@ -1045,11 +1046,23 @@ public class BoundingBox extends BoundingVolume {
             // angles and distances because they fail the bounding box test.
             // Many Bothans died bring you this fix.
             //    -pspeed
+
+            // I added an epsilon to workaround floating point precision issues
+            // when compiling to javascript.
+            //
+            // Bug that I'm fixing: rays still going through quads if boundingbox
+            // thickness is zero, when the engine is compiled to javascript.
+            //
+            // Hard to debug due to (likely) js weirdness.
+            // >> Trying to debugging this got me things like 9>9=true that lead me to
+            // >> this conclusion, but I didn't find exactly what is causing this to manifest like that
+            // >> especially since the java code works fine in the jvm.
+            //    -rblb
             float newT = numerator / denom;
-            if (newT > t[1]) {
+            if (newT > t[1] + EPSILON) {
                 return false;
             }
-            if (newT > t[0]) {
+            if (newT > t[0] + EPSILON) {
                 t[0] = newT;
             }
             return true;
@@ -1061,15 +1074,15 @@ public class BoundingBox extends BoundingVolume {
             // When we move it over to the other side we have to flip
             // the comparison.  Algebra for the win.
             float newT = numerator / denom;
-            if (newT < t[0]) {
+            if (newT < t[0] - EPSILON) {
                 return false;
             }
-            if (newT < t[1]) {
+            if (newT < t[1] - EPSILON) {
                 t[1] = newT;
             }
             return true;
         } else {
-            return numerator <= 0.0;
+            return numerator <= EPSILON;
         }
     }
 
