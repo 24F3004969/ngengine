@@ -8,7 +8,8 @@ plugins {
 import java.security.MessageDigest
 import java.nio.file.Files
 import java.nio.file.Paths
- 
+apply from: 'class-finder.gradle'
+
 configurations {
     withResources {
         canBeResolved = true
@@ -26,6 +27,7 @@ dependencies {
     implementation "org.teavm:teavm-core:${teaVmVersion}"
     
     implementation project(':nge-web')
+    implementation project(':nge-web-bullet')
     implementation project(':nge-app')
     implementation project(':nge-auth')
     implementation project(':nge-core')
@@ -181,9 +183,81 @@ task runWebApp(type: Exec) {
     commandLine = ['python3', '-m', 'http.server', '8000']
     standardInput = System.in
 }
+
+task scanClasspathForTeaVM {
+    description = "Scans classpath for classes for TeaVM preservation and reflection"
+    group = "build"
+
+    // Ensure jars of all project deps (including transitive) are built
+    dependsOn configurations.runtimeClasspath.getTaskDependencyFromProjectDependency(true, "jar")
+    dependsOn "jar"
+
+    doLast {
+        // Build classpath from resolved artifacts (transitive) in lenient mode
+        def runtimeArtifacts = configurations.runtimeClasspath.incoming.artifactView {
+            lenient true
+        }.artifacts.artifactFiles
+
+        // Optionally merge compile artifacts as a fallback
+        def compileArtifacts = configurations.compileClasspath.incoming.artifactView {
+            lenient true
+        }.artifacts.artifactFiles
+
+        Set<File> classpath = new LinkedHashSet<>()
+        // This project’s compiled classes (dirs)
+        classpath.addAll(sourceSets.main.output.files)
+        // All resolved artifacts (transitive), jars/dirs
+        classpath.addAll(runtimeArtifacts.files)
+        classpath.addAll(compileArtifacts.files)
+
+        // Keep only existing dirs/jars
+        classpath = classpath.findAll { it.exists() && (it.isDirectory() || it.name.endsWith(".jar")) } as Set<File>
+
+        println "Scanning ${classpath.size()} classpath entries"
+
+        def scanResults = project.scanClasspathForClasses(classpath)
+
+        def preserveListFile = file("${buildDir}/generated/teaReflectList.txt")
+        project.generateClassListFile(preserveListFile, scanResults.classes) { className ->
+            "**/${className.replace('.', '/')}.java"
+        }
+
+        def reflectionSupplierFile = file("${buildDir}/generated/teaReflect.java")
+        def template = """private static void initGenerated() {
+{{classInitializers}}
+    }"""
+        project.generateCodeFromTemplate(reflectionSupplierFile, template, [
+            classInitializers: scanResults.reflectionClasses.collect {
+                "        TeaReflectionSupplier.addReflectionClass(\"${it}\");"
+            }.join('\n')
+        ])
+    }
+}
+
+task updateTeaReflectionSupplier {
+    description = "Updates the TeaReflectionSupplier.java file with generated initGenerated method"
+    group = "build"
+    dependsOn scanClasspathForTeaVM
+    
+    doLast {
+        def reflectionSupplierFile = file("${buildDir}/generated/teaReflect.java")
+        def teaReflectionSupplierFile = file("${projectDir}/src/main/java/org/ngengine/platform/TeaReflectionSupplier.java")
+        
+        if (reflectionSupplierFile.exists() && teaReflectionSupplierFile.exists()) {
+            def content = teaReflectionSupplierFile.text
+            def initGeneratedContent = reflectionSupplierFile.text
+            content = content.replaceAll(/(?s)private static void initGenerated\(\)\s*\{.*?\}/, initGeneratedContent)
+            teaReflectionSupplierFile.text = content
+            println "Updated TeaReflectionSupplier.java with generated initGenerated() method"
+        }
+    }
+}
+
+compileTeavmJava.dependsOn updateTeaReflectionSupplier
+
 teavm.js {
-     addedToWebApp = true
-    mainClass = "com.jme3.web.WebApp"
+    addedToWebApp = false
+    mainClass = "org.ngengine.web.WebApp"
     obfuscated = false
     debugInformation = true
     strict= false
@@ -193,65 +267,21 @@ teavm.js {
     optimization=org.teavm.gradle.api.OptimizationLevel.NONE
     sourceMap=true
     
-    def classesToPreserve=[
-        "**/J3MLoader.java",
-        "**/WAVLoader.java",
-        "**/CursorLoader.java",
-        "**/WebLocator.java",
-        "**/*Logic.java",
-        "**/*AssetCache.java",
-        "**/*Processor.java",
-        "**/StbImageLoader.java",
-        "**/GLSLLoader.java",
-        "**/CloneableAssetProcessor.java",
-        "**/BinaryLoader.java",
-                "**/ShaderNodeDefinitionLoader.java",
-        "**/HeapAllocator.java",
-        "**/SinglePassAndImageBasedLightingLogic.java",
-          "**/OGGLoader.java",
-        //  "**/OBJLoader.java",
-        //  "**/MTLLoader.java",
+    moduleType = org.teavm.gradle.api.JSModuleType.ES2015  
 
-         "**/GltfLoader.java",
-         "**/BinLoader.java",
-         "**/GlbLoader.java",
-
-        "**/HDRLoader.java",
-         "**/TGALoader.java",
-         "**/DDSLoader.java",
-
-        "**/BitmapFontLoader.java",
-        // "**/SkeletonLoader.java",
-        // "**/MaterialLoader.java",
-        // "**/SceneLoader.java",
-        // "**/MeshLoader.java",
-
-
+    properties = [
+        "teavm.c.vmAssertions": "false"
     ]
-    def projects = [
-        project(':jme3-core'),
-        project(':nge-web'),
-        project(':nge-web-demo'),
-        project(':jme3-jogg'),
-        project(':jme3-effects'),
-        project(':jme3-terrain'),
-        project(':jme3-plugins'),
-    ]
-
-    for(def project in projects) {
-       def mainJavaDirs = project.sourceSets.main.java.srcDirs.iterator();
-       while(true){
-            if(!mainJavaDirs.hasNext()) break;
-            def mainJavaDir=mainJavaDirs.next();
-            
-            fileTree(mainJavaDir).matching {
-                include classesToPreserve
-            }.forEach { file ->
-                def filePath = file.path.replaceAll('\\.java$', '').replaceAll('/', '.').substring(mainJavaDir.path.length() + 1)
-                System.out.println("preserve " + filePath)
-                preservedClasses.add(filePath)
+    
+    def preserveListFile = file("${buildDir}/generated/teaReflectList.txt")
+    if (preserveListFile.exists()) {
+        preserveListFile.readLines().each { line ->
+            if (line.trim()) {
+                preservedClasses.add(line.trim())
             }
-       }
+        }
     }
-    targetFileName = "jmeapp.js"
+
+    targetFileName = "webapp.js"
 }
+
