@@ -133,13 +133,13 @@ public class AppComponentLoader implements ComponentLoader {
 
         if (fragment instanceof MainViewPortFragment) {
             i.incrementAndGet();
-            MainViewPortFragment f = (MainViewPortFragment) fragment;
-            FilterPostProcessor fpp = Utils.getFilterPostProcessor(
-                app.getContext().getSettings(),
-                assetManager,
-                app.getViewPort()
-            );
-            f.loadMainViewPortFilterPostprocessor(assetManager, fpp);
+            // MainViewPortFragment f = (MainViewPortFragment) fragment;
+            // FilterPostProcessor fpp = Utils.getFilterPostProcessor(
+            //     app.getContext().getSettings(),
+            //     assetManager,
+            //     app.getViewPort()
+            // );
+            // f.loadMainViewPortFilterPostprocessor(assetManager, fpp);
             markReady.run();
         }
 
