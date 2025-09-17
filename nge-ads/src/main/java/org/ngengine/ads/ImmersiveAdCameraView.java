@@ -90,20 +90,19 @@ public class ImmersiveAdCameraView implements ImmersiveAdViewer {
                 if(actionType==AdActionType.ATTENTION){
                     space.confirm();
                 }
-                windowManager.showToast(
+                NToast toast = windowManager.showToast(
                     ToastType.INFO,
                     description + "\n    " + calloutPrefix + " " + callToAction,
-                    Duration.ofMinutes(1),
-                    (toast, err) -> {
-                        toast.addActionListener(id -> {
-                            space.openLink();
-                            if(actionType==AdActionType.ACTION){
-                               space.confirm();
-                            }
-                        });
-                        currentToast = toast;
+                    Duration.ofMinutes(1));
+
+                toast.addActionListener(id -> {
+                    space.openLink();
+                    if(actionType==AdActionType.ACTION){
+                        space.confirm();
                     }
-                );
+                });
+                currentToast = toast;
+                    
             }
         }
         lastSpace = space;

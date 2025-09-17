@@ -55,4 +55,6 @@ public interface Runner {
      * @param task
      */
     void enqueue(Runnable task);
+
+    void checkThread();
 }

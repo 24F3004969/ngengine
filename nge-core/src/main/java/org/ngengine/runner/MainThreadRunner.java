@@ -86,4 +86,11 @@ public class MainThreadRunner extends BaseAppState implements Runner {
 
     @Override
     protected void onDisable() {}
+
+    @Override
+    public void checkThread() {
+        if(Thread.currentThread() != mainThread){
+            throw new IllegalStateException("Not in main thread");
+        }
+    }
 }

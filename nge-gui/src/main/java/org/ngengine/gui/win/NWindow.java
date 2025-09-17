@@ -124,6 +124,7 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
         title.setTextHAlignment(HAlignment.Center);
         title.setTextVAlignment(VAlignment.Center);
         float margin = title.getFontSize();
+        assert !Float.isNaN(margin)||margin == 0;
         title.setInsets(new Insets3f(0, margin, 0, margin));
         titleBar.addChild(title, BorderLayout.Position.Center);
 
@@ -202,13 +203,10 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
     }
 
     final void recenter(Vector3f size) {
-        getManager()
-            .runInThread(() -> {
-                int width = getManager().getWidth();
-                int height = getManager().getHeight();
+        int width = getManager().getWidth();
+        int height = getManager().getHeight();
 
-                setLocalTranslation(width / 2 - size.x / 2, height / 2 + size.y / 2, 1);
-            });
+        setLocalTranslation(width / 2 - size.x / 2, height / 2 + size.y / 2, 1);
     }
 
     @Override
@@ -216,7 +214,7 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
         if (center) {
             recenter(size);
         }
-    }
+   }
 
     @Override
     public final void focusGained(GuiControl source) {}
@@ -285,10 +283,7 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
     }
 
     public final void close() {
-        getManager()
-            .runInThread(() -> {
-                getManager().closeWindow(this);
-            });
+        getManager().closeWindow(this);
     }
 
     public void onAction(int id) {}

@@ -40,6 +40,8 @@ import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.SpringGridLayout;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -106,10 +108,14 @@ public class AuthSelectionWindow extends NWindow<AuthStrategy> {
                         player != null ? player.getImage() : null
                     )
                         .setConfirmAction(win -> {
-                            auth.open(getManager(), npub, null);
+                            auth.open(getManager(), npub);
                         })
                         .setRemoveAction(win -> {
-                            auth.delete(npub);
+                            try {
+                                auth.delete(npub);
+                            } catch (IOException e) {
+                                log.log(Level.WARNING, "Failed to delete stored identity: " + npub, e);
+                            }
                         })
                 );
         });
@@ -122,7 +128,7 @@ public class AuthSelectionWindow extends NWindow<AuthStrategy> {
         setFitContent(true);
 
         if (strategy.isAutoStore()) {
-            strategy.store = this.getManager().getDataStoreProvider().getDataStore("auth").getVStore();
+            strategy.store = this.getManager().getDataStoreProvider().getDataStore("auth");
         }
 
         Container content = getContent().addCol();
@@ -142,7 +148,7 @@ public class AuthSelectionWindow extends NWindow<AuthStrategy> {
                     }
                 );
                 if (auth.isEnabled()) {
-                    List<String> npubs = auth.listSaved().await();
+                    List<String> npubs = auth.listSaved();
                     for (String npub : npubs) {
                         Button storedIdentityButton = playerButton(npub, auth);
                         stored.addChild(storedIdentityButton);

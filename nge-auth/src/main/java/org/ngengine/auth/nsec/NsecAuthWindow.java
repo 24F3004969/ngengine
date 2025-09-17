@@ -108,32 +108,34 @@ public class NsecAuthWindow extends NWindow<AuthConfig> {
             Button nsecLoginBtn = new Button("Authenticate");
             nsecLoginBtn.setTextHAlignment(HAlignment.Center);
             windowContent.addChild(nsecLoginBtn);
-
             nsecLoginBtn.addClickCommands(src -> {
                 try {
-                    if (nsecInput.getText().isEmpty()) {
-                        authFailed(opt, new Exception("Nsec is empty"));
-                    }
 
-                    if (!rememberMe.isChecked()) {
-                        if (nsecInput.getText().startsWith("ncryptsec")) {
-                            // if the key is encrypted, decrypt and load
-                            loadAndAuthStage(opt, nsecInput.getText(), false);
-                        } else {
-                            // if the key is not encrypted, just skip to the auth confirmation
-                            NostrPrivateKey key = NostrPrivateKey.fromBech32(nsecInput.getText());
-                            auth(opt, new NostrKeyPairSigner(new NostrKeyPair(key)), null);
+                    // getManager().enqueueInThread(()->{
+                        if (nsecInput.getText().isEmpty()) {
+                            authFailed(opt, new Exception("Nsec is empty"));
                         }
-                    } else {
-                        if (nsecInput.getText().startsWith("ncryptsec")) {
-                            // if the key is encrypted, and remind me is toggled, decrypt and store
-                            loadAndAuthStage(opt, nsecInput.getText(), true);
+
+                        if (!rememberMe.isChecked()) {
+                            if (nsecInput.getText().startsWith("ncryptsec")) {
+                                // if the key is encrypted, decrypt and load
+                                loadAndAuthStage(opt, nsecInput.getText(), false);
+                            } else {
+                                // if the key is not encrypted, just skip to the auth confirmation
+                                NostrPrivateKey key = NostrPrivateKey.fromBech32(nsecInput.getText());
+                                auth(opt, new NostrKeyPairSigner(new NostrKeyPair(key)), null);
+                            }
                         } else {
-                            // if the key is not encrypted and remind me is toggled, render the encryption stage to encrypt and store the key
-                            NostrPrivateKey key = NostrPrivateKey.fromBech32(nsecInput.getText());
-                            renderEncryptAndStoreStage(opt, new NostrKeyPairSigner(new NostrKeyPair(key)));
+                            if (nsecInput.getText().startsWith("ncryptsec")) {
+                                // if the key is encrypted, and remind me is toggled, decrypt and store
+                                loadAndAuthStage(opt, nsecInput.getText(), true);
+                            } else {
+                                // if the key is not encrypted and remind me is toggled, render the encryption stage to encrypt and store the key
+                                NostrPrivateKey key = NostrPrivateKey.fromBech32(nsecInput.getText());
+                                renderEncryptAndStoreStage(opt, new NostrKeyPairSigner(new NostrKeyPair(key)));
+                            }
                         }
-                    }
+                    // });
                 } catch (Exception e) {
                     authFailed(opt, e);
                 }
@@ -145,16 +147,14 @@ public class NsecAuthWindow extends NWindow<AuthConfig> {
         AuthStrategy strategy = opt.getStrategy();
         if (saveWithPassword != null) {
             try {
-                opt.getAuth().save(signer, saveWithPassword).await();
+                opt.getAuth().save(signer, saveWithPassword);
             } catch (Exception e) {
                 getManager().showToast(e);
             }
         }
-        getManager()
-            .runInThread(() -> {
-                strategy.getCallback().accept(signer);
-                close();
-            });
+  
+        strategy.getCallback().accept(signer);
+        close();
     }
 
     /**
@@ -191,16 +191,13 @@ public class NsecAuthWindow extends NWindow<AuthConfig> {
                         throw new Exception("Passphrase is empty");
                     }
                     String npub = inputKey;
-                    opt
-                        .getAuth()
-                        .load(npub, passphraseInput.getText())
-                        .catchException(e -> {
-                            getManager().showToast(e);
-                        })
-                        .then(signer -> {
-                            auth(opt, signer, null);
-                            return null;
-                        });
+                    try{
+                        NostrSigner signer = opt.getAuth().load(npub, passphraseInput.getText());
+                        auth(opt, signer, null);
+                    } catch(Exception e){
+                        getManager().showToast(e);
+                    }
+                       
                 } else { // is ncryptsec
                     String ncryptsec = inputKey;
                     Nip49
@@ -211,15 +208,17 @@ public class NsecAuthWindow extends NWindow<AuthConfig> {
                         .then(key -> {
                             NostrKeyPairSigner signer = new NostrKeyPairSigner(new NostrKeyPair(key));
 
-                            String saveWithPassword = null;
-                            if (save) {
-                                if (passphraseInput.getText().isEmpty()) {
-                                    throw new RuntimeException("Passphrase is empty");
-                                }
-                                saveWithPassword = passphraseInput.getText();
-                            }
+                            getManager().runInThread(()->{
 
-                            auth(opt, signer, saveWithPassword);
+                                String saveWithPassword = null;
+                                if (save) {
+                                    if (passphraseInput.getText().isEmpty()) {
+                                        throw new RuntimeException("Passphrase is empty");
+                                    }
+                                    saveWithPassword = passphraseInput.getText();
+                                }
+                                auth(opt, signer, saveWithPassword);
+                            });
                             return null;
                         })
                         .catchException(e -> {

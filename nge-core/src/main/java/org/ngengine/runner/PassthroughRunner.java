@@ -50,4 +50,8 @@ public class PassthroughRunner implements Runner {
             task.run();
         }
     }
+
+    @Override
+    public void checkThread() {
+    }
 }

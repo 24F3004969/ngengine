@@ -33,6 +33,7 @@ package org.ngengine.gui.win;
 
 import com.jme3.input.InputManager;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
 import com.simsilica.lemur.Axis;
@@ -52,12 +53,15 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.GuiViewPortFragment;
 import org.ngengine.components.fragments.InputHandlerFragment;
 import org.ngengine.gui.win.NToast.ToastType;
 import org.ngengine.gui.win.std.NErrorWindow;
+import org.ngengine.runner.MainThreadRunner;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
@@ -67,26 +71,35 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
     private final ArrayList<NWindow<?>> windowsStack = new ArrayList<>();
     private final ArrayList<NToast> toastsStack = new ArrayList<>();
 
-    private Node guiNode;
-    private int width;
-    private int height;
+    
     private Container toastContainer;
-    private Runner dispatcher;
     private DataStoreProvider dataStoreProvider;
-    private InputManager inputManager;
+    private ComponentManager mng;
 
-    @Override
-    public void receiveInputManager(InputManager inputManager) {
-        this.inputManager = inputManager;
-    }
+ 
 
     public void showCursor(boolean v) {
-        inputManager.setCursorVisible(v);
+        mng.getGlobalInstance(InputManager.class).setCursorVisible(v);
+    }
+
+    private Node getGuiNode(){
+        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        return vpm.getRootNode(vpm.getGuiViewPort());
+    }
+
+    
+  public void enqueueInThread(Runnable task) {
+        MainThreadRunner r = this.mng.getGlobalInstance(MainThreadRunner.class);
+        r.enqueue(task);
+    }
+
+    public void runInThread(Runnable task) {
+        MainThreadRunner r = this.mng.getGlobalInstance(MainThreadRunner.class);
+        r.run(task);
     }
 
     @Override
     public void onAttached(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider) {
-        this.dispatcher = runner;
         this.dataStoreProvider = dataStoreProvider;
     }
 
@@ -94,242 +107,186 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
         return dataStoreProvider;
     }
 
-    @Override
-    public void receiveGuiViewPort(ViewPort vp) {
-        this.guiNode = getGuiNode(vp);
-        this.width = vp.getCamera().getWidth();
-        this.height = vp.getCamera().getHeight();
-    }
+    
 
     public int getWidth() {
-        return width;
+        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPort guiVp= vpm.getGuiViewPort();
+        Camera cam = guiVp.getCamera();
+        return cam.getWidth();
     }
 
     public int getHeight() {
-        return height;
+        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPort guiVp= vpm.getGuiViewPort();
+        Camera cam = guiVp.getCamera();
+        return cam.getHeight();
     }
 
-    public <T> void runInThread(Callable<T> r, BiConsumer<T, Throwable> callback) {
-        dispatcher.run(() -> {
-            try {
-                T out = r.call();
-                if (callback != null) callback.accept(out, null);
-            } catch (Exception e) {
-                log.log(Level.SEVERE, "Failed to run in thread", e);
-                if (callback != null) callback.accept(null, e);
-            }
-        });
-    }
-
-    public void runInThread(Runnable r) {
-        dispatcher.run(r);
+    protected void checkThread() {
+        MainThreadRunner r = this.mng.getGlobalInstance(MainThreadRunner.class);
+        r.checkThread();
     }
 
     /**
-     * Shows a window of the specified class with no arguments and no callback and returns a closer function.
-     * @param <T> the class of the window
-     * @param windowClass the class of the window to show
-     * @return a Runnable that can be used to close the window
+     * Shows a window of the specified class with the given arguments and a callback and returns a closer
+     * function.
+     * 
+     * @param <T>
+     *            the class of the window
+     * @param windowClass
+     *            the class of the window to show
+     * @return an instance of the window
      */
-    public <T extends NWindow<?>> Runnable showWindow(Class<T> windowClass) {
-        return showWindow(windowClass, null, null);
+    public  <T extends NWindow<A>, A> T  showWindow(Class<T> windowClass) {
+        checkThread();
+        return showWindow(windowClass, null);
     }
 
     /**
-     * Shows a window of the specified class with the given arguments and a callback and returns a closer function.
-     * @param <T> the class of the window
-     * @param windowClass the class of the window to show
-     * @param callback a callback to be called when the window is shown or if an error occurs, can be null
-     * @return a Runnable that can be used to close the window
+     * Shows a window of the specified class with the given arguments and a callback and returns a closer
+     * function.
+     * 
+     * @param <T>
+     *            the class of the window
+     * @param windowClass
+     *            the class of the window to show
+     * @param args
+     *            the arguments to pass to the window, can be null
+     * @return an instance of the window
      */
-    public <T extends NWindow<?>> Runnable showWindow(Class<T> windowClass, BiConsumer<T, Throwable> callback) {
-        return showWindow(windowClass, null, callback);
-    }
-
-    /**
-     * Shows a window of the specified class with the given arguments and returns a closer function.
-     * @param <T> the class of the window
-     * @param windowClass  the class of the window to show
-     * @param args the arguments to pass to the window, can be null
-     * @return a Runnable that can be used to close the window
-     */
-    public <T extends NWindow<?>> Runnable showWindow(Class<T> windowClass, Object args) {
-        return showWindow(windowClass, args, null);
-    }
-
-    /**
-     * Shows a window of the specified class with the given arguments and a callback and returns a closer function.
-     * @param <T> the class of the window
-     * @param windowClass  the class of the window to show
-     * @param args the arguments to pass to the window, can be null
-     * @param callback a callback to be called when the window is shown or if an error occurs, can be null
-     * @return a Runnable that can be used to close the window
-     */
-    public <T extends NWindow> Runnable showWindow(Class<T> windowClass, Object args, BiConsumer<T, Throwable> callback) {
+    public <T extends NWindow<A>, A> T showWindow(Class<T> windowClass, A args) {
+        checkThread();
         AtomicBoolean closed = new AtomicBoolean(false);
         AtomicReference<Runnable> closer = new AtomicReference<>(() -> {
             closed.set(true);
         });
 
         try {
-            runInThread(
-                () -> {
-                    for (NWindow window : windowsStack) {
-                        window.removeFromParent();
+            for (NWindow window : windowsStack) {
+                window.removeFromParent();
+            }
+
+            log.finer("Opening window: " + windowClass.getSimpleName());
+
+            Consumer<NWindow<A>> backAction = null;
+
+            if (windowsStack.size() > 0) {
+                backAction = win -> {
+                    closeWindow(windowsStack.get(windowsStack.size() - 1));
+                };
+            }
+
+            T window = (T) windowClass.getDeclaredConstructor().newInstance();
+            window.addWindowListener(new NWindowListener() {
+                @Override
+                public void onShow(NWindow<?> window) {
+                    closer.set(() -> {
+                        window.close();
+                    });
+                    if (closed.get()) {
+                        window.close();
                     }
+                }
 
-                    log.finer("Opening window: " + windowClass.getSimpleName());
+                @Override
+                public void onHide(NWindow<?> window) {
+                }
+            });
+            window.initialize(this, backAction);
+            if (args != null) window.setArgs(args);
 
-                    Consumer<NWindow<?>> backAction = null;
+            showWindow(window);
+            windowsStack.add(window);
+            return window;
 
-                    if (windowsStack.size() > 0) {
-                        backAction =
-                            win -> {
-                                closeWindow(windowsStack.get(windowsStack.size() - 1));
-                            };
-                    }
-
-                    T window = windowClass.getDeclaredConstructor().newInstance();
-                    window.addWindowListener(
-                        new NWindowListener() {
-                            @Override
-                            public void onShow(NWindow<?> window) {
-                                closer.set(() -> {
-                                    window.close();
-                                });
-                                if (closed.get()) {
-                                    window.close();
-                                }
-                            }
-
-                            @Override
-                            public void onHide(NWindow<?> window) {}
-                        }
-                    );
-                    window.initialize(this, backAction);
-                    if (args != null) window.setArgs(args);
-
-                    showWindow(window);
-                    windowsStack.add(window);
-                    return window;
-                },
-                callback
-            );
         } catch (Exception e) {
             log.log(Level.SEVERE, "Failed to open window: " + windowClass.getSimpleName(), e);
             throw new RuntimeException("Failed to create window", e);
         }
-        return () -> {
-            closer.get().run();
-        };
+
     }
 
-    public void showFatalError(Throwable exc) {
-        showFatalError(exc, null);
-    }
-
-    public void showFatalError(Throwable exc, BiConsumer<NErrorWindow, Throwable> callback) {
+    public NErrorWindow showFatalError(Throwable exc) {
+        checkThread();
         log.log(Level.SEVERE, "Fatal error", exc);
-        showWindow(NErrorWindow.class, exc, callback);
+        return (NErrorWindow) showWindow(NErrorWindow.class, exc);
     }
 
-    public void showToast(Throwable exc) {
-        showToast(exc, null, null);
+    public NToast showToast(Throwable exc) {
+        checkThread();
+        return showToast(exc, null);
     }
 
-    public void showToast(Throwable exc, BiConsumer<NToast, Throwable> callback) {
-        showToast(exc, null, callback);
-    }
-
-    public void showToast(Throwable exc, Duration duration) {
-        showToast(exc, duration, null);
-    }
-
-    public void showToast(Throwable exc, Duration duration, BiConsumer<NToast, Throwable> callback) {
-        log.log(Level.WARNING, "Exception toast", exc);
+    public NToast showToast(Throwable exc, Duration duration) {
+        checkThread();
+        exc.printStackTrace();
         StringBuilder message = new StringBuilder();
         message.append("Error: ");
         message.append(exc.getClass().getSimpleName());
         message.append("\n\t");
         message.append(exc.getMessage());
-        showToast(ToastType.ERROR, message.toString(), duration, callback);
+        log.log(Level.WARNING, "Exception toast " + message.toString(), exc);
+        return showToast(ToastType.ERROR, message.toString(), duration);
     }
 
-    public void showToast(ToastType type, String message) {
-        showToast(type, message, null, null);
+    public NToast showToast(ToastType type, String message) {
+        return showToast(type, message, null);
     }
 
-    public void showToast(ToastType type, String message, BiConsumer<NToast, Throwable> callback) {
-        showToast(type, message, null, callback);
-    }
-
-    public void showToast(ToastType type, String message, Duration duration) {
-        showToast(type, message, duration, null);
-    }
-
-    public void showToast(ToastType type, String message, Duration duration, BiConsumer<NToast, Throwable> callback) {
-        try {
-            runInThread(
-                () -> {
-                    Duration finalDuration = duration;
-                    if (finalDuration == null) {
-                        if (type != ToastType.INFO) {
-                            finalDuration = Duration.ofSeconds(10);
-                        } else {
-                            finalDuration = Duration.ofSeconds(5);
-                        }
-                    }
-                    NToast toast = new NToast(type, message, finalDuration);
-                    toastContainer.addChild(toast);
-                    toastsStack.add(toast);
-                    return toast;
-                },
-                callback
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create toast", e);
+    public NToast showToast(ToastType type, String message, Duration duration) {
+        checkThread();
+        Duration finalDuration = duration;
+        if (finalDuration == null) {
+            if (type != ToastType.INFO) {
+                finalDuration = Duration.ofSeconds(10);
+            } else {
+                finalDuration = Duration.ofSeconds(5);
+            }
         }
+        System.out.println("Showing toast: " + message);
+        NToast toast = new NToast(type, message, finalDuration);
+        toastContainer.addChild(toast);
+        toastsStack.add(toast);
+        return toast;       
     }
 
     void closeToast(NToast toast) {
-        runInThread(() -> {
-            if (toast.getParent() != null) {
-                toast.removeFromParent();
-            }
-            toastsStack.remove(toast);
-        });
+        checkThread();
+        if (toast.getParent() != null) {
+            toast.removeFromParent();
+        }
+        toastsStack.remove(toast);
     }
 
     private void showWindow(NWindow<?> window) {
-        runInThread(() -> {
-            if (window.getParent() != null) {
-                window.removeFromParent();
-            }
-            window.invalidate();
-            guiNode.attachChild(window);
-            window.onShow();
-        });
+        checkThread();
+        if (window.getParent() != null) {
+            window.removeFromParent();
+        }
+        window.invalidate();
+        getGuiNode().attachChild(window);
+        window.onShow();
     }
 
     public void closeAllWindows() {
-        runInThread(() -> {
-            NWindow<?>[] windows = windowsStack.toArray(new NWindow[0]);
-            for (NWindow<?> window : windows) {
-                closeWindow(window);
-            }
-        });
+        checkThread();
+        NWindow<?>[] windows = windowsStack.toArray(new NWindow[0]);
+        for (NWindow<?> window : windows) {
+            closeWindow(window);
+        }
     }
 
     public void closeAllToasts() {
-        runInThread(() -> {
-            NToast[] toasts = toastsStack.toArray(new NToast[0]);
-            for (NToast toast : toasts) {
-                closeToast(toast);
-            }
-        });
+        checkThread();
+        NToast[] toasts = toastsStack.toArray(new NToast[0]);
+        for (NToast toast : toasts) {
+            closeToast(toast);
+        }
     }
 
     public void closeAll() {
+        checkThread();
         // runInThread(()->{
         closeAllWindows();
         closeAllToasts();
@@ -337,33 +294,32 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
     }
 
     void closeWindow(NWindow<?> window) {
-        runInThread(() -> {
-            if (window.getParent() != null) {
-                window.removeFromParent();
-            }
-            window.onHide();
+        checkThread();
+        if (window.getParent() != null) {
+            window.removeFromParent();
+        }
+        window.onHide();
 
-            windowsStack.remove(window);
-            if (windowsStack.size() > 0) {
-                NWindow<?> lastWindow = windowsStack.get(windowsStack.size() - 1);
-                showWindow(lastWindow);
-            }
-        });
+        windowsStack.remove(window);
+        if (windowsStack.size() > 0) {
+            NWindow<?> lastWindow = windowsStack.get(windowsStack.size() - 1);
+            showWindow(lastWindow);
+        }
     }
 
     @Override
-    public void onEnable(
-        ComponentManager mng,
-        Runner runner,
-        DataStoreProvider dataStoreProvider,
-        boolean firstTime,
-        Object slot
-    ) {
+    public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider,
+            boolean firstTime, Object slot) {
+        this.mng = mng;
+        int width = getWidth();
+        int height = getHeight();
+        Node guiNode = getGuiNode();
         {
             Container toastParent = new Container(new BorderLayout());
             toastParent.setLocalTranslation(0, height, 10);
             toastParent.setPreferredSize(new Vector3f(width, height, 10));
-            toastContainer = new Container(new SpringGridLayout(Axis.Y, Axis.X, FillMode.None, FillMode.Even));
+            toastContainer = new Container(
+                    new SpringGridLayout(Axis.Y, Axis.X, FillMode.None, FillMode.Even));
             toastContainer.setInsetsComponent(new DynamicInsetsComponent(0f, 1f, 0f, 0f));
             toastParent.addChild(toastContainer, BorderLayout.Position.South);
             guiNode.attachChild(toastParent);
@@ -380,6 +336,8 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
 
     @Override
     public void updateGuiViewPort(ViewPort vp, float tpf) {
+        int width = vp.getCamera().getWidth();
+        int height = vp.getCamera().getHeight();
         if (toastsStack.size() > 0) {
             Instant now = Instant.now();
             Iterator<NToast> it = toastsStack.iterator();
@@ -395,15 +353,27 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
                 }
             }
         }
+
+        Camera cam = vp.getCamera();
+        if (width != cam.getWidth() || height != cam.getHeight()) {
+            width = cam.getWidth();
+            height = cam.getHeight();
+            for (NWindow<?> window : windowsStack) {
+                window.invalidate();
+            }
+            ((Container) toastContainer.getParent()).setPreferredSize(new Vector3f(width, height, 10));
+        }
     }
 
     public void back() {
+        checkThread();
         if (windowsStack.size() > 0) {
             closeWindow(windowsStack.get(windowsStack.size() - 1));
         }
     }
 
     public void action(int id) {
+        checkThread();
         if (windowsStack.size() > 0) {
             NWindow<?> window = windowsStack.get(windowsStack.size() - 1);
             window.onAction(id);
@@ -411,6 +381,7 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
     }
 
     public void toastAction(int id) {
+        checkThread();
         if (toastsStack.size() > 0) {
             NToast toast = toastsStack.get(toastsStack.size() - 1);
             toast.onAction(id);

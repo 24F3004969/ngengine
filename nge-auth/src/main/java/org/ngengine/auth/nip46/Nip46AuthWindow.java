@@ -70,35 +70,22 @@ public class Nip46AuthWindow extends NWindow<AuthConfig> {
 
     protected Consumer<Throwable> onChallenge(String challenge, String data) {
         logger.fine("Challenge received: " + challenge + ", data: " + data);
-        AsyncTask<Nip46ChallengeWindow> win = NGEPlatform
-            .get()
-            .wrapPromise((res, rej) -> {
-                getManager()
-                    .showWindow(
-                        Nip46ChallengeWindow.class,
-                        new String[] { challenge, data },
-                        (r, e) -> {
-                            if (e != null) {
-                                logger.warning("Failed to open challenge window: " + e.getMessage());
-                                rej.accept(e);
-                            } else {
-                                res.accept(r);
-                            }
-                        }
-                    );
+        AsyncTask<Nip46ChallengeWindow> win = NGEPlatform.get().wrapPromise((res, rej) -> {
+            Nip46ChallengeWindow w = getManager().showWindow(Nip46ChallengeWindow.class,
+                    new String[] { challenge, data }
+
+            );
+            res.accept(w);
+        });
+        return (e -> {
+            getManager().runInThread(() -> {
+                logger.info("Challenge closed");
+                win.then(w -> {
+                    w.close();
+                    return null;
+                });
             });
-        return (
-            e -> {
-                getManager()
-                    .runInThread(() -> {
-                        logger.info("Challenge closed");
-                        win.then(w -> {
-                            w.close();
-                            return null;
-                        });
-                    });
-            }
-        );
+        });
     }
 
     @Override
@@ -112,43 +99,27 @@ public class Nip46AuthWindow extends NWindow<AuthConfig> {
         if (this.signer == null) {
             if (opt.getForNpub() != null) {
                 try {
-                    opt
-                        .getAuth()
-                        .load(opt.getForNpub(), null)
-                        .then(signer -> {
-                            this.signer = (NostrNIP46Signer) signer;
-                            this.signer.setChallengeHandler(
-                                    (v1, v2) -> {
-                                        try {
-                                            return onChallenge(v1, v2);
-                                        } catch (Exception e) {
-                                            logger.warning("Failed to run in thread: " + e.getMessage());
-                                            return null;
-                                        }
-                                    },
-                                    strategy.getNip46RemoteIdentityStrategy().getChallengeTimeout()
-                                );
-                            // this.signer.getPublicKey()
-                            // .catchException(ex->{
-                            // getManager().runInThread(()->{
-                            // getManager().openToast(ex);
-                            // renderAuthScreen(size, opt);
-                            // });
-                            // })
-                            // .then(pub->{
-
-                            logger.fine("Signer is connected");
-                            try {
-                                auth(opt, this.signer);
-                            } catch (Exception ex) {
-                                getManager().showToast(ex);
-                                getManager()
-                                    .runInThread(() -> {
-                                        renderAuthScreen(size, opt);
-                                    });
-                            }
+                    this.signer = (NostrNIP46Signer) opt.getAuth().load(opt.getForNpub(), null);
+                    this.signer.setChallengeHandler((v1, v2) -> {
+                        try {
+                            return onChallenge(v1, v2);
+                        } catch (Exception e) {
+                            logger.warning("Failed to run in thread: " + e.getMessage());
                             return null;
-                        });
+                        }
+                    }, strategy.getNip46RemoteIdentityStrategy().getChallengeTimeout());
+
+                    logger.fine("Signer is connected");
+                    getManager().runInThread(() -> {
+                        try {
+                            auth(opt, this.signer);
+                        } catch (Exception ex) {
+                            getManager().showToast(ex);
+
+                            renderAuthScreen(size, opt);
+                        }
+                    });
+
                 } catch (Exception e) {
                     getManager().showToast(e);
                     renderAuthScreen(size, opt);
@@ -160,42 +131,32 @@ public class Nip46AuthWindow extends NWindow<AuthConfig> {
                 NostrKeyPair appKeyPair = strategy.getNip46RemoteIdentityStrategy().getAppKeyPair();
                 Nip46AppMetadata appMetadata = strategy.getNip46RemoteIdentityStrategy().getMetadata();
                 this.signer = new NostrNIP46Signer(appMetadata, appKeyPair);
-                this.signer.setChallengeHandler(
-                        (v1, v2) -> {
-                            try {
-                                return onChallenge(v1, v2);
-                            } catch (Exception e) {
-                                logger.warning("Failed to run in thread: " + e.getMessage());
-                                return null;
-                            }
-                        },
-                        strategy.getNip46RemoteIdentityStrategy().getChallengeTimeout()
-                    );
+                this.signer.setChallengeHandler((v1, v2) -> {
+                    try {
+                        return onChallenge(v1, v2);
+                    } catch (Exception e) {
+                        logger.warning("Failed to run in thread: " + e.getMessage());
+                        return null;
+                    }
+                }, strategy.getNip46RemoteIdentityStrategy().getChallengeTimeout());
                 if (strategy.getNip46RemoteIdentityStrategy().isAllowNostrConnect()) {
-                    this.signer.listen(
-                            strategy.getNip46RemoteIdentityStrategy().getRelays(),
-                            src -> {
-                                getManager()
-                                    .runInThread(() -> {
-                                        nostrConnectUrl = src;
-                                        invalidate();
-                                    });
-                            },
-                            strategy.getNip46RemoteIdentityStrategy().getTimeout()
-                        )
-                        .then(signer -> {
-                            getManager()
-                                .runInThread(() -> {
-                                    logger.fine("Signer is connected via nostrconnect flow");
-                                    try {
-                                        auth(opt, signer);
-                                    } catch (Exception ex) {
-                                        getManager().showToast(ex);
-                                        renderAuthScreen(size, opt);
-                                    }
-                                });
-                            return null;
+                    this.signer.listen(strategy.getNip46RemoteIdentityStrategy().getRelays(), src -> {
+                        getManager().runInThread(() -> {
+                            nostrConnectUrl = src;
+                            invalidate();
                         });
+                    }, strategy.getNip46RemoteIdentityStrategy().getTimeout()).then(signer -> {
+                        getManager().runInThread(() -> {
+                            logger.fine("Signer is connected via nostrconnect flow");
+                            try {
+                                auth(opt, signer);
+                            } catch (Exception ex) {
+                                getManager().showToast(ex);
+                                renderAuthScreen(size, opt);
+                            }
+                        });
+                        return null;
+                    });
                 }
             }
         }
@@ -247,7 +208,8 @@ public class Nip46AuthWindow extends NWindow<AuthConfig> {
         if (strategy.getNip46RemoteIdentityStrategy().isAllowBunker()) { // bunker:// - nip05 flow
             Label bunkerFlowLabel = new Label("Or use the bunker:// token or nip-05 address");
             bunkerFlowLabel.setTextHAlignment(HAlignment.Center);
-            Container bunkerFlow = new Container(new SpringGridLayout(Axis.Y, Axis.X, FillMode.None, FillMode.Even));
+            Container bunkerFlow = new Container(
+                    new SpringGridLayout(Axis.Y, Axis.X, FillMode.None, FillMode.Even));
             bunkerFlow.addChild(bunkerFlowLabel);
 
             content.addChild(bunkerFlow);
@@ -270,28 +232,24 @@ public class Nip46AuthWindow extends NWindow<AuthConfig> {
                     renderLoadingScreen(size, opt, null);
                     BunkerUrl bunkerUrl = BunkerUrl.parse(bunker.getText());
                     logger.info("Authenticate to Bunker URL: " + bunkerUrl);
-                    this.signer.connect(bunkerUrl)
-                        .catchException(e -> {
-                            getManager()
-                                .runInThread(() -> {
-                                    getManager().showToast(e);
-                                    nip46LoginBtn.setEnabled(true);
-                                    renderAuthScreen(size, opt);
-                                });
-                        })
-                        .then(signer -> {
-                            getManager()
-                                .runInThread(() -> {
-                                    getManager().showToast(ToastType.INFO, "Connected to Bunker");
-                                    nip46LoginBtn.setEnabled(true);
-                                    try {
-                                        auth(opt, signer);
-                                    } catch (Exception e) {
-                                        getManager().showToast(e);
-                                    }
-                                });
-                            return null;
+                    this.signer.connect(bunkerUrl).catchException(e -> {
+                        getManager().runInThread(() -> {
+                            getManager().showToast(e);
+                            nip46LoginBtn.setEnabled(true);
+                            renderAuthScreen(size, opt);
                         });
+                    }).then(signer -> {
+                        getManager().runInThread(() -> {
+                            getManager().showToast(ToastType.INFO, "Connected to Bunker");
+                            nip46LoginBtn.setEnabled(true);
+                            try {
+                                auth(opt, signer);
+                            } catch (Exception e) {
+                                getManager().showToast(e);
+                            }
+                        });
+                        return null;
+                    });
                 } catch (MalformedURLException | UnsupportedEncodingException | URISyntaxException e) {
                     getManager().showToast(e);
                     renderAuthScreen(size, opt);
@@ -306,15 +264,12 @@ public class Nip46AuthWindow extends NWindow<AuthConfig> {
         AuthStrategy strategy = opt.getStrategy();
 
         try {
-            opt.getAuth().save(signer, null).await();
+            opt.getAuth().save(signer, null);
         } catch (Exception e) {
             getManager().showToast(e);
         }
 
-        getManager()
-            .runInThread(() -> {
-                strategy.getCallback().accept(signer);
-                close();
-            });
+        strategy.getCallback().accept(signer);
+        close();
     }
 }
