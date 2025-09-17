@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.ngengine.AsyncAssetManager;
 import org.ngengine.components.Component;
@@ -107,7 +108,7 @@ public class PlayerManagerComponent implements Component<Object> {
                 try {
                     this.nostrPool.connectRelay(new NostrRelay(relay));
                 } catch (Exception e) {
-                    System.err.println("Failed to connect to relay: " + relay);
+                    log.log(Level.WARNING, "Failed to connect to relay: " + relay, e);
                 }
             }
         }
