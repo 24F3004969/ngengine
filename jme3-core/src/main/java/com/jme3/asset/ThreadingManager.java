@@ -34,11 +34,13 @@ package com.jme3.asset;
 import java.util.concurrent.*;
 
 /**
+ * @deprecated Use nge's AsyncAssetManager
  * <code>ThreadingManager</code> manages the threads used to load content
  * within the Content Manager system. A pool of threads and a task queue
  * is used to load resource data and perform I/O while the application's
  * render thread is active.
  */
+@Deprecated
 public class ThreadingManager {
 
     protected final ExecutorService executor =
