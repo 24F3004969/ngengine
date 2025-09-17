@@ -41,7 +41,6 @@ import com.jme3.network.base.MessageListenerRegistry;
 import com.jme3.network.base.MessageProtocol;
 import com.jme3.network.service.HostedServiceManager;
 import com.jme3.network.service.serializer.ServerSerializerRegistrationsService;
-import java.lang.ref.Cleaner;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -60,12 +59,12 @@ import org.ngengine.nostr4j.rtc.listeners.NostrRTCRoomPeerDiscoveredListener;
 import org.ngengine.nostr4j.rtc.signal.NostrRTCLocalPeer;
 import org.ngengine.nostr4j.rtc.turn.NostrTURNSettings;
 import org.ngengine.nostr4j.signer.NostrSigner;
+import org.ngengine.platform.NGEPlatform;
 import org.ngengine.platform.RTCSettings;
 import org.ngengine.runner.Runner;
 
 public class P2PChannel implements Server {
 
-    private static Cleaner cleaner = Cleaner.create();
     private static final Logger log = Logger.getLogger(P2PChannel.class.getName());
     private boolean isStarted = false;
 
@@ -170,7 +169,7 @@ public class P2PChannel implements Server {
             }
         });
 
-        cleaner.register(
+        NGEPlatform.get().registerFinalizer(
             this,
             () -> {
                 rtcRoom.close();
