@@ -48,6 +48,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.ngengine.web.WebBindsAsync;
+
 /**
  * An app state to manage a single Bullet physics space.
  * <p>
@@ -129,6 +131,7 @@ public class BulletAppState
      * Use getStateManager().addState(bulletAppState) to start physics.
      */
     public BulletAppState() {
+        WebBindsAsync.loadScript("org/ngengine/web/physics/ammo.js");
     }
 
     /**
@@ -171,6 +174,7 @@ public class BulletAppState
      * use (not null)
      */
     public BulletAppState(Vector3f worldMin, Vector3f worldMax, BroadphaseType broadphaseType) {
+        WebBindsAsync.loadScript("org/ngengine/web/physics/ammo.js");
         this.worldMin.set(worldMin);
         this.worldMax.set(worldMax);
         this.broadphaseType = broadphaseType;

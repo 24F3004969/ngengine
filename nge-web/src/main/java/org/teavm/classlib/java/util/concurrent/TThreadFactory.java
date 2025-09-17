@@ -4,6 +4,7 @@ public interface TThreadFactory {
     public default Thread newThread(final Runnable task) {
         Thread t = new Thread(task);
         t.setDaemon(true);
+        t.setName("Unnamed Thread (factory)");
         return t;
     }
 }

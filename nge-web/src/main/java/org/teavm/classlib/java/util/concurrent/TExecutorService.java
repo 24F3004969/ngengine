@@ -1,16 +1,15 @@
 package org.teavm.classlib.java.util.concurrent;
 
-import java.util.concurrent.ExecutorService;
 
 public class TExecutorService extends TScheduledThreadPoolExecutor{
 
-    public TExecutorService() {
-        super(1);
+    public TExecutorService(int nThreads) {
+        super(nThreads);
         
     }
 
     public static TExecutorService newFixedThreadPool(int nThreads, TThreadFactory threadFactory) {
-        return new TExecutorService();
+        return new TExecutorService(nThreads);
     }
 
 }

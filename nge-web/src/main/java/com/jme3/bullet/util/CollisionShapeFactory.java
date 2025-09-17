@@ -34,7 +34,6 @@ package com.jme3.bullet.util;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.collision.shapes.*;
 import com.jme3.bullet.collision.shapes.infos.ChildCollisionShape;
-import com.jme3.json.*;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Transform;
 import com.jme3.math.Vector3f;

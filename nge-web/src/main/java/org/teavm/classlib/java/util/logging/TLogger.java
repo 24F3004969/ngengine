@@ -61,16 +61,20 @@ public class TLogger {
     }
 
     public void log(TLogRecord record) {
+        if(!isLoggable(record.getLevel())) return;
+        if (record.getThrown() != null) {
+            record.getThrown().printStackTrace();
+        }
+
         String message = format(record.getMessage(), record.getParameters());
         if (PlatformDetector.isLowLevel()) {
             System.out.print("[");
             System.out.print(record.getLevel().getName());
             System.out.print("] ");
             System.out.println(message);
-            if (record.getThrown() != null) {
-                record.getThrown().printStackTrace(System.out);
-            }
+            
         } else {
+        
             if (record.getLevel().intValue() >= TLevel.SEVERE.intValue()) {
                 if (PlatformDetector.isWebAssemblyGC()) {
                     JS.invoke(JS.global("console"), JS.wrap("error"), JS.wrap(message));
@@ -91,6 +95,7 @@ public class TLogger {
                 }
             }
         }
+
     }
 
     private String format(String message, Object[] params) {
@@ -146,36 +151,36 @@ public class TLogger {
     }
 
     public void log(TLevel level, String msg, Object[] params) {
-        // TLogRecord record = new TLogRecord(level, msg);
-        // record.setParameters(params);
-        // log(record);
+        TLogRecord record = new TLogRecord(level, msg);
+        record.setParameters(params);
+        log(record);
     }
 
     public void log(TLevel level, String msg) {
-        // log(new TLogRecord(level, msg));
+        log(new TLogRecord(level, msg));
     }
 
     public void log(TLevel level, String msg, TObject param1) {
-        // TLogRecord record = new TLogRecord(level, msg);
-        // record.setParameters(new Object[] { param1 });
-        // log(record);
+        TLogRecord record = new TLogRecord(level, msg);
+        record.setParameters(new Object[] { param1 });
+        log(record);
     }
 
     public void log(TLevel level, String msg, TThrowable thrown) {
-        // TLogRecord record = new TLogRecord(level, msg);
-        // record.setThrown(thrown);
-        // log(record);
+        TLogRecord record = new TLogRecord(level, msg);
+        record.setThrown(thrown);
+        log(record);
     }
 
     public void log(TLevel level, Supplier<String> msgSupplier) {
-        // var record = new TLogRecord(level, msgSupplier.get());
-        // log(record);
+        var record = new TLogRecord(level, msgSupplier.get());
+        log(record);
     }
 
     public void log(TLevel level, TThrowable thrown, Supplier<String> msgSupplier) {
-        // var record = new TLogRecord(level, msgSupplier.get());
-        // record.setThrown(thrown);
-        // log(record);
+        var record = new TLogRecord(level, msgSupplier.get());
+        record.setThrown(thrown);
+        log(record);
     }
 
     public void logp(TLevel level, String sourceClass, String sourceMethod, String msg) {
@@ -290,7 +295,7 @@ public class TLogger {
     }
 
     public boolean isLoggable(@SuppressWarnings("unused") TLevel level) {
-        return true;
+        return level.intValue() > TLevel.FINE.intValue();
     }
 
     public String getName() {

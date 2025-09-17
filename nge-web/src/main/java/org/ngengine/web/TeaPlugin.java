@@ -1,0 +1,17 @@
+package org.ngengine.web;
+   
+import org.teavm.jso.impl.JSOPlugin;
+import org.teavm.vm.spi.Before;
+import org.teavm.vm.spi.TeaVMHost;
+import org.teavm.vm.spi.TeaVMPlugin;
+
+@Before(JSOPlugin.class)
+public class TeaPlugin implements TeaVMPlugin {
+
+    @Override
+    public void install(TeaVMHost host) {
+        System.out.println("Installing NGE TeaVM Plugin");
+        host.add(new TeaClassTransformer());
+
+    }
+}

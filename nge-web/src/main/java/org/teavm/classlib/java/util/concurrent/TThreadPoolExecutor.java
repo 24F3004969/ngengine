@@ -10,7 +10,7 @@ public class TThreadPoolExecutor extends TExecutorService{
                               TimeUnit unit,
                               BlockingQueue<Runnable> workQueue,
             TThreadFactory threadFactory) {
-        super();
+        super(corePoolSize);
     }
     
 }

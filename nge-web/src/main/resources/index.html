@@ -2,27 +2,14 @@
 <html>
 
 <head>
-  <title>Powered by jMonkeyEngine</title>
+  <title>Powered by Nostr Game Engine</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-  <!-- <script type="text/javascript" charset="utf-8" src="debug/webgl-lint.js"></script> -->
-  <!-- <script type="text/javascript" charset="utf-8" src="howler.js"></script> -->
-  <script type="text/javascript" charset="utf-8" src="jme.js"></script>
-  <!-- <script type="text/javascript" charset="utf-8" src="physics/ammo.js"></script>
-  <script type="text/javascript" charset="utf-8" src="jmeapp.js"></script> -->
-
+   <script type="module" charset="utf-8" src="launcher.js"></script>
+ 
   <script>
 
-    function init(demo) {
-      document.querySelectorAll('button#startJme').forEach((btn) => {
-        btn.style.display = 'none';
-      });
-      const canvasJme = document.querySelector('canvas#jme');
-      canvasJme.style.display = 'block';
-      window.jme.canvasFitParent(canvasJme);
-      jme.start(demo);
-    }
   </script>
   <style>
     body {
@@ -131,14 +118,23 @@
   </style>
 </head>
 
-<body>
-  <canvas style="display:none" id="jme"></canvas>
+<body><svg width="0" height="0" style="position:absolute">
+  <filter id="gammaEncode">
+    <feComponentTransfer>
+      <feFuncR type="gamma" amplitude="1" exponent="0.454545" offset="0"/>
+      <feFuncG type="gamma" amplitude="1" exponent="0.454545" offset="0"/>
+      <feFuncB type="gamma" amplitude="1" exponent="0.454545" offset="0"/>
+      <feFuncA type="identity"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+  <canvas style="display:none;filter:url(#gammaEncode);" id="jme"></canvas>
 
-  <button id="startJme" onClick="init('pbr')"> Start PBR Demo</button>
-  <button id="startJme" onClick="init('physics')"> Start Physics Demo</button>
-  <button id="startJme" onClick="init('shadows')"> Start Shadows Demo</button>
-  <button id="startJme" onClick="init('audio')"> Start Audio Demo</button>
-  <button id="startJme" onClick="init('inst')"> Start Instancing Demo</button>
+  <button id="startJme" demo='pbr' > Start PBR Demo</button>
+  <button id="startJme" demo='physics' > Start Physics Demo</button>
+  <button id="startJme" demo='shadows' > Start Shadows Demo</button>
+  <button id="startJme" demo='audio' > Start Audio Demo</button>
+  <button id="startJme" demo='inst' > Start Instancing Demo</button>
  
 
 </body>

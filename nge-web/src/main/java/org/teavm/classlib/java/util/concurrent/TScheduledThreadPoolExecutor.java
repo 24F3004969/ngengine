@@ -6,69 +6,135 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
- import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.teavm.classlib.java.lang.TRunnable;
-import org.teavm.classlib.java.util.concurrent.TExecutor;
-import org.teavm.jso.browser.Window;
+ import java.util.concurrent.TimeUnit;
 
 public class TScheduledThreadPoolExecutor implements Executor {
 
-    // private final Thread pool[];
-    // private final LinkedList<Runnable> queues[];
+    
+
+
+    private class ExecutorThread implements Executor {
+
+        private boolean closed = false;
+        private List<Runnable> tasks = new LinkedList<>();
+        private Thread threadPool[];
+
+        public ExecutorThread(int n){
+            threadPool = new Thread[n];
+            for(int i=0; i<n; ++i){
+                threadPool[i] = new Thread(this::run);
+                threadPool[i].setName("ExecutorThread "+i);
+                threadPool[i].setDaemon(true);
+            }
+        }
+
+        public void start(){
+            for(Thread t : threadPool){
+                t.start();
+            }
+        }
+
+        public void setName(String name){
+            for(int i=0; i<threadPool.length; ++i){
+                threadPool[i].setName(name+"-"+i);
+            }
+        }
+
+
+
+        public void run() {
+            while (!closed) {
+                Runnable task = null;
+                synchronized (tasks) {
+                    if (!tasks.isEmpty()) {
+                        task = tasks.remove(0);
+                    }
+                }
+                if (task != null) {
+                    try {
+                        task.run();
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    try {
+                        synchronized (tasks) {
+                            if (tasks.isEmpty() && !closed) {
+                                tasks.wait(100);
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            
+            }
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            synchronized (tasks) {
+                tasks.add(command);
+                tasks.notifyAll();
+            }
+        }
+
+        public void close() {
+            closed = true;
+            synchronized (tasks) {
+                tasks.notifyAll();
+            }
+        }
+    }
+
+
     private  volatile boolean running = true;
-    // private final AtomicInteger queueIndex = new AtomicInteger(0);
+    private final ExecutorThread thread;
+
 
     public TScheduledThreadPoolExecutor(int poolSize) {
-        // pool = new Thread[poolSize];
-        // queues = new LinkedList[poolSize];
-        // for (int i = 0; i < poolSize; i++) {
-        //     queues[i] = new LinkedList<Runnable>();
-        //     LinkedList<Runnable> queue = queues[i];
-        //     pool[i] = new Thread(new Runnable() {
-        //         @Override
-        //         public void run() {
-        //             while (running) {
-        //                 Runnable r;
-        //                 synchronized (queue) {
-        //                     while (queue.isEmpty()) {
-        //                         try {
-        //                             queue.wait();
-        //                         } catch (InterruptedException e) {
-        //                             e.printStackTrace();
-        //                         }
-        //                     }
-        //                     r = queue.removeFirst();
-        //                 }
-        //                 r.run();
-        //             }
-        //         }
-        //     });
-        //     pool[i].start();
-        // }
-
+        this.thread = new ExecutorThread(poolSize);
+        this.thread.setName("ScheduledThreadPoolExecutor Thread");
+        thread.start();
     }
     
 
     public <V> TFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        if(delay == 0){ // shortcut for tasks without delay
+            TFutureTask<V> futureTask = new TFutureTask<V>();
+            this.thread.execute(()->{
+                try {
+                    V res = callable.call();
+                    futureTask.setResult(res);
+                } catch (Exception e) {
+                    futureTask.setException(e);
+                }
+            });
+            return futureTask;
+        }
+
         long ms = unit.toMillis(delay);
         TFutureTask<V> futureTask = new TFutureTask<V>();
-        Window.setTimeout(() -> {
-            
-           try {
-                V res = callable.call();
-                futureTask.setResult(res);
-            
-            } catch (Exception e) {
-                        e.printStackTrace();
-
-            futureTask.setException(e);
-        }
-        },ms);
+        Thread t = new Thread(()->{ // ensure it runs on the teavms suspendable context
+            try {
+                Thread.sleep(ms);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            this.thread.execute(()->{
+                try {
+                    V res = callable.call();
+                    futureTask.setResult(res);
+                } catch (Exception e) {
+                    futureTask.setException(e);
+                }
+            });
+        });
+        // get stacktrace
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        t.setName("Schedule Waiter "+( stack.length>2?(" at "+stack[2].toString()):""));
+        t.start();        
         return futureTask;
-
 
     }
     @Override
@@ -110,5 +176,6 @@ public class TScheduledThreadPoolExecutor implements Executor {
     
     public void shutdown() {
         running = false;
+        this.thread.close();
     }
 }
