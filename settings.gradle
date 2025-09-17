@@ -3,6 +3,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         maven { url = uri("https://teavm.org/maven/repository") }
+        mavenLocal()
     }
 }
 
@@ -59,3 +60,4 @@ include 'nge-app'
 include 'nge-ads'
 include 'nge-web'
 include 'nge-web-demo'
+include 'nge-web-bullet'
