@@ -58,6 +58,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -1550,9 +1551,25 @@ public class GltfLoader implements AssetLoader {
     }
     
 
-    public static void registerExtension(String name, Class<? extends ExtensionLoader> ext) {
+    public static void registerExtension(String name, Supplier<? extends ExtensionLoader> ext) {
         CustomContentManager.defaultExtensionLoaders.put(name, ext);        
     }
+
+    /**
+     * @deprecated Use {@link #registerExtension(String, Supplier)} instead.
+     */
+    @Deprecated
+    public static void registerExtension(String name, Class<? extends ExtensionLoader> ext) {
+        Supplier<? extends ExtensionLoader> supplier = () -> {
+            try {
+                return ext.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("Could not instantiate extension loader " + ext, e);
+            }
+        };
+        registerExtension(name, supplier);
+    }
+
     
 
     public static void unregisterExtension(String name) {
@@ -1565,8 +1582,23 @@ public class GltfLoader implements AssetLoader {
      * @param loader
      *            the default extras loader.
      */
+    public static void registerDefaultExtrasLoader(Supplier<? extends ExtrasLoader> loader) {
+        CustomContentManager.setDefaultExtrasLoader(loader);
+    }
+
+    /**
+     * Use {@link #registerDefaultExtrasLoader(Supplier)} instead.
+     */
+    @Deprecated
     public static void registerDefaultExtrasLoader(Class<? extends ExtrasLoader> loader) {
-        CustomContentManager.defaultExtraLoaderClass = loader;
+        Supplier<? extends ExtrasLoader> supplier = () -> {
+            try {
+                return loader.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("Could not instantiate extras loader " + loader, e);
+            }
+        };
+        registerDefaultExtrasLoader(supplier);
     }
 
 
@@ -1574,6 +1606,6 @@ public class GltfLoader implements AssetLoader {
      * Unregisters the default extras loader.
      */
     public static void unregisterDefaultExtrasLoader() {
-        CustomContentManager.defaultExtraLoaderClass = UserDataLoader.class;
+        CustomContentManager.setDefaultExtrasLoader(()->new UserDataLoader());
     }
 }

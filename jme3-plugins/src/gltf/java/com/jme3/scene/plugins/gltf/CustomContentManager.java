@@ -35,10 +35,10 @@ import com.jme3.plugins.json.JsonArray;
 import com.jme3.plugins.json.JsonElement;
 import com.jme3.asset.AssetLoadException;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,8 +46,7 @@ import java.util.logging.Logger;
  * Created by Nehon on 20/08/2017.
  */
 public class CustomContentManager {
-    static volatile Class<? extends ExtrasLoader> defaultExtraLoaderClass = UserDataLoader.class;
-    private ExtrasLoader defaultExtraLoaderInstance;
+    private static volatile  Supplier<? extends ExtrasLoader> defaultExtraLoaderSupplier = ()->new UserDataLoader();
 
 
     private final static Logger logger = Logger.getLogger(CustomContentManager.class.getName());
@@ -56,13 +55,13 @@ public class CustomContentManager {
     private GltfLoader gltfLoader;
 
     
-    static final Map<String, Class<? extends ExtensionLoader>> defaultExtensionLoaders = new ConcurrentHashMap<>();
+    static final Map<String, Supplier<? extends ExtensionLoader>> defaultExtensionLoaders = new ConcurrentHashMap<>();
     static {
-        defaultExtensionLoaders.put("KHR_materials_pbrSpecularGlossiness", PBRSpecGlossExtensionLoader.class);
-        defaultExtensionLoaders.put("KHR_lights_punctual", LightsPunctualExtensionLoader.class);
-        defaultExtensionLoaders.put("KHR_materials_unlit", UnlitExtensionLoader.class);
-        defaultExtensionLoaders.put("KHR_texture_transform", TextureTransformExtensionLoader.class);
-        defaultExtensionLoaders.put("KHR_materials_emissive_strength", PBREmissiveStrengthExtensionLoader.class);
+        defaultExtensionLoaders.put("KHR_materials_pbrSpecularGlossiness", ()->new PBRSpecGlossExtensionLoader());
+        defaultExtensionLoaders.put("KHR_lights_punctual", ()->new LightsPunctualExtensionLoader());
+        defaultExtensionLoaders.put("KHR_materials_unlit", ()->new UnlitExtensionLoader());
+        defaultExtensionLoaders.put("KHR_texture_transform", ()->new TextureTransformExtensionLoader());
+        defaultExtensionLoaders.put("KHR_materials_emissive_strength", ()->new PBREmissiveStrengthExtensionLoader());
 
     }
     
@@ -71,29 +70,16 @@ public class CustomContentManager {
     public CustomContentManager() {
     }
     
+    public static void setDefaultExtrasLoader(Supplier<? extends ExtrasLoader> supplier) {
+        defaultExtraLoaderSupplier = supplier;
+    }
+
     /**
      * Returns the default extras loader.
      * @return the default extras loader.
      */
     public ExtrasLoader getDefaultExtrasLoader() {
-        if (defaultExtraLoaderClass == null) { 
-            defaultExtraLoaderInstance = null; // do not hold reference
-            return null;
-        }
-
-        if (defaultExtraLoaderInstance != null
-                && defaultExtraLoaderInstance.getClass() != defaultExtraLoaderClass) {
-            defaultExtraLoaderInstance = null; // reset instance if class changed
-        }
-
-        try {
-            defaultExtraLoaderInstance = defaultExtraLoaderClass.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "Could not instantiate default extras loader", e);
-            defaultExtraLoaderInstance = null;
-        }
-
-        return defaultExtraLoaderInstance;
+        return defaultExtraLoaderSupplier.get();
     }
 
     void init(GltfLoader gltfLoader) {
@@ -151,11 +137,11 @@ public class CustomContentManager {
                 loader = loadedExtensionLoaders.get(ext.getKey());
                 if (loader == null) {
                     try {
-                        Class<? extends ExtensionLoader> clz = defaultExtensionLoaders.get(ext.getKey());
+                        Supplier<? extends ExtensionLoader> clz = defaultExtensionLoaders.get(ext.getKey());
                         if (clz != null) {
-                            loader = clz.getDeclaredConstructor().newInstance();
+                            loader = clz.get();
                         }
-                    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+                    } catch (Exception e) {
                         logger.log(Level.WARNING, "Could not instantiate loader", e);
                     }
 
