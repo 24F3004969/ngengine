@@ -2,6 +2,7 @@
 
 dependencies {
     implementation project(':jme3-core')
+    implementation "org.ngengine:nge-platform-common:${ngePlatformVersion}"
 
 }
 

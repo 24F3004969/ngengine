@@ -34,8 +34,6 @@
 
 package com.simsilica.lemur;
 
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.Styles;
 import com.simsilica.lemur.core.VersionedReference;
@@ -143,7 +141,6 @@ public class Slider extends Panel {
         // it has applied its own, it is possible that its default styles
         // will not have been applied.  So we'll make sure.
         Styles styles = GuiGlobals.getInstance().getStyles();
-        styles.initializeStyles(getClass());
 
         this.axis = axis;
         this.layout = new BorderLayout();
@@ -189,16 +186,6 @@ public class Slider extends Panel {
     protected final void setupCommands() {
         increment.addClickCommands(new ChangeValueCommand(1));
         decrement.addClickCommands(new ChangeValueCommand(-1));
-    }
-
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Styles styles, Attributes attrs ) {
-        ElementId parent = new ElementId(ELEMENT_ID);
-        styles.getSelector(parent.child(UP_ID), null).set("text", "^", false);
-        styles.getSelector(parent.child(DOWN_ID), null).set("text", "v", false);
-        styles.getSelector(parent.child(LEFT_ID), null).set("text", "<", false);
-        styles.getSelector(parent.child(RIGHT_ID), null).set("text", ">", false);
-        styles.getSelector(parent.child(THUMB_ID), null).set("text", "#", false);
     }
 
     public void setModel( RangedValueModel model ) {

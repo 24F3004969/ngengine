@@ -34,16 +34,12 @@
 
 package com.simsilica.lemur;
 
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.component.BorderLayout;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.AbstractGuiControlListener;
 import com.simsilica.lemur.core.VersionedReference;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
-import com.simsilica.lemur.style.StyleDefaults;
 import com.simsilica.lemur.style.Styles;
 
 
@@ -98,7 +94,6 @@ public class ProgressBar extends Panel {
         // it has applied its own, it is possible that its default styles
         // will not have been applied.  So we'll make sure.
         Styles styles = GuiGlobals.getInstance().getStyles();
-        styles.initializeStyles(getClass());
 
         // Having a label as a child is both nice for the caller as
         // well as convenient for us.  It means we have an easy component
@@ -121,16 +116,6 @@ public class ProgressBar extends Panel {
         }
     }                            
  
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Styles styles, Attributes attrs ) {
-        GuiGlobals globals = GuiGlobals.getInstance();
-        ElementId parent = new ElementId(ELEMENT_ID);        
-        styles.getSelector(parent.child(CONTAINER_ID), null).set("background", 
-                                                new QuadBackgroundComponent(globals.srgbaColor(new ColorRGBA(0.2f, 0.2f, 0.2f, 0.5f)), 2, 2)); 
-        styles.getSelector(parent.child(VALUE_ID), null).set("background", 
-                                                new QuadBackgroundComponent(globals.srgbaColor(new ColorRGBA(0.1f, 0.7f, 0.3f, 1)))); 
-        styles.getSelector(parent.child(LABEL_ID), null).set("textHAlignment", HAlignment.Center, false);
-    }
  
     /**
      *  Sets the current progress value as a percentage (0-1.0) of

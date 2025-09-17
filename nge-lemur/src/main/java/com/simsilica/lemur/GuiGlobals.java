@@ -154,20 +154,15 @@ public class GuiGlobals {
             setDefaultStyles();
 
             iconBase = getClass().getPackage().getName().replace( '.', '/' ) + "/icons";
-
             return;
         }
 
         this.keyInterceptor = new KeyInterceptState(app);
 
-        // For now, pick either mouse or touch based on the
-        // availability of touch.  It's an either/or at the
-        // moment but the rest of the code is setup to support
-        // both at once should we ever want to support touch
-        // devices that also may have a mouse connected.
-        if (app.getContext().getTouchInput() == null) {
+        if (app.getContext().getMouseInput() != null) {
             this.mouseState = new MouseAppState(app);
-        } else {
+        } 
+        if( app.getContext().getTouchInput() != null) {
             this.touchState = new TouchAppState(app);
         }
 
@@ -359,7 +354,6 @@ public class GuiGlobals {
         if (t == null) {
             throw new RuntimeException("Error loading texture:" + key.getName());
         }
-
         if (repeat) {
             t.setWrap(Texture.WrapMode.Repeat);
         } else {

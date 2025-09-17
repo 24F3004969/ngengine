@@ -34,17 +34,11 @@
 
 package com.simsilica.lemur;
 
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
 import com.simsilica.lemur.core.GuiComponent;
 import com.simsilica.lemur.core.VersionedReference;
-import com.simsilica.lemur.core.GuiControl;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
-import com.simsilica.lemur.component.IconComponent;
-import com.jme3.math.ColorRGBA;
 
 
 
@@ -108,19 +102,6 @@ public class Checkbox extends Button {
         addCommands(ButtonAction.Click, Checkbox.TOGGLE_COMMAND);
     }
 
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
-        IconComponent on = new IconComponent("/com/simsilica/lemur/icons/Check.png", 1.2f,
-                                   2, 2, 0.01f, false);
-        IconComponent off = new IconComponent("/com/simsilica/lemur/icons/Check.png", 1.2f,
-                                   2, 2, 0.01f, false);
-        off.setColor(new ColorRGBA(0,0,0,0));
-
-        attrs.set("background", new QuadBackgroundComponent( new ColorRGBA(0,0,0,0) ), false);
-        attrs.set("onView", on, false);
-        attrs.set("offView", off, false);
-        attrs.set("textVAlignment", VAlignment.Center, false);
-    }
 
     public void setModel( CheckboxModel model ) {
         if( this.model == model )

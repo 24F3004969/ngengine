@@ -73,11 +73,24 @@ public class NIconButton extends Button {
         }
     }
 
+    /**
+     * @deprecated causes deadlocks when compiling to teavm, use setSVGIconComponent ("svgIconComponent") instead
+     * @param iconPath
+     */
     @StyleAttribute("svgIcon")
+    @Deprecated
     public void setSVGIcon(String iconPath) {
         int iconSize = (int) (this.iconSize > 0 ? this.iconSize : getFontSize() * 1.5f);
         if (iconSize < 2) iconSize = 2;
         IconComponent icon = new NSVGIcon(iconPath, iconSize, iconSize);
+        super.setIcon(icon);
+    }
+
+    @StyleAttribute("svgIconComponent")
+    public void setSVGIconComponent(NSVGIcon icon) {
+        int iconSize = (int) (this.iconSize > 0 ? this.iconSize : getFontSize() * 1.5f);
+        if (iconSize < 2) iconSize = 2;
+        icon.setIconSize(new Vector2f(iconSize, iconSize));
         super.setIcon(icon);
     }
 

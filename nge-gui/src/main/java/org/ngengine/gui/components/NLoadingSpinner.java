@@ -47,10 +47,8 @@ import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.GuiControlListener;
 import com.simsilica.lemur.core.GuiMaterial;
 import com.simsilica.lemur.core.GuiUpdateListener;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
-import com.simsilica.lemur.style.StyleDefaults;
 
 public class NLoadingSpinner extends Panel implements GuiUpdateListener, GuiControlListener {
 
@@ -83,11 +81,6 @@ public class NLoadingSpinner extends Panel implements GuiUpdateListener, GuiCont
         getControl(GuiControl.class).addListener(this);
     }
 
-    @StyleDefaults("loading-spinner")
-    public static void initializeDefaultStyles(Attributes attrs) {
-        ColorRGBA gray = GuiGlobals.getInstance().srgbaColor(ColorRGBA.Gray);
-        attrs.set("color", gray, false);
-    }
 
     protected GuiMaterial createMaterial() {
         GuiMaterial mat = GuiGlobals.getInstance().createMaterial(color, false);

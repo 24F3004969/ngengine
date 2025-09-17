@@ -194,15 +194,6 @@ public class ListBox<T> extends Panel {
         setSelectionModel(selection);        
     }
     
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Styles styles, Attributes attrs ) {
- 
-        ElementId parent = new ElementId(ELEMENT_ID);
-        //QuadBackgroundComponent quad = new QuadBackgroundComponent(new ColorRGBA(0.5f, 0.5f, 0.5f, 1));
-        QuadBackgroundComponent quad = new QuadBackgroundComponent(new ColorRGBA(0.8f, 0.9f, 0.1f, 1));
-        quad.getMaterial().getMaterial().getAdditionalRenderState().setBlendMode(BlendMode.Exclusion);
-        styles.getSelector(parent.child(SELECTOR_ID), null).set("background", quad, false);        
-    }
     
     @Override
     public void updateLogicalState( float tpf ) {

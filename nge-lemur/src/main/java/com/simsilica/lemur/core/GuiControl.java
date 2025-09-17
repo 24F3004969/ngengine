@@ -295,9 +295,11 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
         if( layout != null ) {
             layout.calculatePreferredSize(size);
         }
+        assert Vector3f.isValidVector(size);
         Vector3f lastSize = new Vector3f(size);
         for( int i = componentStack.size() - 1; i >= 0; i-- ) {
             componentStack.get(i).calculatePreferredSize(size);
+            assert Vector3f.isValidVector(size);
             if( size.x < lastSize.x || size.y < lastSize.y || size.z < lastSize.z ) {
                 throw new RuntimeException("Component:" + componentStack.get(i)
                                 + " shrunk the preferred size. Before:" + lastSize

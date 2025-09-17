@@ -34,8 +34,6 @@
 
 package com.simsilica.lemur;
 
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
@@ -108,10 +106,6 @@ public class Container extends Panel {
         }
     }
 
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
-        attrs.set("layout", new SpringGridLayout(), false);
-    }
 
     public <T extends Node> T addChild( T child, Object... constraints ) {
         getLayout().addChild(child, constraints);

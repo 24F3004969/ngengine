@@ -41,9 +41,7 @@ import com.simsilica.lemur.grid.GridModel;
 import com.simsilica.lemur.component.SpringGridLayout;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.VersionedReference;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
-import com.simsilica.lemur.style.StyleDefaults;
 import com.simsilica.lemur.style.Styles;
 
 
@@ -93,9 +91,6 @@ public class GridPanel extends Panel {
         setModel(model);                
     }
 
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
-    }
 
     public void setModel( GridModel<Panel> model ) {
  

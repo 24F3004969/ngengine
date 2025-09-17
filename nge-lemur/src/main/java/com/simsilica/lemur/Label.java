@@ -45,8 +45,6 @@ import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.component.Text2d;
 import com.simsilica.lemur.component.TextComponent;
 import com.simsilica.lemur.core.GuiComponent;
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
@@ -122,10 +120,6 @@ public class Label extends Panel {
                 ignoreFontChanges = false;
             }
         }
-    }
-
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
     }
 
     /**

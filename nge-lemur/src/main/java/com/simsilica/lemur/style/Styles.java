@@ -34,15 +34,18 @@
 
 package com.simsilica.lemur.style;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.annotation.Annotation;
+ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.ngengine.platform.NGEPlatform;
+import org.ngengine.platform.NGEUtils;
+import java.lang.reflect.*;
 
 import com.simsilica.lemur.core.GuiComponent;
   
 import com.jme3.util.clone.Cloner;
-import com.jme3.util.clone.JmeCloneable;
 
 /**
  *  Provides support for automatically configuring GUI elements
@@ -127,7 +130,6 @@ public class Styles {
     public static final String ROOT_STYLE = "root";
     public static final ElementId DEFAULT_ELEMENT = new ElementId("default");
 
-    private static Map<Class, List<Method>> methodIndex = new HashMap<Class, List<Method>>();
     private Set<Class> initialized = new HashSet<Class>();
 
 
@@ -317,107 +319,78 @@ public class Styles {
         return getSelector(new ElementId(parent), new ElementId(child), style);
     }
 
-    public static void main( String... args ) {
 
-        ElementId id = new ElementId( "slider.thumb.button" );
-        System.out.println( "Parts:" + Arrays.asList(id.getParts()) );
 
-        Styles test = new Styles();
 
-        test.getSelector( "slider.thumb.button", null ).set( "color", "red" );
-        test.getSelector( "thumb", "button", null ).set( "background", "angry" );
-        test.getSelector( "slider.thumb.button", "foo").set( "background", "happy" );
-        test.getSelector( "button", null ).set( "border", "outline" );
-        test.getSelector( "button", "foo" ).set( "border", "dotted" );
-        test.getSelector( "slider", "button", null).set( "action", "depress" );
-        test.getSelector( "button", "foo" ).set( "action", "null" );
-        test.getSelector( "foo" ).set( "color", "yellow" );
+  
+    public static class StyleAttributeData {
+        public String value;
+        public boolean lookupDefault;
 
-        Attributes a1 = test.getAttributes( "slider.thumb.button", ROOT_STYLE );
-        System.out.println( "a1:" + a1 );
-
-        Attributes a2 = test.getAttributes( "slider.thumb.button", "foo" );
-        System.out.println( "a2:" + a2 );
-    }
-
-    public void initializeStyles(Class c) {
-        if( initialized.contains(c) )
-            return;
-        initialized.add(c);
-
-        if( c.getSuperclass() != Object.class ) {
-            initializeStyles(c.getSuperclass());
-        }
-
-        // Find the right method
-        Method[] methods = c.getMethods();
-        for( Method m : methods ) {
-            int mods = m.getModifiers();
-            if( !Modifier.isStatic(mods) )
-                continue;
-            if( !Modifier.isPublic(mods) )
-                continue;
-            if( !m.isAnnotationPresent(StyleDefaults.class) )
-                continue;
-
-            StyleDefaults styleDefaults = m.getAnnotation(StyleDefaults.class);
-            try {
-                // It's the one... figure out how we should call it.
-                Class[] parmTypes = m.getParameterTypes();
-                Object[] args = new Object[parmTypes.length];
-                for( int i = 0; i < parmTypes.length; i++ ) {
-                    if( Styles.class.isAssignableFrom(parmTypes[i]) ) {
-                        args[i] = this;
-                    } else if( Attributes.class.isAssignableFrom(parmTypes[i]) ) {
-                        args[i] = getSelector(styleDefaults.value(), null);
-                    }
-                }
-                m.invoke(c, args);
-            } catch( IllegalAccessException e ) {
-                throw new RuntimeException("Error initializing styles for:" + c, e);
-            } catch( InvocationTargetException e ) {
-                throw new RuntimeException("Error initializing styles for:" + c, e);
-            }
+        public StyleAttributeData( String value, boolean lookupDefault ) {
+            this.value = value;
+            this.lookupDefault = lookupDefault;
         }
     }
 
     @SuppressWarnings("unchecked")
-    protected Object getExistingValue( Object o, Method m ) {
-        Class c = o.getClass();
-        String name = m.getName();
-        if( !name.startsWith("set") )
-            return null;
-        name = "g" + name.substring(1);
-        try {
-            m = c.getMethod(name);
-        } catch( NoSuchMethodException e ) {
-            return null;
+    protected  Map<String, Object> getEncodedAnnotationData(Object obj, Class c, String mapName ) {
+         Map<String,Object> attributeMap = null;
+        try{
+            Field f = c.getField(mapName);
+            if(f != null){
+                // WORKAROUND: for runtimes with limited reflection support
+                // like TeaVM. During transpilation we need to collect all the 
+                // annotation metadata and store it in a class field of type String
+                // JSON encoded. Then here we decode it back and use it as source for 
+                // the metadata
+                f.setAccessible(true);
+                String attributeMapString = (String) f.get(obj);
+                attributeMap = NGEPlatform.get().fromJSON(attributeMapString, Map.class);
+            }
+        } catch(Exception e){
         }
-        try {
-            return m.invoke(o);
-        } catch( IllegalAccessException e ) {
-            throw new RuntimeException("Error getting existing value from:" + m + " on:" + o, e);
-        } catch( InvocationTargetException e ) {
-            throw new RuntimeException("Error getting existing value from:" + m + " on:" + o, e);
-        }
+        return attributeMap;
     }
 
-    protected static List<Method> getStyleAttributeMethods( Class c ) {
-        List<Method> results = methodIndex.get(c);
-        if( results != null )
-            return results;
-
-        results = new ArrayList<Method>();
+    @SuppressWarnings("unchecked")
+    protected  List<Method> getAnnotatedMethods( Object obj,Class c , Class<? extends Annotation> annType, String mapName) {
+        Map<String,Object> attributeMap =  getEncodedAnnotationData(obj, c, mapName);;
+        List<Method> results = new ArrayList<Method>();
         for( Method m : c.getMethods() ) {
-            if( m.isAnnotationPresent(StyleAttribute.class) ) {
-                StyleAttribute attribute = m.getAnnotation(StyleAttribute.class);
+            if( m.isAnnotationPresent(annType) || (attributeMap!=null && attributeMap.containsKey(m.getName())) ) {
                 results.add(m);
             }
         }
-
-        methodIndex.put(c, results);
         return results;
     }
+    
+
+    protected  List<Method> getStyleAttributeMethods(Object obj, Class c) {
+        return getAnnotatedMethods(obj, c, StyleAttribute.class, "lemurStyleAttributeMap");
+    }
+
+    protected  StyleAttributeData getStyleAttributeData( Object obj, Method m ) {
+        Class<StyleAttribute>  annType = StyleAttribute.class;
+        StyleAttribute attribute =  m.getAnnotation(annType);
+        if(attribute!=null){
+            StyleAttributeData data = new StyleAttributeData(attribute.value(), attribute.lookupDefault());
+            return data;
+        } else {
+            Map<String,Object> attributeMap = getEncodedAnnotationData(obj, m.getDeclaringClass(), "lemurStyleAttributeMap");
+            if(attributeMap!=null){
+                Map<String,Object> attr = (Map<String,Object>)attributeMap.get(m.getName());
+                if(attr!=null){
+                    String value = (String)attr.get("value");
+                    boolean lookupDefault = NGEUtils.safeBool(attr.getOrDefault("lookupDefault", true));
+                    StyleAttributeData data = new StyleAttributeData(value, lookupDefault);
+                    return data;
+                }
+            }           
+        }
+        return null;
+    }
+    
 
     @Deprecated
     public void applyStyles( Object o, String elementId ) {
@@ -437,7 +410,6 @@ public class Styles {
     public void applyStyles( Object o, ElementId elementId, String style ) {
 
         Class c = o.getClass();
-        initializeStyles(c);
 
         if( log.isLoggable(Level.FINEST) ) {
             log.finest("applyStyles elementId:" + elementId + " style:" + style + (style==null?"(" + defaultStyle + ")":""));
@@ -448,10 +420,10 @@ public class Styles {
             log.finest("style attributes:" + attrs);
         }
 
-        Cloner cloner = null;
 
-        for( Method m : getStyleAttributeMethods(c) ) {
-            StyleAttribute attribute = m.getAnnotation(StyleAttribute.class);
+        List<Method> methods = getStyleAttributeMethods(o, c) ;
+        for( Method m : methods) {
+            StyleAttributeData  attribute = getStyleAttributeData(o, m);
 
             Class type = m.getParameterTypes()[0];
 
@@ -461,7 +433,7 @@ public class Styles {
             //if( existing != null )
             //    continue;
 
-            Object value = attrs.get(attribute.value(), type, attribute.lookupDefault());
+            Object value = attrs.get(attribute.value, type, attribute.lookupDefault);
             if( value == null )
                 continue;
 
@@ -478,10 +450,32 @@ public class Styles {
                 if(log.isLoggable(Level.FINEST) ) {
                     log.finest("calling " + m.getName() + " with:" + value);
                 }
-                m.invoke(o, value);
-            } catch( IllegalAccessException e ) {
-                throw new RuntimeException("Error applying attribute:" + attribute + " to:" + o, e);
-            } catch( InvocationTargetException e ) {
+
+                // WORKAROUND: manual primitive unwrapping for teavm
+                if(type.isPrimitive()){
+                    if(type.equals(int.class)){
+                        m.invoke(o, ((Number)value).intValue());
+                    } else if(type.equals(float.class)){
+                        m.invoke(o, ((Number)value).floatValue());
+                    } else if(type.equals(double.class)){
+                        m.invoke(o, ((Number)value).doubleValue());
+                    } else if(type.equals(long.class)){
+                        m.invoke(o, ((Number)value).longValue());
+                    } else if(type.equals(short.class)){
+                        m.invoke(o, ((Number)value).shortValue());
+                    } else if(type.equals(byte.class)){
+                        m.invoke(o, ((Number)value).byteValue());
+                    } else if(type.equals(boolean.class)){
+                        m.invoke(o, ((Boolean)value).booleanValue());
+                    } else if(type.equals(char.class)){
+                        m.invoke(o, ((Character)value).charValue());
+                    } else {
+                        throw new RuntimeException("Unhandled primitive type: " + type);
+                    }
+                } else {
+                    m.invoke(o, value);
+                }
+            } catch( Throwable e ) {
                 throw new RuntimeException("Error applying attribute:" + attribute + " to:" + o, e);
             }
         }

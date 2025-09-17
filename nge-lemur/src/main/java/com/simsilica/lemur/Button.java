@@ -45,15 +45,12 @@ import com.jme3.scene.Spatial;
 
 import com.simsilica.lemur.core.CommandMap;
 import com.simsilica.lemur.core.GuiControl;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.focus.FocusChangeEvent;
 import com.simsilica.lemur.focus.FocusChangeListener;
 import com.simsilica.lemur.focus.FocusNavigationFunctions;
 import com.simsilica.lemur.input.FunctionId;
 import com.simsilica.lemur.input.InputState;
 import com.simsilica.lemur.input.StateFunctionListener;
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
@@ -128,15 +125,6 @@ public class Button extends Label {
         if( applyStyles ) {
             styles.applyStyles( this, elementId, style );
         }
-    }
-
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
-        GuiGlobals globals = GuiGlobals.getInstance();
-        attrs.set("background", new QuadBackgroundComponent(new ColorRGBA(0,0,0,0)), false);
-        attrs.set("highlightColor", ColorRGBA.Yellow, false);  // yellow should not need srgb conversion
-        attrs.set("focusColor", ColorRGBA.Green, false);       // green should not need srgb conversion
-        attrs.set("shadowColor", globals.srgbaColor(new ColorRGBA(0, 0, 0, 0.5f)), false);
     }
 
     @SuppressWarnings("unchecked") // because Java doesn't like var-arg generics

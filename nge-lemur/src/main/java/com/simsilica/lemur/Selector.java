@@ -179,11 +179,6 @@ public class Selector<T> extends Panel {
         resetView();
     }
 
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Styles styles, Attributes attrs ) {
-        ElementId parent = new ElementId(ELEMENT_ID);
-        styles.getSelector(parent.child(EXPANDER_ID), null).set("text", "v", false);
-    }
 
     public VersionedList<T> getModel() {
         return listBox.getModel();

@@ -31,16 +31,29 @@
  */
 package org.ngengine.gui;
 
+import com.jme3.material.RenderState.BlendMode;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
+import com.simsilica.lemur.Button;
+import com.simsilica.lemur.Checkbox;
+import com.simsilica.lemur.Container;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.HAlignment;
 import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.ListBox;
+import com.simsilica.lemur.Panel;
+import com.simsilica.lemur.ProgressBar;
+import com.simsilica.lemur.Selector;
+import com.simsilica.lemur.Slider;
+import com.simsilica.lemur.Spinner;
+import com.simsilica.lemur.TextField;
 import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.simsilica.lemur.component.SpringGridLayout;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.style.Attributes;
+import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.Styles;
 import java.util.List;
 import org.ngengine.DevMode;
@@ -51,15 +64,15 @@ public class NGEStyle {
     private static final String NAME = "nge";
 
     public static ColorRGBA fromHex(String hex) {
-        ColorRGBA linear = new ColorRGBA();
-        linear.setAsSrgb(
+         GuiGlobals globals = GuiGlobals.getInstance();
+        ColorRGBA c = globals.srgbaColor(
             Integer.valueOf(hex.substring(1, 3), 16) / 255f,
             Integer.valueOf(hex.substring(3, 5), 16) / 255f,
             Integer.valueOf(hex.substring(5, 7), 16) / 255f,
             hex.length() > 7 ? Integer.valueOf(hex.substring(7, 9), 16) / 255f : 1f
         );
 
-        return linear;
+        return c;
     }
 
     static ColorRGBA secondary = fromHex("#15091a");
@@ -141,6 +154,97 @@ public class NGEStyle {
         glob.set("fontSize", vmin(2.1f));
         {}
 
+        {
+            Attributes attrs = styles.getSelector(TextField.ELEMENT_ID, NAME);
+            attrs.set("background", new QuadBackgroundComponent(new ColorRGBA(0,0,0,1)), false);
+            attrs.set("singleLine", true);
+        }
+
+        {
+            ElementId parent = new ElementId(Spinner.ELEMENT_ID);  
+            styles.getSelector(parent.child(Spinner.UP_ID), NAME).set("text", "+", false);
+            styles.getSelector(parent.child(Spinner.UP_ID), NAME).set("insets", new Insets3f(0, 0, 0, 0), false);
+            styles.getSelector(parent.child(Spinner.DOWN_ID), NAME).set("text", "-", false);
+            styles.getSelector(parent.child(Spinner.DOWN_ID), NAME).set("insets", new Insets3f(0, 0, 0, 0), false);
+            styles.getSelector(parent.child(Spinner.VALUE_ID), NAME).set("textVAlignment", VAlignment.Center, false);
+        }
+
+        {
+            ElementId parent = new ElementId(Slider.ELEMENT_ID);
+            styles.getSelector(parent.child(Slider.UP_ID), NAME).set("text", "^", false);
+            styles.getSelector(parent.child(Slider.DOWN_ID), NAME).set("text", "v", false);
+            styles.getSelector(parent.child(Slider.LEFT_ID), NAME).set("text", "<", false);
+            styles.getSelector(parent.child(Slider.RIGHT_ID), NAME).set("text", ">", false);
+            styles.getSelector(parent.child(Slider.THUMB_ID), NAME).set("text", "#", false);
+
+        }
+
+        {
+            ElementId parent = new ElementId(Selector.ELEMENT_ID);
+            styles.getSelector(parent.child(Selector.EXPANDER_ID), NAME).set("text", "v", false);
+   
+
+        }
+
+      {        
+            GuiGlobals globals = GuiGlobals.getInstance();
+            ElementId parent = new ElementId(ProgressBar.ELEMENT_ID);        
+            styles.getSelector(parent.child(ProgressBar.CONTAINER_ID), NAME).set("background", 
+                                                    new QuadBackgroundComponent(globals.srgbaColor(new ColorRGBA(0.2f, 0.2f, 0.2f, 0.5f))
+                                                   , 2, 2) ); 
+            styles.getSelector(parent.child(ProgressBar.VALUE_ID), NAME).set("background", 
+                                                    new QuadBackgroundComponent(globals.srgbaColor(new ColorRGBA(0.1f, 0.7f, 0.3f, 1)))); 
+            styles.getSelector(parent.child(ProgressBar.LABEL_ID), NAME).set("textHAlignment", HAlignment.Center, false);
+        }
+
+        {        
+            Attributes attrs = styles.getSelector(Panel.ELEMENT_ID, NAME);
+            ColorRGBA gray = GuiGlobals.getInstance().srgbaColor(ColorRGBA.Gray);        
+            attrs.set( "background", new QuadBackgroundComponent(gray) , false );
+        }
+
+        {
+            ElementId parent = new ElementId(ListBox.ELEMENT_ID);
+            QuadBackgroundComponent quad = new QuadBackgroundComponent(new ColorRGBA(0.8f, 0.9f, 0.1f, 1));
+            quad.getMaterial().getMaterial().getAdditionalRenderState().setBlendMode(BlendMode.Exclusion);
+            styles.getSelector(parent.child(ListBox.SELECTOR_ID), NAME).set("background", quad, false);        
+        }
+
+
+        {
+            Attributes attrs = styles.getSelector(Container.ELEMENT_ID, NAME);
+            attrs.set("layout", new SpringGridLayout(), false);
+        }
+
+
+        {
+            Attributes attrs = styles.getSelector(Checkbox.ELEMENT_ID, NAME);
+            IconComponent on = new IconComponent("/com/simsilica/lemur/icons/Check.png", 1.2f,
+                                   2, 2, 0.01f, false);
+            IconComponent off = new IconComponent("/com/simsilica/lemur/icons/Check.png", 1.2f,
+                                    2, 2, 0.01f, false);
+            off.setColor(new ColorRGBA(0,0,0,0));
+
+            attrs.set("background", new QuadBackgroundComponent( new ColorRGBA(0,0,0,0) ), false);
+            attrs.set("onView", on, false);
+            attrs.set("offView", off, false);
+            attrs.set("textVAlignment", VAlignment.Center, false);
+        }
+
+        {
+            Attributes attrs = styles.getSelector(Button.ELEMENT_ID, NAME);
+            GuiGlobals globals = GuiGlobals.getInstance();
+            attrs.set("background", new QuadBackgroundComponent(new ColorRGBA(0,0,0,0)), false);
+            attrs.set("highlightColor", ColorRGBA.Yellow, false);  // yellow should not need srgb conversion
+            attrs.set("focusColor", ColorRGBA.Green, false);       // green should not need srgb conversion
+            attrs.set("shadowColor", globals.srgbaColor(new ColorRGBA(0, 0, 0, 0.5f)), false);
+        }
+
+         {
+            Attributes attrs = styles.getSelector("loading-spinner", NAME);
+             ColorRGBA gray = GuiGlobals.getInstance().srgbaColor(ColorRGBA.Gray);
+            attrs.set("color", gray, false);
+         }
         {
             Attributes container = styles.getSelector("container", NAME);
             QuadBackgroundComponent containerBackground = new QuadBackgroundComponent(transparent);
@@ -377,27 +481,36 @@ public class NGEStyle {
             }
 
             {
+                int iconSize = vmin(2.1f);
+                NSVGIcon on = new NSVGIcon("icons/outline/x.svg", iconSize, iconSize);
+
                 Attributes closeBtn = styles.getSelector("toast.close.iconButton", NAME);
                 closeBtn.set("iconSize", vmin(2.1f));
                 closeBtn.set("fontSize", vmin(2.1f));
                 closeBtn.set("color", lightPurple);
-                closeBtn.set("svgIcon", "icons/outline/x.svg");
+                closeBtn.set("svgIconComponent", on);
             }
 
             {
+                int iconSize = vmin(2.1f);
                 Attributes toastIcon = styles.getSelector("toast.iconButton", NAME);
+                NSVGIcon on = new NSVGIcon("icons/outline/info-square-rounded.svg", iconSize, iconSize);
                 toastIcon.set("color", lightPurple);
-                toastIcon.set("svgIcon", "icons/outline/info-square-rounded.svg");
+                toastIcon.set("svgIconComponent",on );
             }
 
             {
                 Attributes errorToastIcon = styles.getSelector("error.toast.iconButton", NAME);
-                errorToastIcon.set("svgIcon", "icons/outline/alert-octagon.svg");
+                int iconSize = vmin(2.1f);
+                NSVGIcon on = new NSVGIcon("icons/outline/alert-triangle.svg", iconSize, iconSize);
+                errorToastIcon.set("svgIconComponent",on );
             }
 
             {
                 Attributes warningToastIcon = styles.getSelector("warning.toast.iconButton", NAME);
-                warningToastIcon.set("svgIcon", "icons/outline/alert-triangle.svg");
+                int iconSize = vmin(2.1f);
+                NSVGIcon on = new NSVGIcon("icons/outline/alert-triangle.svg", iconSize, iconSize);
+                warningToastIcon.set("svgIconComponent",on );
             }
 
             {

@@ -39,15 +39,12 @@ import java.util.Map;
 import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
 
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TextEntryComponent;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.event.KeyActionListener;
 import com.simsilica.lemur.event.KeyAction;
 import com.simsilica.lemur.event.FocusMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
@@ -130,11 +127,6 @@ public class TextField extends Panel {
         return new TextEntryComponent(model, font);
     }
 
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
-        attrs.set("background", new QuadBackgroundComponent(new ColorRGBA(0,0,0,1)), false);
-        attrs.set("singleLine", true);
-    }
 
     public Map<KeyAction,KeyActionListener> getActionMap() {
         return text.getActionMap();

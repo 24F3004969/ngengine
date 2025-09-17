@@ -34,8 +34,6 @@
 
 package com.simsilica.lemur;
 
-import com.simsilica.lemur.style.StyleDefaults;
-import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
@@ -220,12 +218,6 @@ public class Panel extends Node {
         if( mc.isEmpty() ) {
             removeControl(mc);
         }
-    }
-
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Attributes attrs ) {
-        ColorRGBA gray = GuiGlobals.getInstance().srgbaColor(ColorRGBA.Gray);        
-        attrs.set( "background", new QuadBackgroundComponent(gray), false );
     }
 
     @StyleAttribute(value="background", lookupDefault=false)

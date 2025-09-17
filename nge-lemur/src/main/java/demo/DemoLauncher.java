@@ -79,7 +79,6 @@ public class DemoLauncher extends SimpleApplication {
         settings.setVSync(true);
         
 
-        settings.load("Lemur Demos");
         settings.setTitle("Lemur Demos");
         //settings.setSettingsDialogImage("/sim-eth-es-splash-512.png");
         //settings.setUseJoysticks(true);

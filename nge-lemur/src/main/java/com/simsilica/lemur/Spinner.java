@@ -178,17 +178,6 @@ public class Spinner<T> extends Panel {
         
         setModel(model);                
     }
- 
-    @StyleDefaults(ELEMENT_ID)
-    public static void initializeDefaultStyles( Styles styles, Attributes attrs ) {
-        ElementId parent = new ElementId(ELEMENT_ID);  
-        styles.getSelector(parent.child(UP_ID), null).set("text", "+", false);
-        styles.getSelector(parent.child(UP_ID), null).set("insets", new Insets3f(0, 0, 0, 0), false);
-        styles.getSelector(parent.child(DOWN_ID), null).set("text", "-", false);
-        styles.getSelector(parent.child(DOWN_ID), null).set("insets", new Insets3f(0, 0, 0, 0), false);
-        styles.getSelector(parent.child(VALUE_ID), null).set("textVAlignment", VAlignment.Center, false);
-    }
-
     @Override
     public void updateLogicalState(float tpf) {
         super.updateLogicalState(tpf);
