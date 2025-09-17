@@ -32,19 +32,18 @@
 package org.ngengine.auth.nsec;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 import org.ngengine.auth.Auth;
 import org.ngengine.auth.AuthStrategy;
+import org.ngengine.export.NostrPrivateKeySavableWrapper;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
-import org.ngengine.nostr4j.nip49.Nip49;
+import org.ngengine.nostr4j.keypair.NostrPublicKey;
 import org.ngengine.nostr4j.signer.NostrKeyPairSigner;
 import org.ngengine.nostr4j.signer.NostrSigner;
-import org.ngengine.platform.AsyncTask;
-import org.ngengine.platform.VStore;
+import org.ngengine.store.DataStore;
 
 public class NsecAuth extends Auth {
 
@@ -64,110 +63,56 @@ public class NsecAuth extends Auth {
     }
 
     @Override
-    public AsyncTask<NostrSigner> load(VStore store, String pub, String password) {
+    public NostrSigner load(DataStore store, String pub, String password) throws IOException {
         String filePath = pub + ".nsecAuth";
-        return store
-            .exists(filePath)
-            .compose(v -> {
-                if (v) {
-                    return store
-                        .read(filePath)
-                        .compose(in -> {
-                            try {
-                                byte[] data = in.readAllBytes();
-                                String encrypted = new String(data, StandardCharsets.UTF_8);
-                                return Nip49
-                                    .decrypt(encrypted, password)
-                                    .catchException(ex -> {
-                                        System.err.println("Failed to decrypt key: " + ex.getMessage());
-                                    })
-                                    .then(key -> {
-                                        return new NostrKeyPairSigner(new NostrKeyPair(key));
-                                    });
-                            } catch (Exception e) {
-                                throw new RuntimeException("Failed to load key", e);
-                            } finally {
-                                try {
-                                    if (in != null) in.close();
-                                } catch (IOException e) {
-                                    log.warning("Failed to close input stream: " + e.getMessage());
-                                }
-                            }
-                        });
-                } else {
-                    throw new RuntimeException("User does not exist");
-                }
-            });
+        if (store.exists(filePath)) {
+            NostrPrivateKeySavableWrapper wrap = store.read(filePath);
+            try {
+                return new NostrKeyPairSigner(new NostrKeyPair(wrap.get(password)));
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to load key", e);
+            }
+        } else {
+            throw new RuntimeException("User does not exist");
+        }
+        
     }
 
     @Override
-    public AsyncTask<Void> delete(VStore store, String pub) {
+    public void delete(DataStore store, String pub) throws IOException {
         String filePath = pub + ".nsecAuth";
-        return store
-            .exists(filePath)
-            .compose(v -> {
-                if (v) {
-                    return store.delete(filePath);
-                } else {
-                    throw new RuntimeException("User does not exist");
-                }
-            });
+        store.delete(filePath);
     }
 
     @Override
-    public AsyncTask<List<String>> listSaved(VStore store) {
-        return store
-            .listAll()
-            .then(files -> {
-                List<String> users = new ArrayList<>();
-                for (String file : files) {
-                    if (file.endsWith(".nsecAuth")) {
-                        String username = file.substring(0, file.length() - ".nsecAuth".length());
-                        users.add(username);
-                    }
-                }
-                return users;
-            });
+    public List<String> listSaved(DataStore store) throws IOException {
+        List<String> users = new ArrayList<>();
+        List<String> files = store.list();
+        for (String file : files) {
+            if (file.endsWith(".nsecAuth")) {
+                String username = file.substring(0, file.length() - ".nsecAuth".length());
+                users.add(username);
+            }
+        }
+        return users;
     }
 
     @Override
-    public AsyncTask<Void> save(VStore store, NostrSigner sn, String password) {
+    public void save(DataStore store, NostrSigner sn, String password) throws IOException {
         // we won't save cleartext keys
-        NostrKeyPairSigner signer = (NostrKeyPairSigner) sn;
-        return signer
-            .getPublicKey()
-            .compose(pubKey -> {
-                try {
                     Objects.requireNonNull(password, "Password cannot be null");
-                    if (password.isEmpty()) {
-                        throw new RuntimeException("Password cannot be empty");
-                    }
-                    String pub = pubKey.asBech32();
-                    String filePath = pub + ".nsecAuth";
-                    return Nip49
-                        .encrypt(signer.getKeyPair().getPrivateKey(), password)
-                        .compose(encrypted -> {
-                            return store
-                                .write(filePath)
-                                .then(out -> {
-                                    try {
-                                        out.write(encrypted.getBytes(StandardCharsets.UTF_8));
-                                        return null;
-                                    } catch (Exception e) {
-                                        throw new RuntimeException("Failed to save key", e);
-                                    } finally {
-                                        try {
-                                            out.close();
-                                        } catch (IOException e) {
-                                            log.warning("Failed to close output stream: " + e.getMessage());
-                                        }
-                                    }
-                                });
-                        });
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to save key", e);
-                }
-            });
+
+        NostrKeyPairSigner signer = (NostrKeyPairSigner) sn;
+        NostrPublicKey pubKey = signer.getKeyPair().getPublicKey();
+            if (password.isEmpty()) {
+                throw new RuntimeException("Password cannot be empty");
+            }
+            String pub = pubKey.asBech32();
+            String filePath = pub + ".nsecAuth";
+            NostrPrivateKeySavableWrapper wrap = new NostrPrivateKeySavableWrapper(signer.getKeyPair().getPrivateKey(), password);
+            store.write(filePath, wrap);
+     
+
     }
 
     @Override

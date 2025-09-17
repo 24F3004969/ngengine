@@ -31,14 +31,12 @@
  */
 package org.ngengine.auth;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.function.BiConsumer;
 import org.ngengine.gui.win.NWindow;
 import org.ngengine.gui.win.NWindowManagerComponent;
 import org.ngengine.nostr4j.signer.NostrSigner;
-import org.ngengine.platform.AsyncTask;
-import org.ngengine.platform.NGEPlatform;
-import org.ngengine.platform.VStore;
+import org.ngengine.store.DataStore;
 
 public abstract class Auth {
 
@@ -52,33 +50,24 @@ public abstract class Auth {
 
     public abstract String getNewIdentityText();
 
-    public void open(NWindowManagerComponent manager, String forPubKey, BiConsumer<NWindow<AuthConfig>, Throwable> callback) {
+    public NWindow<AuthConfig> open(NWindowManagerComponent manager, String forPubKey) {
         AuthConfig options = this.options.clone();
         if (forPubKey != null) {
             options.setForNpub(forPubKey);
         }
         options.setAuth(this);
-        manager.showWindow(
+        NWindow<AuthConfig> win = manager.showWindow(
             authWindow,
-            options,
-            (win, error) -> {
-                if (callback == null) {
-                    return;
-                }
-                if (error != null) {
-                    callback.accept(null, error);
-                } else {
-                    callback.accept((NWindow<AuthConfig>) win, null);
-                }
-            }
-        );
+            options);    
+            return win;
+           
     }
 
-    public void open(NWindowManagerComponent manager, BiConsumer<NWindow<AuthConfig>, Throwable> callback) {
-        open(manager, null, callback);
+    public NWindow<AuthConfig> open(NWindowManagerComponent manager) {
+       return open(manager, null);
     }
 
-    public VStore getStore() {
+    public DataStore getStore() {
         return options.strategy.getStore();
     }
 
@@ -92,55 +81,43 @@ public abstract class Auth {
 
     public abstract boolean isEnabled();
 
-    protected abstract AsyncTask<NostrSigner> load(VStore store, String pub, String encryptionKey);
+    protected abstract NostrSigner load(DataStore store, String pub, String encryptionKey) throws IOException;
 
-    public AsyncTask<NostrSigner> load(String pub, String encryptionKey) {
-        VStore store = getStore();
+    public NostrSigner load(String pub, String encryptionKey) throws IOException {
+        DataStore store = getStore();
         if (store != null) {
             return load(store, pub, encryptionKey);
         } else {
-            return NGEPlatform.get().wrapPromise((res, rej) -> rej.accept(new RuntimeException("No store available for auth")));
+           throw new IOException("No store available for auth");
         }
     }
 
-    protected abstract AsyncTask<Void> delete(VStore store, String pub);
+    protected abstract void delete(DataStore store, String pub) throws IOException;
 
-    public AsyncTask<Void> delete(String pub) {
-        VStore store = getStore();
+    public void delete(String pub) throws IOException{
+        DataStore store = getStore();
         if (store != null) {
-            return delete(store, pub);
-        } else {
-            return NGEPlatform.get().wrapPromise((res, rej) -> rej.accept(new RuntimeException("No store available for auth")));
+            delete(store, pub);
         }
     }
 
-    protected abstract AsyncTask<List<String>> listSaved(VStore store);
+    protected abstract List<String> listSaved(DataStore store)throws IOException ;
 
-    public AsyncTask<List<String>> listSaved() {
-        VStore store = getStore();
+    public List<String> listSaved() throws IOException {
+        DataStore store = getStore();
         if (store != null) {
             return listSaved(store);
         } else {
-            return NGEPlatform
-                .get()
-                .wrapPromise((res, rej) -> {
-                    res.accept(List.of());
-                });
+              return List.of();
         }
     }
 
-    protected abstract AsyncTask<Void> save(VStore store, NostrSigner signer, String encryptionKey);
+    protected abstract void save(DataStore store, NostrSigner signer, String encryptionKey) throws IOException;
 
-    public AsyncTask<Void> save(NostrSigner signer, String encryptionKey) {
-        VStore store = getStore();
+    public void save(NostrSigner signer, String encryptionKey) throws IOException {
+        DataStore store = getStore();
         if (store != null) {
-            return save(store, signer, encryptionKey);
-        } else {
-            return NGEPlatform
-                .get()
-                .wrapPromise((res, rej) -> {
-                    res.accept(null);
-                });
-        }
+            save(store, signer, encryptionKey);
+        }    
     }
 }

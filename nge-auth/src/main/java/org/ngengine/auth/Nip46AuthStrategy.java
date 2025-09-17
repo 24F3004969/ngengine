@@ -36,10 +36,12 @@ import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
-import com.jme3.export.SavableWrapSerializable;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+
+import org.ngengine.export.Nip46MetadataSavableWrapper;
+import org.ngengine.export.NostrKeyPairSavableWrapper;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
 import org.ngengine.nostr4j.keypair.NostrPrivateKey;
 import org.ngengine.nostr4j.nip46.Nip46AppMetadata;
@@ -140,10 +142,10 @@ public class Nip46AuthStrategy implements Savable {
 
         capsule.write(relaysStr, "relays", new String[0]);
 
-        SavableWrapSerializable savableMeta = new SavableWrapSerializable(metadata);
+        Nip46MetadataSavableWrapper savableMeta = new Nip46MetadataSavableWrapper(metadata);
         capsule.write(savableMeta, "metadata", null);
 
-        SavableWrapSerializable savableKeyPair = new SavableWrapSerializable(appKeyPair);
+        NostrKeyPairSavableWrapper savableKeyPair = new NostrKeyPairSavableWrapper(appKeyPair);
         capsule.write(savableKeyPair, "appKeyPair", null);
     }
 
@@ -154,10 +156,10 @@ public class Nip46AuthStrategy implements Savable {
         String relaysStr[] = capsule.readStringArray("relays", new String[0]);
         relays = List.of(relaysStr);
 
-        SavableWrapSerializable savableMeta = (SavableWrapSerializable) capsule.readSavable("metadata", null);
-        if (metadata != null) metadata = (Nip46AppMetadata) savableMeta.get();
+        Nip46MetadataSavableWrapper savableMeta = (Nip46MetadataSavableWrapper) capsule.readSavable("metadata", null);
+        if (metadata != null) metadata =  savableMeta.get();
 
-        SavableWrapSerializable savableKeyPair = (SavableWrapSerializable) capsule.readSavable("appKeyPair", null);
-        if (savableKeyPair != null) appKeyPair = (NostrKeyPair) savableKeyPair.get();
+        NostrKeyPairSavableWrapper savableKeyPair = (NostrKeyPairSavableWrapper) capsule.readSavable("appKeyPair", null);
+        if (savableKeyPair != null) appKeyPair =  savableKeyPair.get();
     }
 }

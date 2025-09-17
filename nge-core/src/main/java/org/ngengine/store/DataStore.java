@@ -35,7 +35,6 @@ import com.jme3.asset.AssetInfo;
 import com.jme3.asset.AssetKey;
 import com.jme3.asset.AssetManager;
 import com.jme3.export.Savable;
-import com.jme3.export.SavableWrapSerializable;
 import com.jme3.export.binary.BinaryExporter;
 import com.jme3.export.binary.BinaryImporter;
 import java.io.IOException;
@@ -45,6 +44,8 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.ngengine.platform.AsyncTask;
 import org.ngengine.platform.NGEPlatform;
 import org.ngengine.platform.VStore;
 
@@ -98,27 +99,19 @@ public class DataStore {
      *            the object to store, must be a {@link Savable} or serializable object
      * @throws IOException
      */
-    public void write(String key, Object value) throws IOException {
-        if (!(value instanceof Savable)) {
-            SerializableEntry entry = new SerializableEntry();
-            entry.value = value;
-            value = new SavableWrapSerializable(entry);
-        }
+    public void write(String key, Savable value) throws IOException {        
         try (OutputStream os = store.write(key + ".j3o").await()) {
             BinaryExporter exporter = BinaryExporter.getInstance();
-            exporter.save((Savable) value, os);
+            exporter.save(value, os);
         } catch (Throwable e) {
             throw new IOException("Failed to write to store: " + key, e);
         }
     }
 
-    private <T> T readFromStream(InputStream is) throws IOException {
+    private <T extends Savable> T readFromStream(InputStream is) throws IOException {
         BinaryImporter importer = BinaryImporter.getInstance();
         importer.setAssetManager(assetManager);
         Object out = importer.load(is);
-        if (out instanceof SavableWrapSerializable) {
-            out = ((SavableWrapSerializable) out).get();
-        }
         if (out instanceof SerializableEntry) {
             SerializableEntry entry = (SerializableEntry) out;
             out = entry.value;
@@ -136,7 +129,7 @@ public class DataStore {
      * @throws IOException
      *             if reading fails
      */
-    public <T> T read(String key) throws IOException {
+    public <T extends Savable> T read(String key) throws IOException {
         try {
             String prefix = (isCache ? "cache/" : "data/") + name + "/";
             AssetKey<Object> assetKey = new AssetKey<>(prefix + key + ".j3o");
@@ -158,6 +151,10 @@ public class DataStore {
         }
     }
 
+
+
+
+
     /**
      * Checks if a key exists in the store.
      *
@@ -173,6 +170,8 @@ public class DataStore {
         }
     }
 
+
+ 
     /**
      * Deletes a key from the store.
      *
@@ -181,7 +180,9 @@ public class DataStore {
      */
     public void delete(String key) {
         try {
-            store.delete(key + ".j3o").await();
+            if(exists(key)){
+                store.delete(key + ".j3o").await();
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to delete key: " + key, e);
         }
@@ -192,9 +193,15 @@ public class DataStore {
      */
     public List<String> list() {
         try {
-            return store.listAll().await();
+            List<String> all = store.listAll().await();
+            assert all != null;
+            return all.stream().filter(f -> f.endsWith(".j3o")).map(f -> f.substring(0, f.length() - 4)).collect(java.util.stream.Collectors.toList());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to clear the store", e);
+            throw new RuntimeException("Listing failed", e);
         }
+    }
+
+    public AsyncTask<List<String>> listAsync() {
+        return store.listAll();
     }
 }

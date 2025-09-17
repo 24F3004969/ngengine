@@ -33,14 +33,14 @@ package org.ngengine.auth;
 
 import java.util.function.Consumer;
 import org.ngengine.nostr4j.signer.NostrSigner;
-import org.ngengine.platform.VStore;
 import org.ngengine.player.PlayerManagerComponent;
+import org.ngengine.store.DataStore;
 
 public class AuthStrategy {
 
     protected Nip46AuthStrategy nip46;
     protected boolean localIdentity = true;
-    protected VStore store;
+    protected DataStore store;
     protected boolean isStoreSet = false;
     protected Consumer<NostrSigner> callback;
     protected PlayerManagerComponent playerManager;
@@ -58,7 +58,7 @@ public class AuthStrategy {
         return this;
     }
 
-    public AuthStrategy enableStore(VStore store) {
+    public AuthStrategy enableStore(DataStore store) {
         this.isStoreSet = true;
         this.store = store;
         return this;
@@ -93,7 +93,7 @@ public class AuthStrategy {
         return store != null;
     }
 
-    public VStore getStore() {
+    public DataStore getStore() {
         return store;
     }
 
