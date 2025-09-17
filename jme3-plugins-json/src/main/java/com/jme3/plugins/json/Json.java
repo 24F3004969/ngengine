@@ -49,17 +49,29 @@ public class Json {
     private static final Logger LOGGER = Logger.getLogger(Json.class.getName());
     private static final String DEFAULT_JSON_PARSER_IMPLEMENTATION = "com.jme3.plugins.gson.GsonParser";
 
-    private static Class<? extends JsonParser> clazz = null;
+    private static JsonParser parser;
 
     /**
      * Set the parser to use.
      * 
-     * @param clazz
-     *            a class that implements JsonParser
+     * @param parser the json parser to use
      */
-    public static void setParser(Class<? extends JsonParser> clazz) {
-        Json.clazz = clazz;
+    public static void setParser(JsonParser parser) {
+        Json.parser = parser;
     }
+
+    /**
+     * @deprecated Use {@link #setParser(JsonParser)} instead.
+     */
+    @Deprecated
+    public static void setParser(Class<? extends JsonParser> clazz) {
+        try {
+            setParser(clazz.getDeclaredConstructor().newInstance());
+        } catch (Exception e) {
+            throw new RuntimeException("Could not instantiate JsonParser class " + clazz.getName(), e);
+        }
+    }
+
 
     @SuppressWarnings("unchecked")
     private static Class<? extends JsonParser> findJsonParser(String className) {
@@ -80,32 +92,45 @@ public class Json {
     }
 
     /**
+     * @deprecated Use {@link #get()} instead.
+     * This method is deprecated and redirected to {@link #get()}
+     * that returns a single shared instance of JsonParser.
+     */
+    @Deprecated
+    public static JsonParser create() {
+        return get();
+    }
+  
+    /**
      * Create a new JsonParser instance.
      * 
      * @return a new JsonParser instance
      */
 
-    public static JsonParser create() {
-        if (Json.clazz == null) {
+    public static JsonParser get() {
+        if (Json.parser == null) {
+            Class<? extends JsonParser> clazz = null;
             String userDefinedImpl = System.getProperty(PROPERTY_JSON_PARSER_IMPLEMENTATION, null);
             if (userDefinedImpl != null) {
                 LOGGER.log(Level.FINE, "Loading user defined JsonParser implementation {0}", userDefinedImpl);
-                Json.clazz = findJsonParser(userDefinedImpl);
+                clazz = findJsonParser(userDefinedImpl);
             }
-            if (Json.clazz == null) {
+            if (Json.parser == null) {
                 LOGGER.log(Level.FINE, "No usable user defined JsonParser implementation found, using default implementation {0}", DEFAULT_JSON_PARSER_IMPLEMENTATION);
-                Json.clazz = findJsonParser(DEFAULT_JSON_PARSER_IMPLEMENTATION);
+                clazz = findJsonParser(DEFAULT_JSON_PARSER_IMPLEMENTATION);
+            }
+            if (clazz == null) {
+                throw new RuntimeException("No JsonParser implementation found");
+            }
+            try {
+                Json.parser = clazz.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("Could not instantiate JsonParser class " + clazz.getName(), e);
             }
         }
+        return Json.parser;
+      
 
-        if (Json.clazz == null) {
-            throw new RuntimeException("No JsonParser implementation found");
-        }
-
-        try {
-            return clazz.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException("Could not instantiate JsonParser class " + clazz.getName(), e);
-        }
+      
     }
 }

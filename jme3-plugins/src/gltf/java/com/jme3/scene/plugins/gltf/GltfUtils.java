@@ -73,7 +73,7 @@ public class GltfUtils {
      * @return the JsonObject
      */
     public static JsonObject parse(InputStream stream) {
-        JsonParser parser = Json.create();
+        JsonParser parser = Json.get();
         return parser.parse(stream);
     }
 
