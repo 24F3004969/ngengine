@@ -48,6 +48,8 @@ import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import org.ngengine.platform.AsyncTask;
 import org.ngengine.platform.NGEPlatform;
 
 public class NTextInput extends Container implements GuiUpdateListener {
@@ -105,9 +107,7 @@ public class NTextInput extends Container implements GuiUpdateListener {
         });
         setPasteAction(() -> {
             NGEPlatform platform = NGEPlatform.get();
-            String text = platform.getClipboardContent();
-            setText(text);
-            return text;
+            return  platform.getClipboardContent();
         });
         getControl(GuiControl.class).addUpdateListener(this);
         repaint();
@@ -204,7 +204,7 @@ public class NTextInput extends Container implements GuiUpdateListener {
         repaint();
     }
 
-    public void setPasteAction(Supplier<String> action) {
+    public void setPasteAction(Supplier<AsyncTask<String>> action) {
         if (action == null) {
             if (pasteBtn != null) {
                 pasteBtn.removeFromParent();
@@ -214,13 +214,15 @@ public class NTextInput extends Container implements GuiUpdateListener {
         }
         pasteBtn = new NIconButton("icons/outline/clipboard.svg");
         pasteBtn.addClickCommands(src -> {
-            String text = action.get();
-            setText(text);
+            action.get().then(text->{
+                setText(text);
+                return null;
+            });            
         });
         repaint();
     }
 
-    public void setGenerateAction(Supplier<String> action) {
+    public void setGenerateAction(Supplier<AsyncTask<String>> action) {
         if (action == null) {
             if (generateBtn != null) {
                 generateBtn.removeFromParent();
@@ -230,7 +232,10 @@ public class NTextInput extends Container implements GuiUpdateListener {
         }
         generateBtn = new NIconButton("icons/outline/dice.svg");
         generateBtn.addClickCommands(src -> {
-            setText(action.get());
+            action.get().then(text->{
+                setText(text);
+                return null;
+            });            
         });
         repaint();
     }

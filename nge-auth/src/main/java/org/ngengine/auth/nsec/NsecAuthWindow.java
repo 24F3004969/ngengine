@@ -49,6 +49,7 @@ import org.ngengine.nostr4j.keypair.NostrPrivateKey;
 import org.ngengine.nostr4j.nip49.Nip49;
 import org.ngengine.nostr4j.signer.NostrKeyPairSigner;
 import org.ngengine.nostr4j.signer.NostrSigner;
+import org.ngengine.platform.NGEPlatform;
 
 public class NsecAuthWindow extends NWindow<AuthConfig> {
 
@@ -86,7 +87,9 @@ public class NsecAuthWindow extends NWindow<AuthConfig> {
             nsecInput.setPreferredWidth(this.getPreferredSize().x * 0.6f);
             nsecInput.setIsSecretInput(true);
             nsecInput.setGenerateAction(() -> {
-                return NostrPrivateKey.generate().asBech32();
+                return NGEPlatform.get().wrapPromise((res,rej)->{
+                    res.accept(NostrPrivateKey.generate().asBech32());
+                });
             });
             windowContent.addChild(nsecInput);
         }
