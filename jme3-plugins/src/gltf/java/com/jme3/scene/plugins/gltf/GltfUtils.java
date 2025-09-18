@@ -328,6 +328,11 @@ public class GltfUtils {
             populateMatrix4fArray((Matrix4f[]) store, source, count, byteOffset, byteStride, numComponents, format);
         }
     }
+
+    private static void skip(ByteBuffer buff, int n) {
+        buff.position(Math.min(buff.position() + n, buff.limit()));
+    }
+
     private static void populateByteBuffer(ByteBuffer buffer, ByteBuffer source, int count, int byteOffset, int byteStride, int numComponents, VertexBuffer.Format format) {
         int componentSize = format.getComponentSize();
         int index = byteOffset;
@@ -355,7 +360,7 @@ public class GltfUtils {
             }
 
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -374,7 +379,7 @@ public class GltfUtils {
                 buffer.put(source.getInt());
             }
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -392,7 +397,7 @@ public class GltfUtils {
                 buffer.put(readAsFloat(source, format));
             }
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -448,7 +453,7 @@ public class GltfUtils {
             System.arraycopy(buffer, 0, array, arrayIndex, numComponents);
             arrayIndex += numComponents;
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -484,7 +489,7 @@ public class GltfUtils {
                 arrayIndex++;
             }
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -582,7 +587,7 @@ public class GltfUtils {
                 arrayIndex++;
             }
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -605,7 +610,7 @@ public class GltfUtils {
 
             arrayIndex++;
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -629,7 +634,7 @@ public class GltfUtils {
 
             arrayIndex++;
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
             index += stride;
         }
@@ -667,7 +672,7 @@ public class GltfUtils {
 
             arrayIndex++;
             if (dataLength < stride) {
-                source.position(source.position() + (stride - dataLength));
+                skip(source, stride - dataLength);
             }
 
             index += stride;
@@ -961,7 +966,7 @@ public class GltfUtils {
      * @param byteOffset     start offset within source (relative to beginning)
      * @param byteStride     stride in bytes (0 means tightly packed = element size)
      * @param numComponents  components per element (e.g. 3 for VEC3)
-     * @param originalFormat the source component type (from glTF accessor.componentType)
+     * @param originalFormat the source component type  
      * @param targetFormat   the desired buffer view type to return
      */
     public static Buffer getBufferView(ByteBuffer source, int byteOffset,  int count, int byteStride,
@@ -981,7 +986,6 @@ public class GltfUtils {
         boolean tightlyPacked = (stride == elemSize);
 
         if (tightlyPacked) {
-            // Narrow the view to the accessor range and set LE order
             ByteBuffer view = source.duplicate();
             view.position(start).limit(start + bytes);
             view = view.slice().order(ByteOrder.LITTLE_ENDIAN);
@@ -993,7 +997,7 @@ public class GltfUtils {
                     if (srcCompSize == 1 &&
                         (originalFormat == VertexBuffer.Format.Byte ||
                          originalFormat == VertexBuffer.Format.UnsignedByte)) {
-                        return view; // ByteBuffer shares memory
+                        return view;
                     }
                     break;
 
@@ -1026,7 +1030,6 @@ public class GltfUtils {
                     break;
 
                 case Double:
-                    // glTF doesn't use doubles; if ever needed, ensure 8-byte alignment
                     if (srcCompSize == 8 &&
                         originalFormat == VertexBuffer.Format.Double &&
                         (start & 7) == 0) {
@@ -1058,7 +1061,6 @@ public class GltfUtils {
                 return out;
             }
             case Float: {
-                // Handles normalized integer sources via readAsFloat(...)
                 FloatBuffer out = BufferUtils.createFloatBuffer(elements);
                 populateBuffer(out, source, count, byteOffset, byteStride, numComponents, originalFormat);
                 return out;
