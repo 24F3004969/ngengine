@@ -149,8 +149,7 @@ public class WebContext implements JmeContext, Runnable {
         attrs.setPremultipliedAlpha(false);
         attrs.setPreserveDrawingBuffer(true);
         attrs.setFailIfMajorPerformanceCaveat(false);
-        
-
+        attrs.setStencil(settings.getStencilBits()>0);
         attrs.setAntialias(settings.getSamples()>1);
 
         WebGLWrapper ctx = (WebGLWrapper) canvas.getContext("webgl2", attrs);
