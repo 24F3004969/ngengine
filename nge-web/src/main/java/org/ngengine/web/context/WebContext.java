@@ -143,7 +143,7 @@ public class WebContext implements JmeContext, Runnable {
         attrs.setDrawingColorSpace(colorSpace);
         // attrs.setUnpackColorSpace(colorSpace);
         attrs.setPowerPreference("high-performance");
-        attrs.setDepth(true);
+        attrs.setDepth(settings.getDepthBits()>0);
         attrs.setAlpha(true);
         attrs.setDesynchronized(true);
         attrs.setPremultipliedAlpha(false);
