@@ -80,11 +80,10 @@ public class WebKeyInput implements KeyInput, EventListener {
         String keyCharCode = ev.getKey();
         
         int jmeKeyCode=KeyMapper.jsCodeToJme(keyCode);
-        char jmeKeyChar = keyCharCode.length() == 1 ? keyCharCode.charAt(0) : null;
+        char jmeKeyChar = keyCharCode.length() == 1 ? keyCharCode.charAt(0) : '\0';
         boolean isPressed = ev.getType().equals("keydown");
 
-        System.out.println("Key event: keyCode=" + keyCode + " jmeKeyCode=" + jmeKeyCode + " keyCharCode=" + keyCharCode + " jmeKeyChar=" + jmeKeyChar + " isPressed=" + isPressed + " time=" + time);
-        
+         
         KeyInputEvent jmeEvent=new KeyInputEvent(jmeKeyCode, jmeKeyChar, isPressed, false);
         jmeEvent.setTime(time);
         keyEvents.add(jmeEvent);
