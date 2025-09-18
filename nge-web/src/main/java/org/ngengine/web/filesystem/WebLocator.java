@@ -52,31 +52,22 @@ public class WebLocator implements AssetLocator {
         
 
         
-        if (url == null)
+        if (url == null){
             return null;
+        }
       
         
-             Exception ex=null;
-            for (int i = 0; i < 3; i++) {
-                try {
-                    NGEHttpResponse res = NGEPlatform.get().httpRequest("GET", url.toString(), null,null, null).await();
-                    WebAssetInfo info = new WebAssetInfo(manager, key, res.body);                    
-                    return info;
-                } catch (Exception e) {
-                    ex = e;
-                    try {
-                        Thread.sleep(100);
-                    } catch (Throwable e1) {
-                 
-                    }
-                }
+ 
+        try {
+            NGEHttpResponse res = NGEPlatform.get().httpRequest("GET", url.toString(), null,null, null).await();
+            if(!res.status()){
+                throw new IOException("Failed to read URL " + url+": "+res.statusCode());        
             }
-            if (ex != null) {
-                throw new AssetLoadException("Failed to read URL " + url, ex);                
-            } else {
-                throw new AssetLoadException("Failed to read URL " + url);                
-
-            }
-        
+            WebAssetInfo info = new WebAssetInfo(manager, key, res.body);                    
+            return info;
+        } catch (Exception e) {
+            throw new AssetLoadException("Failed to read URL " + url, e);                
+        }
+          
     }
 }
