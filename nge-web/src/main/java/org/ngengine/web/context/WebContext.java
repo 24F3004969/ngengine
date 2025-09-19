@@ -137,7 +137,7 @@ public class WebContext implements JmeContext, Runnable {
             return;
         }
         
-        System.out.println("Rebuild auxiliary framebuffer: "+width+"x"+height+" srgb="+srgb+" samples="+samples);
+        logger.info("Rebuild auxiliary framebuffer: "+width+"x"+height+" srgb="+srgb+" samples="+samples);
         FrameBuffer mainFrameBuffer = new FrameBuffer(width, height, samples);
         
         // color target
@@ -319,13 +319,13 @@ public class WebContext implements JmeContext, Runnable {
                     blitMat = new Material(assetManager, "Common/MatDefs/Post/WebGLBlit.j3md");
                     blitMat.getAdditionalRenderState().setDepthTest(false);
                     blitMat.getAdditionalRenderState().setDepthWrite(false);            
-                    System.out.println("Rebuild blit material");
+                    logger.info("Rebuild blit material");
                 }
 
                 if(blitGeom==null){
                     blitGeom = new Picture("blit surface");
                     blitGeom.setMaterial(blitMat);        
-                    System.out.println("Rebuild blit geometry");    
+                    logger.info("Rebuild blit geometry");    
                 }
 
                 if(auxiliaryFrameBufferRefreshed){
@@ -335,7 +335,7 @@ public class WebContext implements JmeContext, Runnable {
                     } else {
                         blitMat.setInt("NumSamples", auxiliaryFrameBuffer.getSamples());
                     }
-                    System.out.println("Update blit material");
+                    logger.info("Update blit material");
                     auxiliaryFrameBufferRefreshed = false;
                 }
                     
