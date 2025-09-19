@@ -952,13 +952,13 @@ public class WebGL implements GL, GL2, GLES_30, GLExt, GLFbo {
 
     @Override
     public void glGetMultisample(int pname, int index, FloatBuffer val) {
-        throw new UnsupportedOperationException("Multisample renderbuffers not available on WebGL");
+        throw new UnsupportedOperationException("glGetMultisample not available on WebGL");
 
     }
 
     @Override
     public void glRenderbufferStorageMultisampleEXT(int target, int samples, int internalformat, int width, int height) {
-        throw new UnsupportedOperationException("Multisample renderbuffers not available on WebGL");
+        gl.renderbufferStorageMultisample(target, samples, internalformat, width, height);
 
     }
 

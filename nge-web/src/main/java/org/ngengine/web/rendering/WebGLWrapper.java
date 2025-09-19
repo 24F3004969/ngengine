@@ -827,4 +827,7 @@ public interface WebGLWrapper extends JSObject {
 
         Object fenceSync(int condition, int flags);
 
+        void renderbufferStorageMultisample(int target, int samples2, int internalformat, int width,
+                int height);
+
 }
