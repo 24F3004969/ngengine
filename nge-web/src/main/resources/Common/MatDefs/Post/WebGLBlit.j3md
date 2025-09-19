@@ -1,0 +1,24 @@
+MaterialDef BlitMat {
+
+    MaterialParameters {
+        Int BoundDrawBuffer
+        Int NumSamples
+        Int NumSamplesDepth
+        Texture2D Texture
+    }
+
+    Technique {
+        VertexShader   GLSL300 GLSL150 GLSL100 :   Common/MatDefs/Post/WebGLBlit.vert
+        FragmentShader GLSL300 GLSL150 GLSL100 : Common/MatDefs/Post/WebGLBlit.frag
+
+        WorldParameters {
+        }
+
+        Defines {
+            BOUND_DRAW_BUFFER: BoundDrawBuffer
+            RESOLVE_MS : NumSamples
+        }
+
+    }
+
+}

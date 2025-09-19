@@ -1,0 +1,17 @@
+#ifndef SRGB_GLSL_LIB
+#define SRGB_GLSL_LIB
+
+const vec3 sRGB_GAMMA = vec3(1.0 / 2.4);
+vec3 sRGBToLinear(vec3 c){
+    vec3 bLess = step(vec3(0.04045), c);
+    return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), bLess);
+}
+
+vec3 linearToSrgb(vec3 c) {
+    bvec3 cutoff = lessThanEqual(c, vec3(0.0031308));
+    vec3 lower = c * 12.92;
+    vec3 higher = 1.055 * pow(c, sRGB_GAMMA) - 0.055;
+    return mix(higher, lower, vec3(cutoff));
+}
+
+#endif

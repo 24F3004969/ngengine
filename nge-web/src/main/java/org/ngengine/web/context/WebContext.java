@@ -1,13 +1,25 @@
 
 package org.ngengine.web.context;
+import com.jme3.asset.AssetManager;
 import com.jme3.input.JoyInput;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.TouchInput;
+import com.jme3.material.Material;
 import com.jme3.opencl.Context;
+import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.Renderer;
 import com.jme3.renderer.opengl.GLRenderer;
+import com.jme3.scene.Geometry;
 import com.jme3.system.*;
+import com.jme3.texture.FrameBuffer;
+import com.jme3.texture.FrameBuffer.FrameBufferTarget;
+import com.jme3.texture.Image;
+import com.jme3.texture.Image.Format;
+import com.jme3.texture.Texture2D;
+import com.jme3.texture.image.ColorSpace;
+import com.jme3.ui.Picture;
+
 import org.ngengine.web.input.WebKeyInput;
 import org.ngengine.web.input.WebMouseInput;
 import org.ngengine.web.input.WebTouchInput;
@@ -44,8 +56,19 @@ public class WebContext implements JmeContext, Runnable {
     protected SystemListener listener;
     protected Renderer renderer;
     protected WebCanvasElement canvas;
-    protected boolean autofit=false;
+    protected RenderManager renderManager;
+    protected AssetManager assetManager;
 
+    protected Material blitMat;
+    protected Geometry blitGeom;
+    
+    protected FrameBuffer auxiliaryFrameBuffer;
+    protected boolean auxiliaryFrameBufferRefreshed = false;
+    protected boolean needAuxiliaryFrameBuffer = false;
+    
+    protected long timeThen;
+    protected long timeLate;
+    
     @Override
     public Type getType() {
         return Type.Display;
@@ -66,8 +89,6 @@ public class WebContext implements JmeContext, Runnable {
         this.listener = listener;
     }
 
-    private long timeThen;
-    private long timeLate;
 
     public void sync(int fps) {
         long timeNow;
@@ -97,6 +118,58 @@ public class WebContext implements JmeContext, Runnable {
     }
 
 
+    private void rebuildAuxiliaryFrameBufferIfNeeded(int width, int height) {
+        if(!settings.isResizable()){
+            width = settings.getWidth();
+            height = settings.getHeight();
+        }
+
+        int samples = settings.getSamples() <= 0?1:settings.getSamples();
+        boolean srgb = settings.isGammaCorrection();
+        boolean hasDepth = settings.getDepthBits() > 0;
+        boolean hasStencil = settings.getStencilBits() > 0;
+
+        // check if we already have a framebuffer with the desired properties
+        if(auxiliaryFrameBuffer!=null
+            &&auxiliaryFrameBuffer.getWidth()==width
+            &&auxiliaryFrameBuffer.getHeight()==height
+        ){
+            return;
+        }
+        
+        System.out.println("Rebuild auxiliary framebuffer: "+width+"x"+height+" srgb="+srgb+" samples="+samples);
+        FrameBuffer mainFrameBuffer = new FrameBuffer(width, height, samples);
+        
+        // color target
+        // we use an f16 render target to avoid losing precision before the sRGB conversion
+        Texture2D colorTex = new Texture2D(new Image(srgb?Format.RGBA16F:Format.RGBA8, width, height, null, ColorSpace.Linear));
+        if(samples>1){
+            colorTex.getImage().setMultiSamples(samples);
+        }
+        mainFrameBuffer.addColorTarget(FrameBufferTarget.newTarget(colorTex));
+
+
+        // depth and stencil targets
+        if (hasDepth || hasStencil) {
+            if(hasStencil){
+                mainFrameBuffer.setDepthTarget(FrameBufferTarget.newTarget(Format.Depth24Stencil8));
+            }else{
+                mainFrameBuffer.setDepthTarget(FrameBufferTarget.newTarget(Format.Depth));
+            }
+        }
+
+        
+        // cleanup the old framebuffer 
+        if (this.auxiliaryFrameBuffer != null) 
+            this.auxiliaryFrameBuffer.dispose();
+        
+        // set the new framebuffer
+        this.auxiliaryFrameBuffer = mainFrameBuffer;
+        auxiliaryFrameBufferRefreshed = true;
+    }
+
+ 
+
     private void doInit() {
        
         
@@ -117,7 +190,7 @@ public class WebContext implements JmeContext, Runnable {
 
         canvas.canvasFitParent();
 
-
+ 
         this.canvas = canvas;
         
         if (settings.getWidth() == -1 || settings.getHeight() == -1) {
@@ -131,17 +204,17 @@ public class WebContext implements JmeContext, Runnable {
         
 
         setTitle(settings.getTitle());
-        // if (settings.isGammaCorrection()) {
-   
-        // }
-        boolean gammaCorrected = true; //settings.isGammaCorrection();
-        settings.setGammaCorrection(gammaCorrected);
+
+        boolean hasAntialias = settings.getSamples() > 1;
+        settings.setSamples(1);  // WebGL doesn't support MSAA
+
+        
+        this.needAuxiliaryFrameBuffer = settings.isGammaCorrection();
         
         WebGLOptions attrs =  WebGLOptions.create();
         String colorSpace="srgb";
         attrs.setColorSpace(colorSpace);
         attrs.setDrawingColorSpace(colorSpace);
-        // attrs.setUnpackColorSpace(colorSpace);
         attrs.setPowerPreference("high-performance");
         attrs.setDepth(settings.getDepthBits()>0);
         attrs.setAlpha(true);
@@ -150,8 +223,9 @@ public class WebContext implements JmeContext, Runnable {
         attrs.setPreserveDrawingBuffer(true);
         attrs.setFailIfMajorPerformanceCaveat(false);
         attrs.setStencil(settings.getStencilBits()>0);
-        attrs.setAntialias(settings.getSamples()>1);
+        attrs.setAntialias(hasAntialias);
 
+ 
         WebGLWrapper ctx = (WebGLWrapper) canvas.getContext("webgl2", attrs);
         if (ctx == null) {
             throw new RuntimeException("WebGL2 not supported");
@@ -159,6 +233,7 @@ public class WebContext implements JmeContext, Runnable {
         ctx.pixelStorei(WebGLWrapper.UNPACK_COLORSPACE_CONVERSION_WEBGL, WebGLWrapper.NONE);
 
         logger.fine("Starting WebGL renderer...");
+
 
         WebGL gl = new WebGL(ctx);
         renderer = new GLRenderer(gl, gl, gl);
@@ -168,9 +243,9 @@ public class WebContext implements JmeContext, Runnable {
         gl.setCaps(renderer.getCaps());
 
 
-        logger.fine("sRGB: "+gammaCorrected);
-        renderer.setMainFrameBufferSrgb(gammaCorrected); 
-        renderer.setLinearizeSrgbImages(gammaCorrected);
+        logger.fine("sRGB: "+settings.isGammaCorrection());
+        renderer.setMainFrameBufferSrgb(settings.isGammaCorrection()); 
+        renderer.setLinearizeSrgbImages(settings.isGammaCorrection());
             
         logger.fine("WebGL renderer started!");
 
@@ -186,6 +261,13 @@ public class WebContext implements JmeContext, Runnable {
         logger.fine("WebGL destroyed.");
     }
 
+    @Override
+    public  void onRenderManagerReady(RenderManager rm, AssetManager assetManager) {
+        this.assetManager = assetManager;
+        this.renderManager = rm;
+    }
+
+
     private boolean loop() {
         try{
             if(needClose.get()){
@@ -193,17 +275,20 @@ public class WebContext implements JmeContext, Runnable {
                 return false;
             }
 
-
             if (settings.isResizable()) {
                 canvas.canvasFitParent();
-                int w = canvas.getClientWidth();
-                int h = canvas.getClientHeight();
+            }
+            
+            int w = canvas.getClientWidth();
+            int h = canvas.getClientHeight();
+            
+            if (settings.isResizable()) {
                 if (w != settings.getWidth() || h != settings.getHeight()) {
-                    settings.setResolution(w, h);
-        
+                    settings.setResolution(w, h);        
                     listener.reshape(w, h);
                 }
             }
+
             if (settings.isFullscreen()) {
                 if (!canvas.isFullscreen()) {
                     canvas.requestFullscreen();
@@ -214,10 +299,54 @@ public class WebContext implements JmeContext, Runnable {
                 }
                 
             }
-            
-            listener.update();
-          
-      
+
+
+
+            if(needAuxiliaryFrameBuffer && w>2 && h>2){
+                rebuildAuxiliaryFrameBufferIfNeeded(w, h);
+    
+                // we render on a auxiliary framebuffer
+                // and then we blit it to the main framebuffer applying gamma correction
+                // manually
+
+                GLRenderer gl = (GLRenderer) renderer;
+                
+                gl.setMainFrameBufferOverride(auxiliaryFrameBuffer);
+                listener.update();
+                gl.setMainFrameBufferOverride(null);
+
+                if(blitMat==null){
+                    blitMat = new Material(assetManager, "Common/MatDefs/Post/WebGLBlit.j3md");
+                    blitMat.getAdditionalRenderState().setDepthTest(false);
+                    blitMat.getAdditionalRenderState().setDepthWrite(false);            
+                    System.out.println("Rebuild blit material");
+                }
+
+                if(blitGeom==null){
+                    blitGeom = new Picture("blit surface");
+                    blitGeom.setMaterial(blitMat);        
+                    System.out.println("Rebuild blit geometry");    
+                }
+
+                if(auxiliaryFrameBufferRefreshed){
+                    blitMat.setTexture("Texture", (Texture2D) auxiliaryFrameBuffer.getColorTarget(0).getTexture());
+                    if(auxiliaryFrameBuffer.getSamples()<=1){
+                        blitMat.clearParam("NumSamples");    
+                    } else {
+                        blitMat.setInt("NumSamples", auxiliaryFrameBuffer.getSamples());
+                    }
+                    System.out.println("Update blit material");
+                    auxiliaryFrameBufferRefreshed = false;
+                }
+                    
+
+                gl.setFrameBuffer(null);
+                blitGeom.updateGeometricState();
+                renderManager.renderGeometry(blitGeom);
+            } else {
+                listener.update();
+            }
+           
          } catch(Throwable e){
             logger.log(Level.SEVERE, "Error in WebGL context: "+e.getMessage(), e);
             throw new RuntimeException(e);
@@ -345,8 +474,7 @@ public class WebContext implements JmeContext, Runnable {
 
     @Override
     public boolean isRenderable() {
-        return true; // Doesn't really matter if true or false. Either way
-                     // RenderManager won't render anything.
+        return true;  
     }
 
     @Override
@@ -361,7 +489,7 @@ public class WebContext implements JmeContext, Runnable {
      */
     @Override
     public int getFramebufferHeight() {
-        throw new UnsupportedOperationException("null context");
+        return auxiliaryFrameBuffer !=null ? auxiliaryFrameBuffer.getHeight() : canvas.getClientHeight();
     }
 
     /**
@@ -371,7 +499,7 @@ public class WebContext implements JmeContext, Runnable {
      */
     @Override
     public int getFramebufferWidth() {
-        throw new UnsupportedOperationException("null context");
+        return auxiliaryFrameBuffer !=null ? auxiliaryFrameBuffer.getWidth() : canvas.getClientWidth();
     }
 
     /**
@@ -381,7 +509,7 @@ public class WebContext implements JmeContext, Runnable {
      */
     @Override
     public int getWindowXPosition() {
-        throw new UnsupportedOperationException("null context");
+        return 0;
     }
 
     /**
@@ -391,7 +519,7 @@ public class WebContext implements JmeContext, Runnable {
      */
     @Override
     public int getWindowYPosition() {
-        throw new UnsupportedOperationException("null context");
+        return 0;
     }
 
     @Override
