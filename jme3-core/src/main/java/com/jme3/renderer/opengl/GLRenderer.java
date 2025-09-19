@@ -1940,7 +1940,7 @@ public final class GLRenderer implements Renderer {
                     + ":" + fb.getHeight() + " is not supported.");
         }
 
-        GLImageFormat glFmt = texUtil.getImageFormatWithError(rb.getFormat(), fb.isSrgb());
+        GLImageFormat glFmt = texUtil.getImageFormatWithError(rb.getFormat(), rb.isSrgb());
 
         if (fb.getSamples() > 1 && caps.contains(Caps.FrameBufferMultisample)) {
             int samples = fb.getSamples();
@@ -2025,6 +2025,7 @@ public final class GLRenderer implements Renderer {
     }
 
     private void bindFrameBuffer(FrameBuffer fb) {
+        boolean isSrgb;
         if (fb == null) {
             if (context.boundFBO != defaultFBO) {
                 glfbo.glBindFramebufferEXT(GLFbo.GL_FRAMEBUFFER_EXT, defaultFBO);
@@ -2032,6 +2033,7 @@ public final class GLRenderer implements Renderer {
                 context.boundFBO = defaultFBO;
                 context.boundFB = null;
             }
+            isSrgb = mainFrameBufferSrgb;
         } else {
             assert fb.getId() != -1 && fb.getId() != 0;
             if (context.boundFBO != fb.getId()) {
@@ -2042,6 +2044,20 @@ public final class GLRenderer implements Renderer {
             } else {
                 statistics.onFrameBufferUse(fb, false);
             }
+            isSrgb = fb.isSrgb();
+        }
+
+        if(isSrgb != context.srgbWriteEnabled) {
+            if (caps.contains(Caps.Srgb)) {
+                if(!caps.contains(Caps.WebGL)){ // this not supported in WebGL
+                    if (isSrgb) {
+                        gl.glEnable(GLExt.GL_FRAMEBUFFER_SRGB_EXT);
+                    } else {
+                        gl.glDisable(GLExt.GL_FRAMEBUFFER_SRGB_EXT);
+                    }
+                }
+            }  
+            context.srgbWriteEnabled = isSrgb;
         }
     }
 
@@ -2189,8 +2205,8 @@ public final class GLRenderer implements Renderer {
 
         // generate mipmaps for last FB if needed
         if (context.boundFB != null && (context.boundFB.getMipMapsGenerationHint()!=null?context.boundFB.getMipMapsGenerationHint():generateMipmapsForFramebuffers)) {
-            for (int i = 0; i < context.boundFB.getNumColorBuffers(); i++) {
-                RenderBuffer rb = context.boundFB.getColorBuffer(i);
+            for (int i = 0; i < context.boundFB.getNumColorTargets(); i++) {
+                RenderBuffer rb = context.boundFB.getColorTarget(i);
                 Texture tex = rb.getTexture();
                 if (tex != null && tex.getMinFilter().usesMipMapLevels()) {
                     try {
@@ -3478,6 +3494,7 @@ public final class GLRenderer implements Renderer {
 //        }
     }
 
+    private boolean mainFrameBufferSrgb = false;
     @Override
     public void setMainFrameBufferSrgb(boolean enableSrgb) {
         // Gamma correction
@@ -3486,26 +3503,11 @@ public final class GLRenderer implements Renderer {
             logger.warning("sRGB framebuffer is not supported " +
                     "by video hardware, but was requested.");
 
+            mainFrameBufferSrgb = false;
             return;
         }
 
-        setFrameBuffer(null);
-
-        if (enableSrgb) {
-            if (
-                // Workaround: getBoolean(GLExt.GL_FRAMEBUFFER_SRGB_CAPABLE_EXT) causes error 1280 (invalid enum) on macos
-                JmeSystem.getPlatform().getOs() != Platform.Os.MacOS
-                && !getBoolean(GLExt.GL_FRAMEBUFFER_SRGB_CAPABLE_EXT)
-            ) {
-                logger.warning("Driver claims that default framebuffer " + "is not sRGB capable. Enabling anyway.");
-            }
-
-            gl.glEnable(GLExt.GL_FRAMEBUFFER_SRGB_EXT);
-
-            logger.log(Level.FINER, "SRGB FrameBuffer enabled (Gamma Correction)");
-        } else {
-            gl.glDisable(GLExt.GL_FRAMEBUFFER_SRGB_EXT);
-        }
+        mainFrameBufferSrgb = enableSrgb;
     }
 
     @Override
@@ -3599,10 +3601,6 @@ public final class GLRenderer implements Renderer {
      */
     @Override
     public boolean isMainFrameBufferSrgb() {
-        if (!caps.contains(Caps.Srgb)) {
-            return false;
-        } else {
-            return gl.glIsEnabled(GLExt.GL_FRAMEBUFFER_SRGB_EXT);
-        }
+        return mainFrameBufferSrgb;
     }
 }

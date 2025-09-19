@@ -33,7 +33,9 @@ package com.jme3.texture;
 
 import com.jme3.renderer.Caps;
 import com.jme3.renderer.Renderer;
+import com.jme3.system.Annotations.Internal;
 import com.jme3.texture.Image.Format;
+import com.jme3.texture.image.ColorSpace;
 import com.jme3.util.NativeObject;
 import java.util.ArrayList;
 
@@ -83,7 +85,6 @@ public class FrameBuffer extends NativeObject {
     private final ArrayList<RenderBuffer> colorBufs = new ArrayList<>();
     private RenderBuffer depthBuf = null;
     private int colorBufIndex = 0;
-    private boolean srgb;
     private String name;
     private Boolean mipMapsGenerationHint = null;
 
@@ -92,6 +93,7 @@ public class FrameBuffer extends NativeObject {
      * buffer that will be rendered to. <code>RenderBuffer</code>s
      * are attached to an attachment slot on a <code>FrameBuffer</code>.
      */
+    @Internal
     public static class RenderBuffer {
 
         Texture tex;
@@ -101,11 +103,17 @@ public class FrameBuffer extends NativeObject {
         int face = -1;
         int layer = -1;
         int level = 0;
-
+        boolean srgb = false;
 
         public int getLevel() {
             return this.level;
         }
+
+        public boolean isSrgb() {
+            return this.srgb;
+        }
+
+     
 
         /**
          * @return The image format of the render buffer.
@@ -181,10 +189,18 @@ public class FrameBuffer extends NativeObject {
     }
     
     public static class FrameBufferTextureTarget extends RenderBuffer {
+        public static FrameBufferTextureTarget newTarget(Texture tx){
+            FrameBufferTextureTarget t=new FrameBufferTextureTarget();
+            t.setTexture(tx);
+            return t;
+        }
+
         private FrameBufferTextureTarget(){}
+
         void setTexture(Texture tx){
             this.tex=tx;
             this.format=tx.getImage().getFormat();
+            this.srgb = tx.getImage().getColorSpace() == ColorSpace.sRGB;
         }
 
         void setFormat(Format f){
@@ -213,6 +229,17 @@ public class FrameBuffer extends NativeObject {
     }
 
     public static class FrameBufferBufferTarget extends RenderBuffer {
+        public static FrameBufferBufferTarget newTarget(Format format, ColorSpace colorSpace){
+            FrameBufferBufferTarget t=new FrameBufferBufferTarget();
+            t.setFormat(format);
+            t.setSrgb(colorSpace == ColorSpace.sRGB);
+            return t;
+        }
+
+        void setSrgb(boolean srgb) {
+            this.srgb = srgb;
+        }
+        
         private FrameBufferBufferTarget(){}
         void setFormat(Format f){
             this.format=f;
@@ -222,15 +249,15 @@ public class FrameBuffer extends NativeObject {
     public static class FrameBufferTarget {
         private FrameBufferTarget(){}
         public static FrameBufferTextureTarget newTarget(Texture tx){
-            FrameBufferTextureTarget t=new FrameBufferTextureTarget();
-            t.setTexture(tx);
-            return t;
+            return FrameBufferTextureTarget.newTarget(tx);
         }
     
         public static FrameBufferBufferTarget newTarget(Format format){
-            FrameBufferBufferTarget t=new FrameBufferBufferTarget();
-            t.setFormat(format);
-            return t;
+            return FrameBufferBufferTarget.newTarget(format, ColorSpace.Linear);
+        }
+
+        public static FrameBufferBufferTarget newTarget(Format format, ColorSpace colorSpace){
+            return FrameBufferBufferTarget.newTarget(format, colorSpace);
         }
 
         /**
@@ -864,9 +891,22 @@ public class FrameBuffer extends NativeObject {
      *
      * @throws IllegalStateException If the texture attached to this framebuffer
      * is not sRGB.
+     * @deprecated This is automatically inferred from the attached targets. If at least one target is sRGB, the framebuffer is considered sRGB.
      */
+    @Deprecated
     public void setSrgb(boolean srgb) {
-        this.srgb = srgb;
+        ColorSpace cs = srgb ? ColorSpace.sRGB : ColorSpace.Linear;
+        for( RenderBuffer rb : colorBufs ) {
+            if (rb.getTexture() != null){
+                if (rb.getTexture().getImage().getColorSpace() != cs){
+                    rb.getTexture().getImage().setColorSpace(cs);
+                }
+            } else {
+                FrameBufferBufferTarget b = (FrameBufferBufferTarget)rb;
+                b.setSrgb(srgb);                
+            }
+            rb.srgb = srgb;
+        }
     }
 
     /**
@@ -876,7 +916,12 @@ public class FrameBuffer extends NativeObject {
      * in linear space.
      */
     public boolean isSrgb() {
-        return srgb;
+        for( RenderBuffer rb : colorBufs ) {
+            if (rb.isSrgb()){
+                return true;
+            }
+        }
+        return false;
     }
 
     public String getName() {
