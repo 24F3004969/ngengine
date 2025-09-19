@@ -31,10 +31,12 @@
  */
 package com.jme3.system;
 
+import com.jme3.asset.AssetManager;
 import com.jme3.input.JoyInput;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.TouchInput;
+import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.Renderer;
 
 /**
@@ -240,4 +242,8 @@ public interface JmeContext {
      * @return the position of the value in the arraylist of the primary monitor.
      */
     public int getPrimaryDisplay();
+
+    public default void onRenderManagerReady(RenderManager rm, AssetManager assetManager){
+        
+    }
 }

@@ -329,6 +329,7 @@ public class LegacyApplication implements Application, SystemListener {
         renderManager = new RenderManager(renderer);
         //Remy - 09/14/2010 set the timer in the renderManager
         renderManager.setTimer(timer);
+        context.onRenderManagerReady(renderManager, assetManager);
 
         if (prof != null) {
             renderManager.setAppProfiler(prof);
