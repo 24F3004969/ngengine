@@ -14,76 +14,34 @@ public class TScheduledThreadPoolExecutor implements Executor {
 
 
     private class ExecutorThread implements Executor {
+        private  String name = "Executor";
 
-        private boolean closed = false;
-        private List<Runnable> tasks = new LinkedList<>();
-        private Thread threadPool[];
 
         public ExecutorThread(int n){
-            threadPool = new Thread[n];
-            for(int i=0; i<n; ++i){
-                threadPool[i] = new Thread(this::run);
-                threadPool[i].setName("ExecutorThread "+i);
-                threadPool[i].setDaemon(true);
-            }
+            
         }
 
         public void start(){
-            for(Thread t : threadPool){
-                t.start();
-            }
+      
         }
 
         public void setName(String name){
-            for(int i=0; i<threadPool.length; ++i){
-                threadPool[i].setName(name+"-"+i);
-            }
+            this.name = name;
+  
         }
 
 
-
-        public void run() {
-            while (!closed) {
-                Runnable task = null;
-                synchronized (tasks) {
-                    if (!tasks.isEmpty()) {
-                        task = tasks.remove(0);
-                    }
-                }
-                if (task != null) {
-                    try {
-                        task.run();
-                    } catch (Throwable e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    try {
-                        synchronized (tasks) {
-                            if (tasks.isEmpty() && !closed) {
-                                tasks.wait(100);
-                            }
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            
-            }
-        }
 
         @Override
         public void execute(Runnable command) {
-            synchronized (tasks) {
-                tasks.add(command);
-                tasks.notifyAll();
-            }
+
+            Thread t = new Thread(command);
+            t.setName(name+" Worker");
+            t.start();
         }
 
         public void close() {
-            closed = true;
-            synchronized (tasks) {
-                tasks.notifyAll();
-            }
+    
         }
     }
 
