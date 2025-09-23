@@ -42,18 +42,23 @@ import org.ngengine.nostr4j.nip49.Nip49;
 import org.ngengine.nostr4j.nip49.Nip49FailedException;
 
 public class Lobby implements Cloneable, Serializable {
-
     protected final String id;
     protected final String key;
     protected String roomRawData; // used for filtering
     protected final Map<String, String> data = new HashMap<>();
     protected final Instant expiration;
+    protected final Instant creationTime;
 
-    Lobby(String roomId, String roomKey, String roomRawData, Instant expiration) {
+    Lobby(String roomId, String roomKey, String roomRawData, Instant expiration, Instant creationTime) {
         this.key = Objects.requireNonNull(roomKey);
         this.roomRawData = Objects.requireNonNull(roomRawData);
         this.id = roomId;
         this.expiration = expiration;
+        this.creationTime = creationTime;
+    }
+    
+    public Instant getCreationTime() {
+        return creationTime;
     }
 
     public Instant getExpiration() {
@@ -136,7 +141,8 @@ public class Lobby implements Cloneable, Serializable {
     @Override
     public String toString() {
         return (
-            "Lobby [roomId=" +
+            "Lobby ["+
+            "roomId=" +
             id +
             ", roomKey=" +
             key +
@@ -152,5 +158,18 @@ public class Lobby implements Cloneable, Serializable {
 
     public boolean isLocked() {
         return Nip49.isEncrypted(key);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Lobby lobby = (Lobby) o;
+        return Objects.equals(id, lobby.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

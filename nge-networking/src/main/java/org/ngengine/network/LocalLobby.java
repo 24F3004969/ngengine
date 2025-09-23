@@ -42,8 +42,8 @@ public class LocalLobby extends Lobby {
 
     private transient volatile boolean updateNeeded = false;
 
-    public LocalLobby(String roomId, String roomKey, String roomRawData, Instant expiration) {
-        super(roomId, roomKey, roomRawData, expiration);
+    public LocalLobby( String roomId, String roomKey, String roomRawData, Instant expiration, Instant creationTime) {
+        super( roomId, roomKey, roomRawData, expiration, creationTime);
     }
 
     @Override

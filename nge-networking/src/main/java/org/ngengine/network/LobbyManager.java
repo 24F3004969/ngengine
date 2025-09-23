@@ -60,10 +60,13 @@ import org.ngengine.nostr4j.nip49.Nip49;
 import org.ngengine.nostr4j.nip50.NostrSearchFilter;
 import org.ngengine.nostr4j.signer.NostrSigner;
 import org.ngengine.platform.AsyncExecutor;
+import org.ngengine.platform.AsyncTask;
 import org.ngengine.platform.NGEPlatform;
 import org.ngengine.platform.NGEUtils;
 import org.ngengine.runner.PassthroughRunner;
 import org.ngengine.runner.Runner;
+
+import jakarta.annotation.Nullable;
 
 public class LobbyManager implements Closeable {
 
@@ -72,19 +75,49 @@ public class LobbyManager implements Closeable {
     private final NostrSigner localSigner;
     private final String gameName;
     private final int gameVersion;
-    private final String turnServer;
     private final AsyncExecutor looper;
     private final ArrayList<WeakReference<Lobby>> trackedLobbies = new ArrayList<>();
     private final Runner dispatcher;
     private volatile boolean closed = false;
     private boolean forceTurn = false;
+    private String turnServer = null;
 
     private transient Boolean isSearchSupported;
 
     private static final Logger log = Logger.getLogger(LobbyManager.class.getName());
 
+
+    /**
+     * @deprecated use {@link #LobbyManager(NostrSigner, String, int, Collection, Runner)}
+     */
+    @Deprecated
+    public LobbyManager(NostrSigner signer, String gameName, int gameVersion, Collection<String> relays) {
+        this(signer, gameName, gameVersion, relays, new PassthroughRunner());
+    }
+
+    /**
+     * @deprecated use another constructor and call setTurnServer() instead
+     */
+    @Deprecated
     public LobbyManager(NostrSigner signer, String gameName, int gameVersion, Collection<String> relays, String turnServer) {
-        this(signer, gameName, gameVersion, relays, turnServer, new PassthroughRunner());
+        this(signer, gameName, gameVersion, relays, new PassthroughRunner());
+        setTurnServer(turnServer, forceTurn);
+    }
+ 
+
+    /**
+     * @deprecated use {@link #LobbyManager(NostrSigner, String, String, Runner)}
+     
+     */
+    @Deprecated
+    public LobbyManager(NostrSigner signer, String gameName, int gameVersion) {
+        this(signer, gameName, gameVersion, null, new PassthroughRunner());
+    }
+
+
+     
+    public LobbyManager(NostrSigner signer, String gameName, int gameVersion, Runner dispatcher) {
+        this(signer, gameName, gameVersion, null, dispatcher);
     }
 
     public LobbyManager(
@@ -92,12 +125,11 @@ public class LobbyManager implements Closeable {
         String gameName,
         int gameVersion,
         Collection<String> relays,
-        String turnServer,
         Runner dispatcher
     ) {
         this.dispatcher = dispatcher;
 
-        this.looper = NGEUtils.getPlatform().newAsyncExecutor();
+        this.looper = NGEUtils.getPlatform().newAsyncExecutor(LobbyManager.class);
         this.localSigner = signer;
         this.gameName = gameName;
         this.gameVersion = gameVersion;
@@ -116,9 +148,7 @@ public class LobbyManager implements Closeable {
         update();
     }
 
-    public void setForceTurn(boolean forceTurn) {
-        this.forceTurn = forceTurn;
-    }
+ 
 
     protected void update() {
         this.looper.runLater(
@@ -164,9 +194,13 @@ public class LobbyManager implements Closeable {
         }
     }
 
-    public void listLobbies(NostrFilter filter, BiConsumer<List<Lobby>, Throwable> callback) {
+    public void listLobbies(NostrFilter filter, int limit, Duration timeout,  BiConsumer<List<Lobby>, Throwable> callback) {
         masterServersPool
-            .fetch(filter, 6000, TimeUnit.MILLISECONDS)
+            .fetch(filter,
+                limit,
+                true,
+                timeout
+            )
             .then(events -> {
                 List<Lobby> lobbies = new ArrayList<>();
                 NGEPlatform p = NGEUtils.getPlatform();
@@ -181,12 +215,13 @@ public class LobbyManager implements Closeable {
 
                         String roomId = event.getFirstTag("d").get(0);
                         Instant expiration = event.getExpiration();
+                        Instant creationTime = event.getCreatedAt();
 
                         Lobby lobby;
                         if (event.getPubkey().equals(this.localSigner.getPublicKey().await())) {
-                            lobby = new LocalLobby(roomId, roomKey, rawData, expiration);
+                            lobby = new LocalLobby( roomId, roomKey, rawData, expiration, creationTime);
                         } else {
-                            lobby = new Lobby(roomId, roomKey, rawData, expiration);
+                            lobby = new Lobby( roomId, roomKey, rawData, expiration, creationTime);
                         }
                         // for(Entry<String, List<String>> tagEntry : event.getTags().entrySet()){
                         for (String tagKey : event.listTagKeys()) {
@@ -240,8 +275,18 @@ public class LobbyManager implements Closeable {
     public void listLobbies(
         String words,
         int limit,
-        Map<String, String> dataFilter,
-        BiConsumer<List<Lobby>, Throwable> callback
+        @Nullable Map<String, String> dataFilter,
+        BiConsumer<LobbyCursor, Throwable> callback
+    ) {
+        listLobbies(words,limit,dataFilter, null, callback);
+    }
+
+    public void listLobbies(
+        String words,
+        int limit,
+        @Nullable Map<String, String> dataFilter,
+        LobbyCursor cursor,
+        BiConsumer<LobbyCursor, Throwable> callback
     ) {
         NostrFilter filter = null;
         if (words != null && !words.isEmpty() && isSearchSupported()) {
@@ -252,6 +297,13 @@ public class LobbyManager implements Closeable {
         }
         filter.withKind(KIND);
         filter.withTag("t", gameName + "/" + gameVersion);
+        if(cursor!=null) {
+            if (cursor.direction() == LobbyCursor.Direction.OLDER && cursor.until() != null) {
+                filter.until(cursor.until());
+            } else if (cursor.direction() == LobbyCursor.Direction.NEWER && cursor.since() != null) {
+                filter.since(cursor.since());
+            }
+        }
 
         if (dataFilter != null) {
             // relay side filter for 1 letter tags
@@ -263,6 +315,8 @@ public class LobbyManager implements Closeable {
 
         listLobbies(
             filter,
+            limit,
+            Duration.ofSeconds(3),
             (lobbies, err) -> {
                 if (err != null) {
                     this.dispatcher.run(() -> {
@@ -273,6 +327,7 @@ public class LobbyManager implements Closeable {
                 List<Lobby> filteredLobbies = lobbies
                     .stream()
                     .filter(lobby -> {
+                        if(cursor!=null && cursor.get().contains(lobby))return false;
                         if (dataFilter != null) {
                             // client side filter by tags > 1 letter
                             for (Entry<String, String> tagFilter : dataFilter.entrySet()) {
@@ -295,8 +350,24 @@ public class LobbyManager implements Closeable {
                         return true;
                     })
                     .collect(Collectors.toList());
-                this.dispatcher.run(() -> {
-                        callback.accept(filteredLobbies, null);
+                    this.dispatcher.run(() -> {
+                        Instant until = null;
+                        Instant since = null;
+                        for (Lobby l : filteredLobbies) {
+                            if (until == null || l.getCreationTime().isBefore(until)) {
+                                until = l.getCreationTime();
+                            }
+                            if (since == null || l.getCreationTime().isAfter(since)) {
+                                since = l.getCreationTime();
+                            }
+                        }
+                        LobbyCursor newCursor = new LobbyCursor(
+                            cursor != null ? cursor.direction() : LobbyCursor.Direction.OLDER,
+                            until,
+                            since,
+                            filteredLobbies
+                        );
+                        callback.accept(newCursor, null);
                     });
             }
         );
@@ -349,7 +420,7 @@ public class LobbyManager implements Closeable {
 
             String rawData = NGEUtils.getPlatform().toJSON(fullData);
 
-            LocalLobby lobby = new LocalLobby(roomId, roomKey, rawData, Instant.now().plus(expiration));
+            LocalLobby lobby = new LocalLobby( roomId, roomKey, rawData, Instant.now().plus(expiration), Instant.now());
             for (Entry<String, String> dataEntry : fullData.entrySet()) {
                 String key = dataEntry.getKey();
                 String value = dataEntry.getValue();
@@ -371,8 +442,8 @@ public class LobbyManager implements Closeable {
                         return;
                     }
                     log.info("Creating lobby with event " + signed.toMap());
-                    masterServersPool
-                        .send(signed)
+                    AsyncTask.any(masterServersPool
+                        .publish(signed))
                         .then(acks -> {
                             this.dispatcher.run(() -> {
                                     callback.accept(lobby, null);
@@ -445,5 +516,10 @@ public class LobbyManager implements Closeable {
         conn.setForceTurn(forceTurn);
         conn.start();
         return conn;
+    }
+
+    public void setTurnServer(String turnServer, boolean force) {
+        this.turnServer = turnServer;
+        this.forceTurn = force;
     }
 }
