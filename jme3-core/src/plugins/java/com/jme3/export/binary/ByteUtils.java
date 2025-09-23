@@ -64,6 +64,15 @@ public class ByteUtils {
         }
     }
 
+    public static byte[] readFully(InputStream is) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024*16];
+        int bytesRead;
+        while ((bytesRead = is.read(buffer)) != -1) {
+            baos.write(buffer, 0, bytesRead);
+        }
+        return baos.toByteArray();
+    }
  
 
     public static void skipFully(InputStream in, long n) throws IOException {
@@ -535,5 +544,8 @@ public class ByteUtils {
             
         return bytes;
     }
+
+
+
 
 }

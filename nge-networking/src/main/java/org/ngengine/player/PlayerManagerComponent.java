@@ -41,26 +41,19 @@ import java.util.logging.Logger;
 import org.ngengine.AsyncAssetManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
+import org.ngengine.config.Relays;
 import org.ngengine.network.P2PChannel;
 import org.ngengine.network.RemotePeer;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
 import org.ngengine.nostr4j.keypair.NostrPublicKey;
 import org.ngengine.nostr4j.signer.NostrSigner;
-import org.ngengine.platform.VStore;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
 public class PlayerManagerComponent implements Component<Object> {
 
-    public static final List<String> DEFAULT_ID_RELAYS = List.of(
-        "wss://relay.ngengine.org",
-        "wss://relay.snort.social",
-        "wss://nostr.wine",
-        "wss://nos.lol",
-        "wss://relay.damus.io",
-        "wss://relay.primal.net"
-    );
+    public static final List<String> DEFAULT_ID_RELAYS = Relays.nostr.get("id");
     private static final Logger log = Logger.getLogger(PlayerManagerComponent.class.getName());
     protected Collection<String> connectToRelays;
     protected NostrPool nostrPool;
@@ -76,7 +69,7 @@ public class PlayerManagerComponent implements Component<Object> {
         this.connectToRelays = idRelays;
     }
 
-    public PlayerManagerComponent(VStore dataStore, NostrPool pool) {
+    public PlayerManagerComponent(NostrPool pool) {
         this.nostrPool = pool;
         this.externalPool = true;
         this.connectToRelays = null;

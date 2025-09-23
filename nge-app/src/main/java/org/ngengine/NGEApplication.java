@@ -52,6 +52,7 @@ import org.ngengine.components.jme3.AppComponentLoader;
 import org.ngengine.components.jme3.AppComponentUpdater;
 import org.ngengine.components.jme3.AppViewPortComponentUpdater;
 import org.ngengine.components.jme3.ComponentManagerAppState;
+import org.ngengine.config.Relays;
 import org.ngengine.gui.NGEStyle;
 import org.ngengine.gui.win.NWindowManagerComponent;
 import org.ngengine.nostr4j.keypair.NostrPrivateKey;
@@ -63,14 +64,7 @@ public class NGEApplication {
 
     private final Jme3Application app;
     private final String defaultAppId = "npub146wutmuxfmnlx9fcty0lkns2rpwhnl57kpes26mmt4hygalsakrsdllryz";
-    private final List<String> defaultAdsRelays = List.of(
-        "wss://relay.ngengine.org",
-        "wss://relay2.ngengine.org",
-        "wss://nostr.rblb.it",
-        "wss://relay.damus.io",
-        "wss://relay.primal.net",
-        "wss://relay.nostr.band"
-    );
+ 
     private final AppSettings settings;
 
     public static class Jme3Application extends SimpleApplication {
@@ -223,7 +217,7 @@ public class NGEApplication {
                 .addAndEnableComponent(
                     ads =
                         new ImmersiveAdComponent(
-                            relays != null && !relays.isEmpty() ? relays : defaultAdsRelays,
+                            relays != null && !relays.isEmpty() ? relays : Relays.nostr.get("ads"),
                             appKey,
                             userAdsKey
                         )

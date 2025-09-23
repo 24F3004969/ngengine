@@ -47,6 +47,8 @@ import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import org.ngengine.config.Relays;
 import org.ngengine.nostr4j.NostrFilter;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
@@ -99,7 +101,8 @@ public class LobbyManager implements Closeable {
         this.localSigner = signer;
         this.gameName = gameName;
         this.gameVersion = gameVersion;
-        this.turnServer = turnServer;
+
+        if(relays==null) relays = Relays.nostr.get("lobby");
 
         this.masterServersPool = new NostrPool();
         for (String server : relays) {

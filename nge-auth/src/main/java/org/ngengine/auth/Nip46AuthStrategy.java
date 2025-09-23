@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 
+import org.ngengine.config.Relays;
 import org.ngengine.export.Nip46MetadataSavableWrapper;
 import org.ngengine.export.NostrKeyPairSavableWrapper;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
@@ -47,9 +48,7 @@ import org.ngengine.nostr4j.keypair.NostrPrivateKey;
 import org.ngengine.nostr4j.nip46.Nip46AppMetadata;
 
 public class Nip46AuthStrategy implements Savable {
-
-    protected List<String> relays = List.of("wss://relay.nsec.app", "wss://relay.ngengine.org");
-
+    protected List<String> relays = Relays.nostr.get("nip46");
     protected Nip46AppMetadata metadata = new Nip46AppMetadata().setName("ngengine.org - Unnamed App");
     protected NostrKeyPair appKeyPair;
     protected boolean allowNostrConnect = true;
