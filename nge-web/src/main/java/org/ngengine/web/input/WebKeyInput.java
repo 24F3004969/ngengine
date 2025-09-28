@@ -7,32 +7,37 @@ import org.teavm.jso.browser.Window;
 import org.teavm.jso.dom.events.Event;
 import org.teavm.jso.dom.events.EventListener;
 import org.teavm.jso.dom.events.KeyboardEvent;
-import org.teavm.jso.dom.html.HTMLDocument;
 
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.RawInputListener;
 import com.jme3.input.event.KeyInputEvent;
 import com.jme3.input.event.MouseMotionEvent;
+
+import org.ngengine.web.WebBinds;
 import org.ngengine.web.context.WebCanvasElement;
 
-public class WebKeyInput implements KeyInput, EventListener {
+public class WebKeyInput implements KeyInput {
     private boolean initialized = false;
     private RawInputListener listener;
 
     private final List<KeyInputEvent> keyEvents = new ArrayList<>();
-        private WebCanvasElement canvas;
-
-       public WebKeyInput(WebCanvasElement canvas) {
-        this.canvas = canvas;
-    }
+    @SuppressWarnings("rawtypes")
+    private EventListener webListener = new EventListener() {
+        @Override
+        public void handleEvent(Event evt) {
+            handleWebEvent(evt);
+        }
+    };
+    public WebKeyInput() {
+   }
 
     @Override
     public void initialize() {
-        Window win = Window.current();
-        HTMLDocument doc = win.getDocument();
-        doc.addEventListener("keydown", this, false);
-        doc.addEventListener("keyup", this, false);     
+       
+ 
+        WebBinds.addInputEventListener("keyup", webListener);
+        WebBinds.addInputEventListener("keydown", webListener);
         initialized = true;
     }
 
@@ -48,10 +53,8 @@ public class WebKeyInput implements KeyInput, EventListener {
 
     @Override
     public void destroy() {
-        Window win = Window.current();
-        HTMLDocument doc = win.getDocument();
-        doc.removeEventListener("keydown", this);
-        doc.removeEventListener("keyup", this);
+        WebBinds.removeInputEventListener("keyup", webListener);
+        WebBinds.removeInputEventListener("keydown", webListener);      
         initialized = false;
     }
 
@@ -72,8 +75,7 @@ public class WebKeyInput implements KeyInput, EventListener {
 
     }
 
-    @Override
-    public void handleEvent(Event evt) {
+    private void handleWebEvent(Event evt) {
         long time = getInputTimeNanos();
         KeyboardEvent ev = (KeyboardEvent) evt;
         String keyCode = ev.getCode();

@@ -1,6 +1,7 @@
 package org.ngengine.web.filesystem;
 
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,9 +11,11 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.logging.Logger;
 
-import org.teavm.jso.browser.Window;
+import org.ngengine.platform.NGEPlatform;
+import org.ngengine.platform.NGEUtils;
+import org.ngengine.platform.transport.NGEHttpResponse;
+import org.ngengine.web.WebBindsAsync;
 
 import com.jme3.util.res.ResourceLoader;
 
@@ -33,10 +36,16 @@ public class WebResourceLoader implements ResourceLoader {
             classPath = classPath.substring(0, classPath.lastIndexOf('/'));
             resourcePath = classPath + "/" + path;
         }
-        URL baseURL = new URL(Window.current().getLocation().getFullURL());
-        resourcePath = new URL(baseURL, resourcePath).toString();
- 
-        return resourcePath;
+        String url = WebBindsAsync.getBaseURL();
+        if(!url.endsWith("/")){
+            url+="/";
+        }
+         if(resourcePath.startsWith("/")){
+            resourcePath=resourcePath.substring(1);
+        }
+        url += resourcePath;
+        url = NGEUtils.safeURI(url).toString();
+        return url;
     }
 
 
@@ -56,7 +65,12 @@ public class WebResourceLoader implements ResourceLoader {
         URL url = getResource(path, clazz);
         if(url==null) return null;
         try {
-            return url.openConnection().getInputStream();
+            NGEHttpResponse req = NGEPlatform.get().httpRequest("GET", url.toString(), null, null, null).await();
+            if(!req.status()){
+                throw new IOException("Failed to get resource: "+url.toString()+" - "+req.statusCode());
+            }
+            byte[] data = req.body();
+            return new ByteArrayInputStream(data);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -68,7 +82,7 @@ public class WebResourceLoader implements ResourceLoader {
     @Override
     public Enumeration<URL> getResources(String path) throws IOException {
         if (index == null) {
-            String indexPath=this.getFullPath(null, "resourcesIndex.txt");
+            String indexPath=this.getFullPath(null, "resources.index.txt");
             URL url=new URL(indexPath);
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -84,10 +98,11 @@ public class WebResourceLoader implements ResourceLoader {
                 index = new ArrayList<URL>();
                 for (String line : lines) {
                     line = line.trim();
-                    String[] parts=line.split(" ",1);
+                    String[] parts=line.split(" ",2);
                     if(parts.length==2){
                         String hash=parts[0].trim(); // useless
-                        String resource=parts[1].trim();
+                        String size=parts[1].trim(); // useless
+                        String resource=parts[2].trim();
                         if (resource.length() > 0 ) {
                             URL url2 = getResource(line, null);
                             index.add(url2);

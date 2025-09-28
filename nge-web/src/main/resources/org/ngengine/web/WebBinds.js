@@ -1,5 +1,6 @@
  
-
+import Binds from "./WebBindsHub.js";
+import ImageLoader from "./ImageLoader.js";
 // convert various buffer types to Uint8Array
 const _u = (data) => {
     if (data instanceof Uint8Array) {
@@ -21,140 +22,15 @@ const _u = (data) => {
     }
 };
 
+function isWorker() {
+    return (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
+}
+
 function s() {
     return ((typeof window !== 'undefined' && window) ||
         (typeof globalThis !== 'undefined' && globalThis) ||
         (typeof global !== 'undefined' && global) ||
         (typeof self !== 'undefined' && self));
-}
-
-function mimeFromFilename(name) {
-    if (!name || typeof name !== 'string') return 'image/*';
-    const ext = name.split('.').pop().toLowerCase();
-    switch (ext) {
-        case 'png': return 'image/png';
-        case 'jpg':
-        case 'jpeg': return 'image/jpeg';
-        case 'webp': return 'image/webp';
-        case 'gif': return 'image/gif';
-        case 'bmp': return 'image/bmp';
-        case 'avif': return 'image/avif';
-        case 'svg': return 'image/svg+xml';
-        default: return 'image/*';
-    }
-}
-
-
-async function _decodeImageAsync (data, filename, scaleW, scaleH) { /*
-    returns { data: Uint8Array, width: number, height: number }
-*/
-    const g = ((typeof window !== 'undefined' && window) || globalThis);
-    const URL_ = g.URL || g.webkitURL;
-
-    // const doc = g.document;
-    let u8in = new Uint8Array(data);
-    let svgText;
-
-    if (filename && filename.toLowerCase().endsWith('.svg')){
-        svgText = new TextDecoder().decode(u8in);
-        svgText = svgText.replace(/currentColor/g, "#ffffff");
-        u8in = new TextEncoder().encode(svgText);
-    }
-
-
-    const blob = new Blob([u8in], { type: mimeFromFilename(filename) });
-    const url = URL_.createObjectURL(blob);
-    let canvas = null;
-    try {
-        const img = new Image();
-        const p = new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('Image decode error')); });
-        img.src = url;
-        await p;
-
-        // Intrinsic dimensions
-        let w = (img.naturalWidth || img.width) | 0;
-        let h = (img.naturalHeight || img.height) | 0;
-
-        // Fallback for SVG without explicit size
-        if ((w === 0 || h === 0) && svgText) {
-            try {
-                const m = svgText.match(/viewBox\s*=\s*"([\d.\s]+)"/i);
-                if (m) {
-                    const parts = m[1].trim().split(/\s+/).map(Number);
-                    if (parts.length === 4) {
-                        const vw = parts[2];
-                        const vh = parts[3];
-                        if (vw > 0 && vh > 0) {
-                            const maxDim = 256;
-                            const scale = vw > vh ? maxDim / vw : maxDim / vh;
-                            w = Math.max(1, (vw * scale) | 0);
-                            h = Math.max(1, (vh * scale) | 0);
-                        }
-                    }
-                }
-                if (w === 0 || h === 0) { w = 256; h = 256; }
-            } catch (_) {
-                w = 256; h = 256;
-            }
-        }
-
-        // Apply requested scaling (maintain aspect if only one provided)
-        let dw = (typeof scaleW === 'number' && scaleW > 0) ? scaleW | 0 : 0;
-        let dh = (typeof scaleH === 'number' && scaleH > 0) ? scaleH | 0 : 0;
-        if (dw && !dh) {
-            dh = Math.max(1, Math.round(h * (dw / w)));
-        } else if (dh && !dw) {
-            dw = Math.max(1, Math.round(w * (dh / h)));
-        }
-        if (!dw) dw = w;
-        if (!dh) dh = h;
-
-        // canvas = doc.createElement('canvas');
-        canvas = new g.OffscreenCanvas(dw, dh);
-        // canvas.style.cssText = 'position:absolute;top:-10000px;left:-10000px;visibility:hidden;';
-        // doc.body.appendChild(canvas); // some browsers require canvas to be in DOM for certain operations
-        canvas.width = dw;
-        canvas.height = dh;
-
-        const ctx = canvas.getContext('2d',{
-                alpha: true,
-                premultipliedAlpha: false   ,
-                colorSpace: 'srgb', 
-                willReadFrequently: true 
-        });
-        ctx.clearRect(0, 0, dw, dh);
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fillRect(0, 0, dw, dh);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        if (svgText) {
-            img.width = dw;
-            img.height = dh;
-            ctx.drawImage(img, 0, 0, dw, dh);
-            const tempData = ctx.getImageData(0, 0, dw, dh);
-            ctx.putImageData(tempData, 0, 0);
-        } else {
-            ctx.drawImage(img, 0, 0, dw, dh);
-        }
-        ctx.fillRect(0, 0, dw, dh);
-
-        const imageData = ctx.getImageData(0, 0, dw, dh, {
-            colorSpace: 'srgb'
-        });
-        const pixels = imageData.data;  
-       
-
-        return {
-            data: new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.length),
-            width: dw,
-            height: dh
-        };
-    } finally {
-        try { URL_.revokeObjectURL(url); } catch(e) {}
- 
-        
-    }
 }
 
 export const decodeImageAsync = (data /*byte[]*/, filename /*str*/ , targetWidth /*int*/, targetHeight /*int*/, res, rej) => { /* {
@@ -163,8 +39,11 @@ export const decodeImageAsync = (data /*byte[]*/, filename /*str*/ , targetWidth
         height: number
     
     }*/
-    _decodeImageAsync(_u(data), filename, targetWidth, targetHeight ).then(res).catch(rej);  
-
+   if(!isWorker()||!filename.toLowerCase().endsWith('.svg')) {
+        ImageLoader.decodeImage(_u(data), filename, targetWidth, targetHeight ).then(res).catch(e=>rej( String(e)));  
+   } else{
+        Binds.fireEvent("decodeImage", _u(data), filename, targetWidth, targetHeight).then(res).catch(e=>rej( String(e)));
+   }
 }
 
 export const helloBinds = () => {
@@ -175,78 +54,238 @@ export const helloBinds = () => {
         console.log("Platform: " + (g.navigator ? g.navigator.platform : "unknown"));
     }
 }
-
-let PIXELS_PER_LINE = null;
-export const getPixelDeltaScroll = (deltaValue, deltaMode) => {
-    const g = s();
-    const doc = g && g.document;
-
-    let pixelsPerLine = PIXELS_PER_LINE;
-    if (!pixelsPerLine) {
-        if (!doc || !doc.body) {
-            pixelsPerLine = 16; // fallback when no DOM
-        } else {
-            const el = doc.createElement("span");
-            el.style.cssText = "position:absolute;visibility:hidden;font-size:16px;line-height:1.2;margin:0;padding:0;border:0;";
-            el.textContent = "X";
-            doc.body.appendChild(el);
-            const cs = g.getComputedStyle ? g.getComputedStyle(el) : null;
-            const lh = cs && cs.lineHeight && cs.lineHeight.endsWith("px")
-                ? parseFloat(cs.lineHeight)
-                : (el.offsetHeight || 16);
-            doc.body.removeChild(el);
-            pixelsPerLine = lh || 16;
-        }
-        PIXELS_PER_LINE = pixelsPerLine;
-    }
-
-    if (deltaMode === 0) {
-        return deltaValue; // pixels
-    } else if (deltaMode === 1) {
-        return deltaValue * pixelsPerLine; // lines -> pixels
-    } else {
-        // pages -> pixels
-        const viewportHeight = doc && doc.documentElement
-            ? Math.max(doc.documentElement.clientHeight, g.innerHeight || 0)
-            : 800;
-        const estimatedLinesPerPage = Math.max(1, Math.floor(viewportHeight / pixelsPerLine));
-        return deltaValue * pixelsPerLine * estimatedLinesPerPage;
-    }
-}
+ 
 
 
-export const canvasFitParent =  (canvas) => {
-    const parent = canvas.parentElement;
-    canvas.width = parent.clientWidth;
-    canvas.height = parent.clientHeight;
-    canvas.setAttribute("width", parent.clientWidth);
-    canvas.setAttribute("height", parent.clientHeight);
-}
+ 
+
+
 
 
 
 export const loadScriptAsync = async (script, res, rej) => {
-    console.log("Loading script: " + script);
-    const g = s();
-    const scriptElement = g.document.createElement("script");
-    scriptElement.src = script;
-    g.document.head.appendChild(scriptElement);
- 
-    scriptElement.onload = () => {
-        console.log("Script loaded: " + script);
-        res();
-    }
-    scriptElement.onerror = (e) => {
-        console.error("Failed to load script: " + script, e);
-        rej(e);
+    const isWorker = (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
+    if(isWorker) {
+        try {
+            console.log("Loading script: " + script + " in worker");
+            importScripts(script);
+            console.log("Script loaded: " + script);
+            res();
+        } catch (e) {
+            const code = await fetch(script).then(r => r.text());
+            eval(code);
+            console.log("Script loaded via fetch+eval: " + script);
+            res();
+        }
+    } else {
+        console.log("Loading script: " + script);
+        const g = s();
+        const scriptElement = g.document.createElement("script");
+        scriptElement.src = script;
+        g.document.head.appendChild(scriptElement);
+    
+        scriptElement.onload = () => {
+            console.log("Script loaded: " + script);
+            res();
+        }
+        scriptElement.onerror = (e) => {
+            console.error("Failed to load script: " + script, e);
+            rej(String(e));
+        }
     }
 };
 
 
+
+
 export const setPageTitle = (title) => {
-    if (typeof title !== 'string') return;
-    const g = s();
-    if (g && g.document && g.document.title !== undefined) {
-        g.document.title = title;
+    Binds.fireEvent("setPageTitle", title);
+}
+
+export const toggleFullscreen = (v) =>{
+    Binds.fireEvent("toggleFullscreen", v);
+}
+
+export const togglePointerLock = (v) =>{
+    Binds.fireEvent("togglePointerLock", v);
+}
+
+ 
+// export const addEventListener = (event, fun) =>{
+//     Binds.addEventListener(event, fun);
+// }
+
+// export const removeEventListener = (event, fun) =>{
+//     Binds.removeEventListener(event, fun);
+// }
+
+export const waitNextFrame = (callback) => {
+    const l = () => {
+        try{
+            Binds.removeEventListener("render", l);
+        } catch(e){
+            console.warn("Error removing render listener in waitNextFrame", e);
+        }
+        try{
+            callback();
+        } catch(e){
+            console.error("Error in waitNextFrame callback", e);
+        }
     }
+    Binds.addEventListener("render", l);
+}
+
+// export const fireEventAsync = (event, args, res,rej) => {
+//     Binds.fireEvent(event, ...args).then(res).catch(e=>rej(String(e)));
+// }
+
+export const getRenderTargetAsync = (res, rej) => {
+    Binds.fireEvent("getRenderTarget").then(res).catch(e=>rej(String(e)));
+}
+
+export const addResizeRenderTargetListener = (fun)=>{
+    Binds.addEventListener("resizeRenderTarget", fun);
+}
+
+export const addSwapRenderTargetListener = (fun)=>{
+    Binds.addEventListener("swapRenderTarget", fun);
+}
+
+export const addInputEventListener = (event, fun) => {
+    Binds.addEventListener(event, fun);
+}
+
+export const removeInputEventListener = (event, fun) => {
+    Binds.removeEventListener(event, fun);
+}
+
+
+
+
+// audio
+export const addAudioEndListener = (fun) => {
+    Binds.addEventListener("audioSourceEnded", fun);
+};
+
+export const createAudioContextAsync = (sampleRate, id, res, rej) => {
+    Binds.fireEvent("createAudioContext", sampleRate, id).then(res).catch(e=>rej(String(e)));
+};
+
+export const freeAudioContext = (id) => {
+    Binds.fireEvent("freeAudioContext", id);
+};
+
+export const createAudioBufferAsync = (ctxId, id, f32channelData, lengthInSamples, sampleRate, res, rej) => {
+    Binds.fireEvent("createAudioBuffer", ctxId, id, f32channelData, lengthInSamples, sampleRate).then(res).catch(e=>rej(String(e)));
+};
+
+export const freeAudioBuffer = (ctxId, bufId) => {
+    Binds.fireEvent("freeAudioBuffer", ctxId, bufId);
+};
+
+export const createAudioSourceAsync = (ctxId, id,  res, rej) => {
+    Binds.fireEvent("createAudioSource", ctxId, id).then(res).catch(e=>rej(String(e)));
+};
+
+export const freeAudioSource = (ctxId, srcId) => {
+    Binds.fireEvent("freeAudioSource", ctxId, srcId);
+};
+
+export const setAudioBufferAsync = (ctxId, srcId, bufId, res, rej) => {
+    Binds.fireEvent("setAudioBuffer", ctxId, srcId, bufId).then(res).catch(e=>rej(String(e)));
+};
+
+export const setAudioPositional = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioPositional", ctxId, srcId, v);
+};
+
+export const setContextAudioEnv = (ctxId, i8data) => {
+    Binds.fireEvent("setContextAudioEnv", ctxId, i8data);
+};
+
+export const setAudioPosition = (ctxId, srcId, x, y, z) => {
+    Binds.fireEvent("setAudioPosition", ctxId, srcId, x, y, z);
+};
+
+export const setAudioVelocity = (ctxId, srcId, x, y, z) => {
+    Binds.fireEvent("setAudioVelocity", ctxId, srcId, x, y, z);
+};
+
+export const setAudioMaxDistance = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioMaxDistance", ctxId, srcId, v);
+};
+
+export const setAudioRefDistance = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioRefDistance", ctxId, srcId, v);
+};
+
+export const setAudioDirection = (ctxId, srcId, x, y, z) => {
+    Binds.fireEvent("setAudioDirection", ctxId, srcId, x, y, z);
+};
+
+export const setAudioConeInnerAngle = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioConeInnerAngle", ctxId, srcId, v);
+};
+
+export const setAudioConeOuterAngle = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioConeOuterAngle", ctxId, srcId, v);
+};
+
+export const setAudioConeOuterGain = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioConeOuterGain", ctxId, srcId, v);
+};
+
+export const setAudioLoop = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioLoop", ctxId, srcId, v);
+};
+
+export const setAudioPitch = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioPitch", ctxId, srcId, v);
+};
+
+export const setAudioVolume = (ctxId, srcId, v) => {
+    Binds.fireEvent("setAudioVolume", ctxId, srcId, v);
+};
+
+export const getAudioPlaybackRateAsync = (ctxId, srcId, res, rej) => {
+    Binds.fireEvent("getAudioPlaybackRate", ctxId, srcId).then(res).catch(e=>rej(String(e)));
+};
+
+export const playAudioSourceAsync = (ctxId, srcId, res, rej) => {
+    Binds.fireEvent("playAudioSource", ctxId, srcId).then(res).catch(e=>rej(String(e)));
+};
+
+export const pauseAudioSourceAsync = (ctxId, srcId, res, rej) => {
+    Binds.fireEvent("pauseAudioSource", ctxId, srcId).then(res).catch(e=>rej(String(e)));
+};
+
+export const stopAudioSourceAsync = (ctxId, srcId, res, rej) => {
+    Binds.fireEvent("stopAudioSource", ctxId, srcId).then(res).catch(e=>rej(String(e)));
+};
+
+export const setAudioContextListener = (
+    ctxId, 
+    px, py, pz, 
+    dx, dy, dz, 
+    ux, uy, uz
+) => {
+    Binds.fireEvent("setAudioContextListener", 
+        ctxId, 
+        px, py, pz, 
+        0,0,0,
+        dx, dy, dz, 
+        ux, uy, uz
+    );
+}
+
+let baseUrl = null;
+export const getBaseURLAsync = (res, rej) => {
+    if(baseUrl){
+        res(baseUrl);
+        return;
+    }
+    Binds.fireEvent("getBaseURL").then( (url) => {
+        baseUrl = url;
+        res(url);
+    }).catch(e=>rej(String(e)));
 }

@@ -10,49 +10,54 @@ import org.teavm.jso.dom.events.EventListener;
 import org.teavm.jso.dom.events.MouseEvent;
 import org.teavm.jso.dom.events.WheelEvent;
 import org.teavm.jso.dom.html.HTMLCanvasElement;
-import org.teavm.jso.dom.html.HTMLDocument;
 
 import com.jme3.cursors.plugins.JmeCursor;
 import com.jme3.input.MouseInput;
 import com.jme3.input.RawInputListener;
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.input.event.MouseMotionEvent;
-import org.ngengine.web.context.PointerLockOptions;
+
+import org.ngengine.web.WebBinds;
 import org.ngengine.web.context.WebCanvasElement;
 
-public class WebMouseInput implements MouseInput, EventListener {
-    private WebCanvasElement canvas;
-    private boolean cursorVisible = false;
+public class WebMouseInput implements MouseInput {
+    private boolean cursorVisible = true;
     private RawInputListener listener;
     private int xPos = 0, yPos = 0, wheelPos;
     private boolean undefinedPos = true;
     private boolean initialized = false;
     private final List<MouseMotionEvent> mouseMotionEvents = new ArrayList<>();
     private final List<MouseButtonEvent> mouseButtonEvents = new ArrayList<>();
-
-    public WebMouseInput(WebCanvasElement canvas) {
-        this.canvas = canvas;
+    @SuppressWarnings("rawtypes")
+    private EventListener webListener = new EventListener() {
+        @Override
+        public void handleEvent(Event evt) {
+            handleWebEvent(evt);
+        }
+    };
+    public WebMouseInput() {
+        // this.canvas = canvas;
     }
 
     @Override
     public void initialize() {
-        Window win = Window.current();
-        HTMLDocument doc = win.getDocument();
-        doc.addEventListener("mousemove", this, false);
-        doc.addEventListener("wheel", this, false);
-        doc.addEventListener("mousedown", this, false);
-        doc.addEventListener("mouseup", this, false);
+
+        WebBinds.addInputEventListener("mousemove", webListener);
+        WebBinds.addInputEventListener("wheel", webListener);
+        WebBinds.addInputEventListener("mousedown", webListener);
+        WebBinds.addInputEventListener("mouseup", webListener); 
+
         initialized = true;
     }
 
     @Override
     public void destroy() {
-        Window win = Window.current();
-        HTMLDocument doc = win.getDocument();
-        doc.removeEventListener("mousemove", this, false);
-        doc.removeEventListener("wheel", this, false);
-        doc.removeEventListener("mousedown", this, false);
-        doc.removeEventListener("mouseup", this, false);
+
+        WebBinds.removeInputEventListener("mousemove", webListener);
+        WebBinds.removeInputEventListener("wheel", webListener);
+        WebBinds.removeInputEventListener("mousedown", webListener);
+        WebBinds.removeInputEventListener("mouseup", webListener);
+
         initialized = false;
     }
 
@@ -61,8 +66,7 @@ public class WebMouseInput implements MouseInput, EventListener {
         return initialized;
     }
 
-    @Override
-    public void handleEvent(Event evt) {
+    private void handleWebEvent(Event evt) {
         if (listener == null) return;
         if (evt.getType().equals("mousemove")) {
             MouseEvent ev = (MouseEvent) evt;
@@ -79,9 +83,6 @@ public class WebMouseInput implements MouseInput, EventListener {
                 int x = (int) ev.getClientX();
                 int y = (int) ev.getClientY();
 
-                x = canvas.getRelativePosX(x);
-                y = canvas.getRelativePosY(y);
-
                 dX = undefinedPos ? 0 : x - xPos;
                 dY = undefinedPos ? 0 : y - yPos;
                 xPos = x;
@@ -89,21 +90,18 @@ public class WebMouseInput implements MouseInput, EventListener {
                 undefinedPos = false;
             }
 
-            if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
+            // if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
             MouseMotionEvent mme = new MouseMotionEvent((int) xPos, (int) yPos, (int) dX, (int) dY, 0, 0);
             mme.setTime(getInputTimeNanos());
             mouseMotionEvents.add(mme);
-            ev.preventDefault();
 
         } else if (evt.getType().equals("wheel")) {
-            if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
+            // if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
 
             WheelEvent ev = (WheelEvent) evt;
             float dX = 0;
             float dY = 0;
             double wheelDelta = ev.getDeltaY();
-            int deltaMode = ev.getDeltaMode();
-            wheelDelta = canvas.getPixelDeltaScrollY((float) wheelDelta, (int) deltaMode);
             wheelPos += wheelDelta;
 
             MouseMotionEvent mme = new MouseMotionEvent((int) xPos, (int) yPos, (int) dX, (int) dY,
@@ -111,10 +109,9 @@ public class WebMouseInput implements MouseInput, EventListener {
             mme.setTime(getInputTimeNanos());
 
             mouseMotionEvents.add(mme);
-            ev.preventDefault();
 
         } else if (evt.getType().equals("mousedown")) {
-            if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
+            // if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
 
             MouseEvent ev = (MouseEvent) evt;
             int button = ev.getButton();
@@ -127,9 +124,8 @@ public class WebMouseInput implements MouseInput, EventListener {
                 mouseButtonEvents.add(mbe);
 
             }
-            ev.preventDefault();
         } else if (evt.getType().equals("mouseup")) {
-            if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
+            // if (!(xPos >= 0 && yPos >= 0 && xPos <= canvas.getWidth() && yPos <= canvas.getHeight())) return;
 
             MouseEvent ev = (MouseEvent) evt;
             int button = ev.getButton();
@@ -141,7 +137,6 @@ public class WebMouseInput implements MouseInput, EventListener {
 
                 mouseButtonEvents.add(mbe);
             }
-            ev.preventDefault();
         }
 
     }
@@ -152,11 +147,12 @@ public class WebMouseInput implements MouseInput, EventListener {
 
     @Override
     public void update() {
-        boolean canvasCursorVisible = !canvas.isPointerLocked();
+        boolean lock = !cursorVisible;
 
-        if (cursorVisible != canvasCursorVisible) {
-            boolean lock = !cursorVisible;
-            undefinedPos = true;
+        WebBinds.togglePointerLock(lock);
+
+        // if (cursorVisible != canvasCursorVisible) {
+        //     undefinedPos = true;
 
             // if (lock) {
             // PointerLockOptions options = PointerLockOptions.create();
@@ -164,7 +160,7 @@ public class WebMouseInput implements MouseInput, EventListener {
             // canvas.requestPointerLock(options);
             // } else
             // canvas.exitPointerLock();
-        }
+        // }
 
         for (MouseMotionEvent mme : mouseMotionEvents) {
             listener.onMouseMotionEvent(mme);

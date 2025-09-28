@@ -20,6 +20,8 @@ import com.jme3.texture.Texture2D;
 import com.jme3.texture.image.ColorSpace;
 import com.jme3.ui.Picture;
 
+import org.ngengine.web.WebBinds;
+import org.ngengine.web.WebBindsAsync;
 import org.ngengine.web.input.WebKeyInput;
 import org.ngengine.web.input.WebMouseInput;
 import org.ngengine.web.input.WebTouchInput;
@@ -31,12 +33,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.teavm.interop.Async;
-import org.teavm.interop.AsyncCallback;
-import org.teavm.jso.JSBody;
+import org.teavm.jso.JSFunctor;
+import org.teavm.jso.JSObject;
 import org.teavm.jso.browser.Window;
-import org.teavm.jso.dom.xml.Document;
-import org.teavm.jso.function.JSConsumer;
  
 
 public class WebContext implements JmeContext, Runnable {
@@ -55,7 +54,7 @@ public class WebContext implements JmeContext, Runnable {
     protected Timer timer;
     protected SystemListener listener;
     protected Renderer renderer;
-    protected WebCanvasElement canvas;
+    protected WebCanvasElement canvasTarget;
     protected RenderManager renderManager;
     protected AssetManager assetManager;
 
@@ -68,7 +67,20 @@ public class WebContext implements JmeContext, Runnable {
     
     protected long timeThen;
     protected long timeLate;
-    
+
+    protected int canvasWidth;
+    protected int canvasHeight;
+
+    @JSFunctor
+    public static interface CanvasResizeHandler extends JSObject {
+        void onResize(int width, int height);
+    }
+
+    @JSFunctor
+    public static interface CanvasSwapHandler extends JSObject {
+        void onSwap(WebCanvasElement canvas);
+    }
+
     @Override
     public Type getType() {
         return Type.Display;
@@ -168,41 +180,47 @@ public class WebContext implements JmeContext, Runnable {
         auxiliaryFrameBufferRefreshed = true;
     }
 
- 
-
     private void doInit() {
        
         
         timer = new NanoTimer();
-        
-        Window window=Window.current();
-        Document doc = window.getDocument();
+        canvasTarget  = WebBindsAsync.getRenderTarget();
 
-        logger.fine("Searching viable canvas...");
-      
-        WebCanvasElement canvas = (WebCanvasElement) doc.querySelector("canvas#jme");
-        if (canvas == null) {
-            logger.fine("Canvas not found, create a new one.");
-            canvas = (WebCanvasElement) doc.createElement("canvas");
-            canvas.setId("jme");
-            doc.getElementsByTagName("body").get(0).appendChild(canvas);
-        }
+        // WebBinds.addEventListener("resizeRenderTarget", (CanvasResizeHandler)(width, height) -> {
+        //     canvasWidth = width;
+        //     canvasHeight = height;
+        //     System.out.println("Resize render target: "+width+"x"+height);
+        // });
 
-        canvas.canvasFitParent();
+        // WebBinds.addEventListener("resizeRenderTarget", new CanvasResizeHandler() {
+        //     @Override
+        //     public void onResize(int width, int height) {
+        //         canvasWidth = width;
+        //         canvasHeight = height;
+        //         System.out.println("Resize render target: "+width+"x"+height);
+        //     }
+        // });
 
- 
-        this.canvas = canvas;
-        
-        if (settings.getWidth() == -1 || settings.getHeight() == -1) {
-            canvas.setWidth(canvas.getClientWidth());
-            canvas.setHeight(canvas.getClientHeight());
-        } else {
-            canvas.setWidth(settings.getWidth());
-            canvas.setHeight(settings.getHeight());
-        }
-        
-        
 
+        WebBinds.addResizeRenderTargetListener((width,height)->{
+            canvasWidth = width;
+            canvasHeight = height;
+            System.out.println("Resize render target: "+width+"x"+height);
+        });
+        // WebBinds.addEventListener("swapRenderTarget", (CanvasSwapHandler)(c -> {
+        //     if (this.canvasTarget != c) {
+        //         this.canvasTarget = c;
+        //     }
+        // }));
+
+        WebBinds.addSwapRenderTargetListener(c -> {
+            if (canvasTarget != c) {
+                canvasTarget = c;
+            }
+        
+        });
+
+        
         setTitle(settings.getTitle());
 
         boolean hasAntialias = settings.getSamples() > 1;
@@ -226,7 +244,7 @@ public class WebContext implements JmeContext, Runnable {
         attrs.setAntialias(hasAntialias);
 
  
-        WebGLWrapper ctx = (WebGLWrapper) canvas.getContext("webgl2", attrs);
+        WebGLWrapper ctx = (WebGLWrapper) canvasTarget.getContext("webgl2", attrs);
         if (ctx == null) {
             throw new RuntimeException("WebGL2 not supported");
         }
@@ -267,6 +285,33 @@ public class WebContext implements JmeContext, Runnable {
         this.renderManager = rm;
     }
 
+    int internalTargetW = 0;
+    int internalTargetH = 0;
+
+    public void reshapeIfNeeded(){
+        int w = settings.getWidth();
+        int h = settings.getHeight();
+        if(canvasWidth>0 && settings.isResizable()){
+            w = canvasWidth;
+        }
+        if(canvasHeight>0 && settings.isResizable()){
+            h = canvasHeight;
+        }
+
+        if(settings.getWidth()!=w || settings.getHeight()!=h){
+            settings.setResolution(w, h);        
+        }
+
+        if(canvasTarget!=null&&(internalTargetW!=w||internalTargetH!=h)){
+            canvasTarget.setWidth(w);
+            canvasTarget.setHeight(h);
+            listener.reshape(w, h);
+            internalTargetW = w;
+            internalTargetH = h;
+            
+            System.out.println("Reshape to "+w+"x"+h);
+        }
+    }
 
     private boolean loop() {
         try{
@@ -275,32 +320,18 @@ public class WebContext implements JmeContext, Runnable {
                 return false;
             }
 
-            if (settings.isResizable()) {
-                canvas.canvasFitParent();
-            }
+            if(canvasTarget==null) return true;
+     
             
-            int w = canvas.getClientWidth();
-            int h = canvas.getClientHeight();
-            
-            if (settings.isResizable()) {
-                if (w != settings.getWidth() || h != settings.getHeight()) {
-                    settings.setResolution(w, h);        
-                    listener.reshape(w, h);
-                }
-            }
+            reshapeIfNeeded();
 
-            if (settings.isFullscreen()) {
-                if (!canvas.isFullscreen()) {
-                    canvas.requestFullscreen();
-                }
-            } else {
-                if (canvas.isFullscreen()) {
-                    canvas.exitFullscreen();
-                }
-                
-            }
+            WebBinds.toggleFullscreen(settings.isFullscreen());
+     
+            Thread.yield();
 
 
+            int w = internalTargetW;
+            int h = internalTargetH;
 
             if(needAuxiliaryFrameBuffer && w>2 && h>2){
                 rebuildAuxiliaryFrameBufferIfNeeded(w, h);
@@ -338,19 +369,30 @@ public class WebContext implements JmeContext, Runnable {
                     logger.info("Update blit material");
                     auxiliaryFrameBufferRefreshed = false;
                 }
-                    
+                Thread.yield();
+   
 
                 gl.setFrameBuffer(null);
                 blitGeom.updateGeometricState();
                 renderManager.renderGeometry(blitGeom);
+                
+                Thread.yield();
             } else {
                 listener.update();
             }
-           
+            Thread.yield();
+
          } catch(Throwable e){
             logger.log(Level.SEVERE, "Error in WebGL context: "+e.getMessage(), e);
             throw new RuntimeException(e);
         }       
+
+        // if (!settings.isVSync()) {
+        //     sync(frameRate>0?frameRate:60);
+        // } else{
+        //     vsync();
+        // }
+
       
         return true;
     }
@@ -359,24 +401,33 @@ public class WebContext implements JmeContext, Runnable {
     @Override
     public void run() {            
         doInit();  
+
+        Object lock = new Object();
         while(true){
             if(!loop())return;
-            if (!settings.isVSync()) {
-                sync(frameRate>0?frameRate:60);
-            } else{
-                vsync();
+            WebBinds.waitNextFrame(n->{
+                new Thread(()->{
+                    synchronized(lock){
+                        lock.notifyAll();
+                    }
+                }).start();
+            });
+
+            synchronized(lock){   
+                try{
+                    lock.wait(100);
+                }catch(InterruptedException ex){
+                }
             }
         }             
     }
 
-    @Async
-    public static native void vsync();
-    private static void vsync( AsyncCallback<Void> callback) {
-        vsyncAsync(result -> callback.complete(result));
-    }
-
-    @JSBody(params = {"callback" }, script = "return window.requestAnimationFrame(function(t){ callback(null); });")
-    public static native void vsyncAsync(JSConsumer<Void> callback);
+    // @Async
+    // public static native void vsync();
+    // private static void vsync( AsyncCallback<Void> callback) {
+    //     vsyncAsync(result -> callback.complete(result));
+    // }
+ 
 
     @Override
     public void destroy(boolean waitFor) {
@@ -403,12 +454,12 @@ public class WebContext implements JmeContext, Runnable {
 
     @Override
     public MouseInput getMouseInput() {
-        return new WebMouseInput(canvas);
+        return new WebMouseInput();
     }
 
     @Override
     public KeyInput getKeyInput() {
-        return new WebKeyInput(canvas);
+        return new WebKeyInput();
     }
 
     @Override
@@ -418,13 +469,12 @@ public class WebContext implements JmeContext, Runnable {
 
     @Override
     public TouchInput getTouchInput() {
-        return new WebTouchInput(canvas, settings);
+        return new WebTouchInput(()->canvasTarget, settings);
     }
 
     @Override
     public void setTitle(String title) {
-        Window.current().setName(title);
-        Window.current().getDocument().setTitle(title);        
+        WebBinds.setPageTitle(title);       
     }
 
     public void create() {
@@ -436,14 +486,14 @@ public class WebContext implements JmeContext, Runnable {
     }
 
     protected void waitFor(boolean createdVal) {
-        synchronized (createdLock) {
-            while (created.get() != createdVal) {
-                try {
-                    createdLock.wait();
-                } catch (InterruptedException ex) {
-                }
-            }
-        }
+        // synchronized (createdLock) {
+        //     while (created.get() != createdVal) {
+        //         try {
+        //             createdLock.wait();
+        //         } catch (InterruptedException ex) {
+        //         }
+        //     }
+        // }
     }
 
     @Override
@@ -489,7 +539,9 @@ public class WebContext implements JmeContext, Runnable {
      */
     @Override
     public int getFramebufferHeight() {
-        return auxiliaryFrameBuffer !=null ? auxiliaryFrameBuffer.getHeight() : canvas.getClientHeight();
+        if(auxiliaryFrameBuffer !=null)return auxiliaryFrameBuffer.getHeight();
+        if(canvasTarget!=null) return  canvasTarget.getClientHeight();
+        return 768;
     }
 
     /**
@@ -499,7 +551,9 @@ public class WebContext implements JmeContext, Runnable {
      */
     @Override
     public int getFramebufferWidth() {
-        return auxiliaryFrameBuffer !=null ? auxiliaryFrameBuffer.getWidth() : canvas.getClientWidth();
+        if(auxiliaryFrameBuffer !=null)return auxiliaryFrameBuffer.getWidth();
+        if(canvasTarget!=null) return  canvasTarget.getClientWidth();
+        return 1024;
     }
 
     /**
@@ -530,8 +584,8 @@ public class WebContext implements JmeContext, Runnable {
         long monitorI = 0;
         int monPos = displayList.addNewMonitor(monitorI);
         displayList.setPrimaryDisplay(monPos);
-        int width = this.canvas.getWidth();
-        int height = this.canvas.getHeight();
+        int width = canvasTarget ==null? 1024:canvasTarget.getWidth();
+        int height = canvasTarget==null?768:canvasTarget.getHeight();
         int rate =  60; // TODO: set real rate
         displayList.setInfo(monPos, "Canvas", width, height, rate);
 

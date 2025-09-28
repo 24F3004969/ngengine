@@ -2,6 +2,7 @@ package org.ngengine.web.input;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.teavm.jso.browser.Window;
 import org.teavm.jso.dom.events.Event;
@@ -15,17 +16,25 @@ import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.input.event.TouchEvent;
 import com.jme3.system.AppSettings;
+
+import org.ngengine.web.WebBinds;
 import org.ngengine.web.context.WebCanvasElement;
 
-public class WebTouchInput implements TouchInput,EventListener{
-    private WebCanvasElement canvas;
+public class WebTouchInput implements TouchInput{
+    private Supplier<WebCanvasElement> canvasSupplier;
     private RawInputListener listener;
     private boolean initialized = false;
     private boolean simulateMouse;
     private boolean keyboardEventsEnabled = false;
     private boolean flipX = false;
     private boolean flipY = false;
-
+    @SuppressWarnings("rawtypes")
+    private EventListener webListener = new EventListener() {
+        @Override
+        public void handleEvent(Event evt) {
+            handleWebEvent(evt);
+        }
+    };
     private static class TouchStatus {
         boolean undefinedPos;
         int xPos, yPos;
@@ -37,8 +46,8 @@ public class WebTouchInput implements TouchInput,EventListener{
     private final List<MouseButtonEvent> mouseButtonEvents = new ArrayList<>();
     
     private final List<TouchEvent> touchEvents = new ArrayList<>();
-    public WebTouchInput(WebCanvasElement canvas,AppSettings settings) {
-        this.canvas = canvas;
+    public WebTouchInput(Supplier<WebCanvasElement> canvasSupplier, AppSettings settings) {
+        this.canvasSupplier = canvasSupplier;
         this.setSimulateMouse(settings.isEmulateMouse());
         this.setSimulateKeyboard(settings.isEmulateKeyboard());
         flipX = settings.isEmulateMouseFlipX();
@@ -48,12 +57,11 @@ public class WebTouchInput implements TouchInput,EventListener{
 
     @Override
     public void initialize() {
-        Window win = Window.current();
-        HTMLDocument doc = win.getDocument();
-        doc.addEventListener("touchstart", this, true);
-        doc.addEventListener("touchmove", this, true);
-        doc.addEventListener("touchcancel", this, true);
-        doc.addEventListener("touchend", this, true);
+        WebBinds.addInputEventListener("touchstart", webListener);
+        WebBinds.addInputEventListener("touchmove", webListener);
+        WebBinds.addInputEventListener("touchcancel", webListener);
+        WebBinds.addInputEventListener("touchend", webListener);
+  
         initialized = true;
     }
  
@@ -80,12 +88,11 @@ public class WebTouchInput implements TouchInput,EventListener{
 
     @Override
     public void destroy() {
-        Window win = Window.current();
-        HTMLDocument doc = win.getDocument();
-        doc.removeEventListener("touchstart", this, true);
-        doc.removeEventListener("touchmove", this, true);
-        doc.removeEventListener("touchcancel", this, true);
-        doc.removeEventListener("touchend", this, true);
+        WebBinds.removeInputEventListener("touchstart", webListener);
+        WebBinds.removeInputEventListener("touchmove", webListener);
+        WebBinds.removeInputEventListener("touchcancel", webListener);
+        WebBinds.removeInputEventListener("touchend", webListener);
+
         initialized = false;
     }
 
@@ -137,15 +144,13 @@ public class WebTouchInput implements TouchInput,EventListener{
 
     private void scheduleEvent(TouchEvent.Type t, JSTouchEvent ev, boolean simulateMouse) {
         int nTouches = ev.getNumChangedTouches();
+        WebCanvasElement canvas = canvasSupplier.get();
         for (int i = 0; i < nTouches; i++) {
             JSTouch touch = ev.getChangedTouch(i);
             TouchStatus s = getTouchStatus((int) touch.getIdentifier());
             int x = touch.getClientX();
             int y = touch.getClientY();
-
-            x = canvas.getRelativePosX(x);
-            y = canvas.getRelativePosY(y);
-                           
+                          
 
             int dX = s.undefinedPos ? 0 : x - s.xPos;
             int dY = s.undefinedPos ? 0 : y - s.yPos;
@@ -161,11 +166,13 @@ public class WebTouchInput implements TouchInput,EventListener{
             touchEvents.add(te);
 
             if (simulateMouse) {
-                if (flipX) {
-                    x = canvas.getWidth() - x;
-                }
-                if (flipY) {
-                    y = canvas.getHeight() - y;
+                if(canvas!=null){
+                    if (flipX) {
+                        x = canvas.getWidth() - x;
+                    }
+                    if (flipY) {
+                        y = canvas.getHeight() - y;
+                    }
                 }
                 if (t == TouchEvent.Type.DOWN) {
                     MouseButtonEvent mev = new MouseButtonEvent(MouseInput.BUTTON_LEFT, true, x, y);
@@ -187,8 +194,7 @@ public class WebTouchInput implements TouchInput,EventListener{
         // ev.preventDefault();     
     }
 
-    @Override
-    public void handleEvent(Event evt) {
+    private void handleWebEvent(Event evt) {
 
         if (evt.getType().equals("touchstart")) {
             scheduleEvent(TouchEvent.Type.DOWN, (JSTouchEvent) evt,this.isSimulateMouse());

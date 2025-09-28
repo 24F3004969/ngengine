@@ -31,7 +31,7 @@ public class btUtils {
     }
 
     // init ammo and wait
-    @JSBody(params = { "callback" }, script = "Ammo().then((impl)=>{console.info('Ammo loaded');window.AmmoImpl=impl;callback();});")
+    @JSBody(params = { "callback" }, script = "Ammo().then((impl)=>{console.info('Ammo loaded');(typeof window !== 'undefined'?window:self).AmmoImpl=impl;callback();});")
     public static native void _init(btCallback callback);
 
     // new btVector3
