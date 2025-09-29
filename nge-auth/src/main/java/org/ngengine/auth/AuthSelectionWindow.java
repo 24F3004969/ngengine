@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.ngengine.CallbackPolicy;
+import org.ngengine.auth.nip07.Nip07Auth;
 import org.ngengine.auth.nip46.Nip46Auth;
 import org.ngengine.auth.nsec.NsecAuth;
 import org.ngengine.auth.stored.StoredAuthSelectionOptions;
@@ -64,7 +65,7 @@ public class AuthSelectionWindow extends NWindow<AuthStrategy> {
     private final Logger log = Logger.getLogger(AuthSelectionWindow.class.getName());
     private final Map<Class<? extends Auth>, Auth> initializedAuths = new HashMap<>();
 
-    private List<Class<? extends Auth>> authMethods = new ArrayList<>(List.of(NsecAuth.class, Nip46Auth.class));
+    private List<Class<? extends Auth>> authMethods = new ArrayList<>(List.of(Nip07Auth.class, NsecAuth.class, Nip46Auth.class));
 
     public List<Class<? extends Auth>> getAuthMethods() {
         return authMethods;

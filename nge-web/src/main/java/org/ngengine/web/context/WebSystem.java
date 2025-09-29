@@ -32,7 +32,6 @@
 package org.ngengine.web.context;
 
 import com.jme3.asset.AssetManager;
-import com.jme3.asset.DesktopAssetManager;
 import com.jme3.audio.AudioRenderer;
 import com.jme3.plugins.json.Json;
 import com.jme3.system.JmeSystemDelegate;
@@ -40,7 +39,6 @@ import com.jme3.system.Platform;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.system.JmeContext.Type;
-import com.jme3.util.BufferAllocatorFactory;
 import com.jme3.util.res.Resources;
 import org.ngengine.web.audio.WebAudioRenderer;
 import org.ngengine.web.filesystem.WebLocator;
@@ -53,6 +51,7 @@ import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
 import org.ngengine.web.WebBinds;
+import org.ngengine.web.WebBindsAsync;
 import org.ngengine.web.json.TeaJSONParser;
 
 public class WebSystem extends JmeSystemDelegate {
@@ -70,6 +69,7 @@ public class WebSystem extends JmeSystemDelegate {
         Resources.setResourceLoader(new WebResourceLoader());
         Json.setParser(new TeaJSONParser());
         
+        WebBindsAsync.connectNip07Backend();
 
     }
     

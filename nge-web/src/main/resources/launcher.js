@@ -1,6 +1,7 @@
 import Binds from "./org/ngengine/web/WebBindsHub.js";
 import AudioRenderer from "./org/ngengine/web/AudioRenderer.js";
 import ImageLoader from "./org/ngengine/web/ImageLoader.js";
+import Nip07 from "./org/ngengine/web/Nip07.js";
 
 const USE_OFFSCREEN_CANVAS = true;
 const RUN_IN_WORKER = true;
@@ -22,6 +23,9 @@ const animLoop = ()=>{
 function bind(canvas, renderTarget){
     AudioRenderer.bind();
     ImageLoader.bind();
+    Nip07.bind();
+
+
 
     Binds.addEventListener("getRenderTarget", ()=>{
         return renderTarget;

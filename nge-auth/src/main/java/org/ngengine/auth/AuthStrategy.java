@@ -44,6 +44,7 @@ public class AuthStrategy {
     protected boolean isStoreSet = false;
     protected Consumer<NostrSigner> callback;
     protected PlayerManagerComponent playerManager;
+    protected boolean nip07 = true;
 
     public AuthStrategy(Consumer<NostrSigner> callback) {
         this.callback = callback;
@@ -112,11 +113,13 @@ public class AuthStrategy {
         return this;
     }
 
-    public AuthStrategy enableNip07Identity(Object nip07adapter) {
+    public AuthStrategy enableNip07Identity() {
+        nip07 = true;
         return this;
     }
 
     public AuthStrategy disableNip07Identity() {
+        nip07 = false;
         return this;
     }
 
@@ -129,7 +132,7 @@ public class AuthStrategy {
     }
 
     public boolean isNip07IdentityEnabled() {
-        return false;
+        return nip07;
     }
 
     public Nip46AuthStrategy getNip46RemoteIdentityStrategy() {

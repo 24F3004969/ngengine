@@ -1,6 +1,7 @@
  
 import Binds from "./WebBindsHub.js";
 import ImageLoader from "./ImageLoader.js";
+import Nip07 from "./Nip07.js";
 // convert various buffer types to Uint8Array
 const _u = (data) => {
     if (data instanceof Uint8Array) {
@@ -289,3 +290,8 @@ export const getBaseURLAsync = (res, rej) => {
         res(url);
     }).catch(e=>rej(String(e)));
 }
+
+export const connectNip07BackendAsync = (res, rej) => {
+    Nip07.inject().then(res).catch(e=>rej(String(e)));
+}
+

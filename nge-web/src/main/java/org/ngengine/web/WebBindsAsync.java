@@ -143,4 +143,15 @@ public class WebBindsAsync {
             callback.error(new Exception(rej));
         });
     }
+
+
+    @Async
+    public static native void connectNip07Backend();
+    private static void connectNip07Backend(AsyncCallback<String> callback) {
+        WebBinds.connectNip07BackendAsync( (res) -> {
+            callback.complete(res.toString());
+        }, (rej) -> {
+            callback.error(new Exception(rej));
+        }); 
+    }
 }
