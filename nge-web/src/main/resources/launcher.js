@@ -163,57 +163,57 @@ function bind(canvas, renderTarget){
 
 
     window.document.addEventListener('mousemove', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("mousemove", event);
     }, false);
     window.document.addEventListener('wheel', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("wheel", event);
     }, false);
     window.document.addEventListener('mousedown', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("mousedown", event);
     }, false);
     window.document.addEventListener('mouseup', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("mouseup", event);
     }, false);
     window.document.addEventListener('touchstart', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("touchstart", event);
     }, true);
     window.document.addEventListener('touchmove', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("touchmove", event);
     }, true);
     window.document.addEventListener('touchcancel', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("touchcancel", event);
     }, true);
     window.document.addEventListener('touchend', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("touchend", event);
     }, true); 
     window.document.addEventListener('keydown', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("keydown", event);
     }, false);
     window.document.addEventListener('keyup', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("keyup", event);
     }, false);
     window.document.addEventListener('keypress', (event) => {
-        event.preventDefault();
+        // event.preventDefault();
         event = prepareEvent(event);
         Binds.fireEvent("keypress", event);
     }, false);
