@@ -67,17 +67,10 @@ export const helloBinds = () => {
 export const loadScriptAsync = async (script, res, rej) => {
     const isWorker = (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
     if(isWorker) {
-        try {
-            console.log("Loading script: " + script + " in worker");
-            importScripts(script);
-            console.log("Script loaded: " + script);
-            res();
-        } catch (e) {
-            const code = await fetch(script).then(r => r.text());
-            eval(code);
-            console.log("Script loaded via fetch+eval: " + script);
-            res();
-        }
+        const code = await fetch(script).then(r => r.text());
+        self.eval(code);
+        console.log("Script loaded via fetch+eval: " + script);
+        res();        
     } else {
         console.log("Loading script: " + script);
         const g = s();
@@ -112,13 +105,6 @@ export const togglePointerLock = (v) =>{
 }
 
  
-// export const addEventListener = (event, fun) =>{
-//     Binds.addEventListener(event, fun);
-// }
-
-// export const removeEventListener = (event, fun) =>{
-//     Binds.removeEventListener(event, fun);
-// }
 
 export const waitNextFrame = (callback) => {
     const l = () => {
