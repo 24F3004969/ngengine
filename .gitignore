@@ -57,4 +57,3 @@ hs_err_*.log
 node_modules
 package.json
 package-lock.json
-nge-web-demo
