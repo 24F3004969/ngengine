@@ -49,7 +49,6 @@ public class WebContext implements JmeContext, Runnable {
     protected AtomicBoolean needClose = new AtomicBoolean(false);
     protected final Object createdLock = new Object();
 
-    protected int frameRate;
     protected AppSettings settings = new AppSettings(true);
     protected Timer timer;
     protected SystemListener listener;
@@ -102,32 +101,6 @@ public class WebContext implements JmeContext, Runnable {
     }
 
 
-    public void sync(int fps) {
-        long timeNow;
-        long gapTo;
-        long savedTimeLate;
-
-        gapTo = timer.getResolution() / fps + timeThen;
-        timeNow = timer.getTime();
-        savedTimeLate = timeLate;
-
-        try {
-            while (gapTo > timeNow + savedTimeLate) {
-                Thread.sleep(1);
-                timeNow = timer.getTime();
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        if (gapTo < timeNow) {
-            timeLate = timeNow - gapTo;
-        } else {
-            timeLate = 0;
-        }
-
-        timeThen = timeNow;
-    }
 
 
     private void rebuildAuxiliaryFrameBufferIfNeeded(int width, int height) {
@@ -397,7 +370,9 @@ public class WebContext implements JmeContext, Runnable {
         return true;
     }
 
- 
+
+    long pingDelta = 0;
+
     @Override
     public void run() {            
         doInit();  
@@ -405,20 +380,51 @@ public class WebContext implements JmeContext, Runnable {
         Object lock = new Object();
         while(true){
             if(!loop())return;
-            WebBinds.waitNextFrame(n->{
-                new Thread(()->{
-                    synchronized(lock){
-                        lock.notifyAll();
-                    }
-                }).start();
-            });
+            long timeNow = timer.getTime();
+
+            pingDelta += (timeNow - timeThen);
+            if(pingDelta>1000){
+                WebBinds.pingFrontEnd();
+                pingDelta = 0;
+            }
+
+            if(settings.isVSync()){
+                WebBinds.waitNextFrame(n->{
+                    new Thread(()->{
+                        synchronized(lock){
+                            lock.notifyAll();
+                        }
+                    }).start();
+                });
+            } else {
+                int fps = settings.getFrameRate();
+                long gapTo = timer.getResolution() / fps + timeThen;
+                gapTo = timer.getResolution() / fps + timeThen;
+                long sleepTime = gapTo - timeNow - timeLate;
+                if(sleepTime>0){
+                    WebBinds.runWithDelay(m->{
+                        new Thread(()->{
+                            synchronized(lock){
+                                lock.notifyAll();
+                            }
+                        }).start();
+                    }, (int)sleepTime);
+                }
+                if (gapTo < timeNow) {
+                    timeLate = timeNow - gapTo;
+                } else {
+                    timeLate = 0;
+                }
+            }
+
+            timeThen = timeNow;
 
             synchronized(lock){   
                 try{
                     lock.wait(100);
                 }catch(InterruptedException ex){
                 }
-            }
+            }   
         }             
     }
 
@@ -504,7 +510,6 @@ public class WebContext implements JmeContext, Runnable {
     @Override
     public void setSettings(AppSettings settings) {
         this.settings.copyFrom(settings);
-        frameRate = settings.getFrameRate();
     }
 
     @Override

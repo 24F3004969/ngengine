@@ -295,3 +295,12 @@ export const connectNip07BackendAsync = (res, rej) => {
     Nip07.inject().then(res).catch(e=>rej(String(e)));
 }
 
+
+export const pingFrontEnd = () => {
+    Binds.fireEvent("ping");
+}
+
+
+export const runWithDelay=(f, t) => {
+    setTimeout(f, t);
+}

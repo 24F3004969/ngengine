@@ -139,7 +139,55 @@
         #ngeSplash i {
             text-transform: none;
         }
+
+        #ngeLoading {
+            position:fixed;
+            top:0;
+            left:0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.1);
+            z-index: 12;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            user-select: none;
+            opacity:0.8;
+        }
+         #ngeLoading .ngeLoader {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: inline-block;
+            border-top: 4px solid var(--neon-blue);
+            border-right: 4px solid transparent;
+            box-sizing: border-box;
+            animation: loadingRotation 1s linear infinite;
+        }
+        #ngeLoading .ngeLoader::after {
+            content: '';  
+            box-sizing: border-box;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border-left: 4px solid var(--accent-purple);
+            border-bottom: 4px solid transparent;
+            animation: loadingRotation 0.5s linear infinite reverse;
+        }
+        @keyframes loadingRotation {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        } 
     </style>
+
 </head>
 
 <body>

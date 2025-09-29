@@ -7,9 +7,10 @@ const USE_OFFSCREEN_CANVAS = true;
 const RUN_IN_WORKER = true;
 let fullscreen = false;
 let pointerLock = false;
+let loadingAnimationTimer = null;
+let loadingAnimation = null;
 
-
-const animLoop = ()=>{
+function animLoop(){
     window.requestAnimationFrame(()=>{
         Binds.fireEvent("render");
         animLoop();
@@ -17,7 +18,14 @@ const animLoop = ()=>{
 }
 
 
-
+function renderLoadingAnimation(){
+    if(loadingAnimation) return;
+    const el = document.createElement("div");
+    el.setAttribute("id", "ngeLoading");
+    el.innerHTML = '<span class="ngeLoader"></span>';  
+    document.body.appendChild(el);
+    loadingAnimation = el;
+}
 
 
 function bind(canvas, renderTarget){
@@ -26,6 +34,18 @@ function bind(canvas, renderTarget){
     Nip07.bind();
 
 
+    Binds.addEventListener("ping",()=>{
+        if(loadingAnimation){
+            loadingAnimation.remove();
+            loadingAnimation = null;
+        }
+
+        if(loadingAnimationTimer) clearTimeout(loadingAnimationTimer);
+
+        loadingAnimationTimer = setTimeout(()=>{
+            renderLoadingAnimation();
+        }, 2000);
+    })
 
     Binds.addEventListener("getRenderTarget", ()=>{
         return renderTarget;
@@ -243,6 +263,7 @@ window.addEventListener('load',  () => {
 
         canvas.style.visibility = 'visible';
         console.log("Starting nge...");
+        renderLoadingAnimation();
         if (RUN_IN_WORKER){
              Binds.addEventListener("ready", ()=>{
                 console.log("NGE worker is ready");
