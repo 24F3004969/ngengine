@@ -74,7 +74,7 @@ public class TLogger {
             System.out.println(message);
             
         } else {
-        
+            message = "[" + name + "] " + message;
             if (record.getLevel().intValue() >= TLevel.SEVERE.intValue()) {
                 if (PlatformDetector.isWebAssemblyGC()) {
                     JS.invoke(JS.global("console"), JS.wrap("error"), JS.wrap(message));
@@ -295,7 +295,7 @@ public class TLogger {
     }
 
     public boolean isLoggable(@SuppressWarnings("unused") TLevel level) {
-        return level.intValue() > TLevel.FINE.intValue();
+        return level.intValue() >= TLevel.FINE.intValue();
     }
 
     public String getName() {
