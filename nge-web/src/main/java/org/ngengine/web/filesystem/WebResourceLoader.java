@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,12 +50,36 @@ public class WebResourceLoader implements ResourceLoader {
         return url;
     }
 
+    private static class WebUrlStreamHandler extends URLStreamHandler {
+        @Override
+        protected URLConnection openConnection(URL u) throws IOException {
+            return new URLConnection(u) {
+                @Override
+                public void connect() {}
+
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    try{
+                        NGEHttpResponse req = NGEPlatform.get().httpRequest("GET", url.toString(), null, null, null).await();
+                        if(!req.status()){
+                            throw new IOException("Failed to get resource: "+url.toString()+" - "+req.statusCode());
+                        }
+                        byte[] data = req.body();
+                        return new ByteArrayInputStream(data);
+                    } catch(Exception ex){
+                        throw new IOException("Failed to get resource: "+url.toString()+" - "+ex.getMessage());
+                    }
+                }
+            };
+        }
+    }
+
 
     @Override
     public URL getResource(String path, Class<?> clazz) {
         try{
             path = getFullPath(clazz, path);            
-            return new URL(path);
+            return new URL(null,path, new WebUrlStreamHandler());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -65,12 +91,7 @@ public class WebResourceLoader implements ResourceLoader {
         URL url = getResource(path, clazz);
         if(url==null) return null;
         try {
-            NGEHttpResponse req = NGEPlatform.get().httpRequest("GET", url.toString(), null, null, null).await();
-            if(!req.status()){
-                throw new IOException("Failed to get resource: "+url.toString()+" - "+req.statusCode());
-            }
-            byte[] data = req.body();
-            return new ByteArrayInputStream(data);
+            return url.openConnection().getInputStream();
         } catch (Exception e) {
             e.printStackTrace();
         }
