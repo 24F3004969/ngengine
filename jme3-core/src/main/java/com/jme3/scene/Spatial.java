@@ -49,6 +49,7 @@ import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.control.Control;
+import com.jme3.scene.threadwarden.SceneGraphThreadWarden;
 import com.jme3.util.SafeArrayList;
 import com.jme3.util.TempVars;
 import com.jme3.util.clone.Cloner;
@@ -279,6 +280,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * a refresh is required.
      */
     protected void setTransformRefresh() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         refreshFlags |= RF_TRANSFORM;
         setBoundRefresh();
     }
@@ -294,6 +296,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
     }
  
     protected void setLightListRefresh() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         refreshFlags |= RF_LIGHTLIST;
         // Make sure next updateGeometricState() visits this branch
         // to update lights.
@@ -321,6 +324,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
     }
 
     protected void setMatParamOverrideRefresh() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         refreshFlags |= RF_MATPARAM_OVERRIDE;
         Spatial p = parent;
         while (p != null) {
@@ -338,6 +342,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * a refresh is required.
      */
     protected void setBoundRefresh() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         refreshFlags |= RF_BOUND;
 
         Spatial p = parent;
@@ -386,7 +391,8 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
             throw new IllegalStateException("Scene graph is not properly updated for rendering.\n"
                     + "State was changed after rootNode.updateGeometricState() call. \n"
                     + "Make sure you do not modify the scene from another thread!\n"
-                    + "Problem spatial name: " + getName());
+                    + "Problem spatial name: " + getName() + "\n" +
+                    SceneGraphThreadWarden.getTurnOnAssertsPrompt());
         }
 
         CullHint cm = getCullHint();
@@ -634,6 +640,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @see MatParamOverride
      */
     public void addMatParamOverride(MatParamOverride override) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         if (override == null) {
             throw new IllegalArgumentException("override cannot be null");
         }
@@ -648,6 +655,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @see MatParamOverride
      */
     public void removeMatParamOverride(MatParamOverride override) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         if (localOverrides.remove(override)) {
             setMatParamOverrideRefresh();
         }
@@ -659,6 +667,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @see #addMatParamOverride(com.jme3.material.MatParamOverride)
      */
     public void clearMatParamOverrides() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         if (!localOverrides.isEmpty()) {
             setMatParamOverrideRefresh();
         }
@@ -794,6 +803,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @see Spatial#removeControl(java.lang.Class)
      */
     public void addControl(Control control) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         boolean before = requiresUpdates();
         controls.add(control);
         control.setSpatial(this);
@@ -845,6 +855,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @see Spatial#addControl(com.jme3.scene.control.Control)
      */
     public void removeControl(Class<? extends Control> controlType) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         boolean before = requiresUpdates();
         for (int i = 0; i < controls.size(); i++) {
             if (controlType.isAssignableFrom(controls.get(i).getClass())) {
@@ -872,6 +883,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @see Spatial#addControl(com.jme3.scene.control.Control)
      */
     public boolean removeControl(Control control) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         boolean before = requiresUpdates();
         boolean result = controls.remove(control);
         if (result) {
@@ -1030,6 +1042,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      *            the parent of this node.
      */
     protected void setParent(Node parent) {
+        assert SceneGraphThreadWarden.updateRequirement(this, parent);
         this.parent = parent;
     }
 
@@ -1394,6 +1407,7 @@ public abstract class Spatial implements Savable, Cloneable, Collidable,
      * @param lod The lod level to set.
      */
     public void setLodLevel(int lod) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
     }
 
     /**

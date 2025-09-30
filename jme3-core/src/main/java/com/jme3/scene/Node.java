@@ -40,6 +40,7 @@ import com.jme3.export.JmeImporter;
 import com.jme3.light.Light;
 import com.jme3.light.LightList;
 import com.jme3.material.Material;
+import com.jme3.scene.threadwarden.SceneGraphThreadWarden;
 import com.jme3.util.SafeArrayList;
 import com.jme3.util.clone.Cloner;
 import java.io.IOException;
@@ -203,6 +204,7 @@ public class Node extends Spatial {
      *  that would change state.
      */
     void invalidateUpdateList() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         updateListValid = false;
         if (parent != null) {
             parent.invalidateUpdateList();
@@ -383,6 +385,7 @@ public class Node extends Spatial {
      * @throws IllegalArgumentException if child is null or this
      */
     public int attachChildAt(Spatial child, int index) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         if (child == null) {
             throw new IllegalArgumentException("child cannot be null");
         }
@@ -467,6 +470,7 @@ public class Node extends Spatial {
      * @return the child at the supplied index.
      */
     public Spatial detachChildAt(int index) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         Spatial child = children.remove(index);
         if (child != null) {
             child.setParent(null);
@@ -494,6 +498,7 @@ public class Node extends Spatial {
      * node.
      */
     public void detachAllChildren() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         // Note: this could be a bit more efficient if it delegated
         // to a private method that avoided setBoundRefresh(), etc.
         // for every child and instead did one in here at the end.
@@ -522,6 +527,7 @@ public class Node extends Spatial {
      * @param index2 The index of the second child to swap
      */
     public void swapChildren(int index1, int index2) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         Spatial c2 = children.get(index2);
         Spatial c1 = children.remove(index1);
         children.add(index1, c2);
@@ -601,6 +607,7 @@ public class Node extends Spatial {
 
     @Override
     public void setMaterial(Material mat) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         for (int i = 0; i < children.size(); i++) {
             children.get(i).setMaterial(mat);
         }
@@ -817,6 +824,7 @@ public class Node extends Spatial {
 
     @Override
     public void setModelBound(BoundingVolume modelBound) {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         if (children != null) {
             for (Spatial child : children.getArray()) {
                 child.setModelBound(modelBound != null ? modelBound.clone(null) : null);
@@ -826,6 +834,7 @@ public class Node extends Spatial {
 
     @Override
     public void updateModelBound() {
+        assert SceneGraphThreadWarden.assertOnCorrectThread(this);
         if (children != null) {
             for (Spatial child : children.getArray()) {
                 child.updateModelBound();
