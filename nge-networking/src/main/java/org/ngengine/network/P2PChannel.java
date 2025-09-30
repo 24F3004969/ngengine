@@ -51,6 +51,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 import org.ngengine.network.protocol.DynamicSerializerProtocol;
+import org.ngengine.network.protocol.messages.ClassRegistrationAckMessage;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
 import org.ngengine.nostr4j.keypair.NostrPrivateKey;
@@ -75,7 +76,6 @@ public class P2PChannel implements Server {
     private final MessageListenerRegistry<HostedConnection> messageListeners = new MessageListenerRegistry<>();
     private final List<ConnectionListener> connectionListeners = new CopyOnWriteArrayList<>();
     private final List<NostrRTCRoomPeerDiscoveredListener> peerDiscoveredListeners = new CopyOnWriteArrayList<>();
-    private final MessageProtocol protocol = new DynamicSerializerProtocol(true);
 
     private final NostrSigner localSigner;
     private final NostrPool masterServersPool;
@@ -101,23 +101,22 @@ public class P2PChannel implements Server {
         this.localSigner = localSigner;
         this.masterServersPool = masterServer;
 
-        this.rtcRoom =
-            new NostrRTCRoom(
-                RTCSettings.DEFAULT,
-                // new NostrTURNSettings(NostrTURNSettings.CHUNK_LENGTH, NostrTURNSettings.PACKET_TIMEOUT,
-                // NostrTURNSettings.MAX_LATENCY, Duration.ofMillis(10), NostrTURNSettings.TURN_KIND),
-                NostrTURNSettings.DEFAULT,
-                new NostrRTCLocalPeer(localSigner, RTCSettings.PUBLIC_STUN_SERVERS, turnServer, new HashMap<String, Object>()),
-                new NostrKeyPair(roomKey),
-                masterServersPool
-            );
+        this.rtcRoom = new NostrRTCRoom(
+            RTCSettings.DEFAULT,
+            // new NostrTURNSettings(NostrTURNSettings.CHUNK_LENGTH, NostrTURNSettings.PACKET_TIMEOUT,
+            // NostrTURNSettings.MAX_LATENCY, Duration.ofMillis(10), NostrTURNSettings.TURN_KIND),
+            NostrTURNSettings.DEFAULT,
+            new NostrRTCLocalPeer(localSigner, RTCSettings.PUBLIC_STUN_SERVERS, turnServer, new HashMap<String, Object>()),
+            new NostrKeyPair(roomKey),
+            masterServersPool
+        );
 
         rtcRoom.addPeerDiscoveryListener((var1, var2, var3) -> {
             this.dispatcher.run(() -> {
-                    for (NostrRTCRoomPeerDiscoveredListener listener : peerDiscoveredListeners) {
-                        listener.onRoomPeerDiscovered(var1, var2, var3);
-                    }
-                });
+                for (NostrRTCRoomPeerDiscoveredListener listener : peerDiscoveredListeners) {
+                    listener.onRoomPeerDiscovered(var1, var2, var3);
+                }
+            });
         });
 
         rtcRoom.addConnectionListener((peerKey, socket) -> {
@@ -125,13 +124,14 @@ public class P2PChannel implements Server {
                 socket.setForceTURN(true);
             }
             log.fine("New connection from: " + peerKey);
-            RemotePeer connection = new RemotePeer(connections.size(), socket, this, protocol);
+
+            RemotePeer connection = new RemotePeer(connections.size(), socket, this);
             connections.put(connection.getId(), connection);
             this.dispatcher.run(() -> {
-                    for (ConnectionListener listener : connectionListeners) {
-                        listener.connectionAdded(this, connection);
-                    }
-                });
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.connectionAdded(this, connection);
+                }
+            });
         });
 
         rtcRoom.addDisconnectionListener((peerKey, socket) -> {
@@ -141,10 +141,10 @@ public class P2PChannel implements Server {
                     RemotePeer connection = entry.getValue();
                     connections.remove(connection.getId());
                     this.dispatcher.run(() -> {
-                            for (ConnectionListener listener : connectionListeners) {
-                                listener.connectionRemoved(this, connection);
-                            }
-                        });
+                        for (ConnectionListener listener : connectionListeners) {
+                            listener.connectionRemoved(this, connection);
+                        }
+                    });
                     break;
                 }
             }
@@ -155,15 +155,22 @@ public class P2PChannel implements Server {
             for (Entry<Integer, RemotePeer> entry : connections.entrySet()) {
                 if (entry.getValue().getSocket() == socket) {
                     RemotePeer connection = entry.getValue();
+                    MessageProtocol protocol = entry.getValue().getProtocol();
                     Message message = protocol.toMessage(bbf);
+                    if(message instanceof ClassRegistrationAckMessage && protocol instanceof DynamicSerializerProtocol){
+                        int id = (int)((ClassRegistrationAckMessage)message).getClassId();
+                        log.fine("Class registration acknowledged by remote peer for id: " + id);
+                        DynamicSerializerProtocol dyn = (DynamicSerializerProtocol)protocol;
+                        dyn.markClassRegistered(id);
+                    }
                     if (message == null) {
                         log.warning("Received null message from: " + peerKey);
                         return;
                     }
                     message.setReliable(true);
                     this.dispatcher.run(() -> {
-                            messageListeners.messageReceived(connection, message);
-                        });
+                        messageListeners.messageReceived(connection, message);
+                    });
                     break;
                 }
             }
@@ -177,6 +184,7 @@ public class P2PChannel implements Server {
         );
     }
 
+   
     public NostrSigner getLocalSigner() {
         return localSigner;
     }

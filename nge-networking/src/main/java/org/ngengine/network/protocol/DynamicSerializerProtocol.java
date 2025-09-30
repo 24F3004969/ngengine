@@ -62,6 +62,7 @@ import java.util.Hashtable;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -70,8 +71,12 @@ import java.util.Vector;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.jar.Attributes;
+import java.util.logging.Logger;
+
 import org.ngengine.network.protocol.messages.ByteDataMessage;
+import org.ngengine.network.protocol.messages.ClassRegistrationAckMessage;
 import org.ngengine.network.protocol.messages.CompressedMessage;
 import org.ngengine.network.protocol.messages.TextDataMessage;
 import org.ngengine.network.protocol.serializers.BooleanSerializer;
@@ -112,6 +117,7 @@ import org.ngengine.nostr4j.keypair.NostrPublicKey;
  * @author Riccardo Balbo
  */
 public class DynamicSerializerProtocol implements MessageProtocol {
+    private static final Logger logger = Logger.getLogger(DynamicSerializerProtocol.class.getName());
 
     protected static class RegisteredSerializer {
 
@@ -138,7 +144,8 @@ public class DynamicSerializerProtocol implements MessageProtocol {
 
     private final Map<Class<?>, Long> classXid = new HashMap<>();
     private final Map<Long, Class<?>> idXClass = new HashMap<>();
-    private final AtomicLong lastId = new AtomicLong(0);
+    private final List<Long> pendingAcks = new ArrayList<>();
+    private final AtomicLong lastId = new AtomicLong(2);
     private final ThreadLocal<ByteBuffer> tmpBuffer = ThreadLocal.withInitial(() -> ByteBuffer.allocate(32767));
 
     private final BiFunction<Object, GrowableByteBuffer, Void> serializeFun = (obj, bbf) -> {
@@ -162,7 +169,7 @@ public class DynamicSerializerProtocol implements MessageProtocol {
     private final Collection<Class> serializablesAnnotation = new ArrayList<>();
     private final boolean spidermonkeyCompatible;
     private boolean forceSpidermonkeyStaticBuffer = false;
-
+    private final Consumer<Long> onClassRegistered;
     /**
      * Creates a new DynamicSerializerProtocol that automatically handles class registration and
      * serialization.
@@ -171,10 +178,12 @@ public class DynamicSerializerProtocol implements MessageProtocol {
      * @param strict
      *            set if the serializer should be strict (safer) or unstrict (FAFO)
      */
-    public DynamicSerializerProtocol(boolean spidermonkeyCompatible) {
+    public DynamicSerializerProtocol(boolean spidermonkeyCompatible, Consumer<Long> onClassRegistered, long initialLastId) {
         this.spidermonkeyCompatible = spidermonkeyCompatible;
+        this.onClassRegistered = onClassRegistered;
         registerDefaultSerializers();
         registerDefaultSerializables(spidermonkeyCompatible);
+        this.lastId.set(initialLastId+12);
     }
 
     protected void registerDefaultSerializables(boolean spidermonkeyCompatible) {
@@ -286,7 +295,16 @@ public class DynamicSerializerProtocol implements MessageProtocol {
         registerSerializer(TextDataMessage.class, new TextMessageSerializer());
         registerSerializer(ByteDataMessage.class, new ByteMessageSerializer());
         registerSerializer(CompressedMessage.class, new CompressedMessageSerializer(serializeFun, deserializeFun));
+
+        classXid.put(ClassRegistrationAckMessage.class, 1L);
+        idXClass.put(1L, ClassRegistrationAckMessage.class);
     }
+
+
+    public void setLastId(long lastId) {
+        this.lastId.set(lastId);
+    }
+    
 
     /**
      * Force use of static buffer (old behavior) even if the serialize supports dynamic buffers. Used mostly
@@ -400,18 +418,21 @@ public class DynamicSerializerProtocol implements MessageProtocol {
 
         Long id = classXid.get(messageClass);
 
-        boolean registerClass = false;
         if (id == null) {
             // This is a new class... assign it an ID
-            id = lastId.incrementAndGet();
+            id = lastId.incrementAndGet();        
             classXid.put(messageClass, id);
             idXClass.put(id, messageClass);
-            registerClass = true;
+            pendingAcks.add(id);
         }
+
+
+        boolean registerClass  = pendingAcks.contains(id);
 
         // set header
         if (registerClass) {
             // send registration data the first time we see the class for this connection
+            logger.fine("Request registration for class " + messageClass.getName() + " with id " + id);
             byte classPath[] = messageClass.getName().getBytes(StandardCharsets.UTF_8);
             buffer.putShort((short) classPath.length);
             buffer.put(classPath);
@@ -462,6 +483,10 @@ public class DynamicSerializerProtocol implements MessageProtocol {
         buffer.position(lastPos);
     }
 
+    public void markClassRegistered(long id){
+        pendingAcks.remove(id);
+    }
+
     protected <T> T deserialize(ByteBuffer bytes, Class<?> expectedClass, boolean messageOnly) throws IOException {
         long id = -1;
         try {
@@ -483,6 +508,7 @@ public class DynamicSerializerProtocol implements MessageProtocol {
 
             // register if registration data was submitted
             if (classPath != null) {
+                logger.fine("Register class " + new String(classPath, StandardCharsets.UTF_8) + " with id " + id + " due to remote request");
                 String className = new String(classPath, StandardCharsets.UTF_8);
                 // check if id is already in use
                 Class<?> messageClass = idXClass.get(id);
@@ -495,7 +521,7 @@ public class DynamicSerializerProtocol implements MessageProtocol {
                 }
 
                 if (messageClass == null) {
-                    if (!className.endsWith("Message")) {
+                    if (messageOnly && !className.endsWith("Message")) {
                         throw new RuntimeException("Message class name must end with 'Message': " + className);
                     }
 
@@ -505,17 +531,11 @@ public class DynamicSerializerProtocol implements MessageProtocol {
                     // check if sendable
                     checkIsSerializable(messageClass, messageOnly);
 
-                    // check class is registered with another id
-                    Long currentId = classXid.get(messageClass);
-                    if (currentId != null) {
-                        throw new RuntimeException(
-                            "Class " + messageClass.getName() + " is already registered with id: " + currentId
-                        );
-                    }
-
-                    // register
+             
                     classXid.put(messageClass, id);
                     idXClass.put(id, messageClass);
+                    onClassRegistered.accept(id);
+                    logger.fine("Registered class " + className + " with id " + id+" due to remote request");
                 }
             }
 

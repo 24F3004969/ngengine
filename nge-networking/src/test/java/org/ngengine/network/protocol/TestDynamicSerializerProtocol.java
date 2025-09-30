@@ -170,8 +170,12 @@ public class TestDynamicSerializerProtocol {
     @Before
     public void setUp() {
         // Create protocol in SpiderMonkey compatible mode
-        protocol = new DynamicSerializerProtocol(true);
+        protocol = new DynamicSerializerProtocol(true, this::onClassRegistered,0 );
         protocol.setForceStaticBuffer(false);
+    }
+
+    private void onClassRegistered(long classId) {
+        protocol.markClassRegistered(classId);
     }
 
     // Helper method for round-trip serialization testing

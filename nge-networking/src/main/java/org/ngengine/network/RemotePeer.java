@@ -42,6 +42,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.ngengine.network.protocol.DynamicSerializerProtocol;
+import org.ngengine.network.protocol.messages.ClassRegistrationAckMessage;
 import org.ngengine.nostr4j.rtc.NostrRTCSocket;
 
 public class RemotePeer implements HostedConnection {
@@ -54,11 +57,22 @@ public class RemotePeer implements HostedConnection {
     private final Map<String, Object> sessionData = new ConcurrentHashMap<>();
     private final MessageProtocol protocol;
 
-    RemotePeer(int id, NostrRTCSocket socket, P2PChannel server, MessageProtocol protocol) {
+    RemotePeer(int id, NostrRTCSocket socket, P2PChannel server) {
         this.socket = socket;
         this.server = server;
         this.id = id;
-        this.protocol = protocol;
+        boolean side = socket.getLocalPeer().getPubkey().asHex().compareTo(socket.getRemotePeer().getPubkey().asHex()) < 0;
+        this.protocol = new DynamicSerializerProtocol(true, this::onClassRegistered, side ? Integer.MAX_VALUE / 2l : 0l);
+    }
+
+    private void onClassRegistered(long id) {
+        log.fine("Send registration ack for class id " + id);
+        send(new ClassRegistrationAckMessage(id));
+    }
+
+
+    public MessageProtocol getProtocol() {
+        return protocol;
     }
 
     public NostrRTCSocket getSocket() {
