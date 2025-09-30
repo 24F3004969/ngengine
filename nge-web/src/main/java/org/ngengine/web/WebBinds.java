@@ -236,8 +236,11 @@ public class WebBinds implements JSObject {
 
     @JSTopLevel
     @JSModule("./org/ngengine/web/WebBinds.js")
-    public static native void connectNip07BackendAsync(JSConsumer<String> resolve, JSConsumer<String> reject);
+    public static native void connectNip07BackendAsync(JSConsumer<Void> resolve, JSConsumer<String> reject);
 
+    @JSTopLevel
+    @JSModule("./org/ngengine/web/WebBinds.js")
+    public static native void connectWebRTCBackendAsync(JSConsumer<Void> resolve, JSConsumer<String> reject);
 
     @JSTopLevel
     @JSModule("./org/ngengine/web/WebBinds.js")

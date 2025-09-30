@@ -70,6 +70,7 @@ public class WebSystem extends JmeSystemDelegate {
         Json.setParser(new TeaJSONParser());
         
         WebBindsAsync.connectNip07Backend();
+        WebBindsAsync.connectWebRTCBackend();
 
     }
     

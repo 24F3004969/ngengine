@@ -154,4 +154,14 @@ public class WebBindsAsync {
             callback.error(new Exception(rej));
         }); 
     }
+
+    @Async
+    public static native void connectWebRTCBackend();
+    private static void connectWebRTCBackend(AsyncCallback<String> callback) {
+        WebBinds.connectWebRTCBackendAsync( (res) -> {
+            callback.complete(res.toString());
+        }, (rej) -> {
+            callback.error(new Exception(rej));
+        }); 
+    }
 }
