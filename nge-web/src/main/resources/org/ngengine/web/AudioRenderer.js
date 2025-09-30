@@ -355,16 +355,26 @@ function setAudioContextListener(
 ){
     const ctx = instances[ctxId];
     if(!ctx) throw new Error("Invalid context id");
-    ctx.listener.positionX.value = posX;
-    ctx.listener.positionY.value = posY;
-    ctx.listener.positionZ.value = posZ;
-    // TODO velocity
-    ctx.listener.forwardX.value = dirX;
-    ctx.listener.forwardY.value = dirY;
-    ctx.listener.forwardZ.value = dirZ;
-    ctx.listener.upX.value = upX;
-    ctx.listener.upY.value = upY;
-    ctx.listener.upZ.value = upZ;
+    const listener = ctx.listener;
+    if (listener.positionX) {
+        listener.positionX.value = posX;
+        listener.positionY.value = posY;
+        listener.positionZ.value = posZ;
+    } else if (listener.setPosition) {
+        listener.setPosition(posX, posY, posZ);
+    }
+
+
+    if (listener.forwardX && listener.upX) {
+        listener.forwardX.value = dirX;
+        listener.forwardY.value = dirY;
+        listener.forwardZ.value = dirZ;
+        listener.upX.value = upX;
+        listener.upY.value = upY;
+        listener.upZ.value = upZ;
+    } else if (listener.setOrientation) {
+        listener.setOrientation(dirX, dirY, dirZ, upX, upY, upZ);
+    }
 }
 
 function bind(){
