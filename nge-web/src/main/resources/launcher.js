@@ -50,8 +50,8 @@ function bind(canvas, renderTarget){
     });
 }
 
-window.addEventListener('load',  () => {
- 
+async function main(){
+
     const canvas = document.querySelector('canvas#nge');
     const splashEl = document.querySelector("#ngeSplash");
     const button = splashEl.querySelector("button#play");
@@ -73,47 +73,54 @@ window.addEventListener('load',  () => {
     const renderTarget = USE_OFFSCREEN_CANVAS ? canvas.transferControlToOffscreen() : canvas;
     bind(canvas, renderTarget);
 
- 
+
     // Start anim loop trigger
     animLoop();
-    
+
     // resize canvas the first time the backend 
     // comes alive
     let firstPing = true;
-    Binds.addEventListener("ping",()=>{
-        if(!firstPing)return;
+    Binds.addEventListener("ping", () => {
+        if (!firstPing) return;
         resize();
-        firstPing=false;
-    })  
+        firstPing = false;
+    })
 
     let loading = false;
     button.addEventListener('click', async () => {
-        if(loading)return;
+        if (loading) return;
         loading = true;
 
         canvas.style.visibility = 'visible';
         console.log("Starting nge...");
         renderLoadingAnimation();
-        if (RUN_IN_WORKER){
-             Binds.addEventListener("ready", ()=>{
+        if (RUN_IN_WORKER) {
+            Binds.addEventListener("ready", () => {
                 console.log("NGE worker is ready");
-                Binds.fireEvent("main", []).then(()=>{
+                Binds.fireEvent("main", []).then(() => {
                     resize();
-                })   
+                })
             });
             const worker = new Worker("./worker.js", { type: 'module' });
             Binds.registerWorker(worker);
-           
+
         } else {
             const { main } = await import("./webapp.js");
-            Binds.addEventListener("ready", ()=>{
+            Binds.addEventListener("ready", () => {
                 main([]);
                 resize();
-            });           
+            });
             Binds.fireEvent("ready");
         }
 
     });
+}
 
-});
+if (document.readyState === 'complete') {
+    main();
+}else{
+    window.addEventListener('load',  () => {
+        main();
+    });
 
+}

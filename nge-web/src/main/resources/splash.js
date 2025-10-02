@@ -1,48 +1,104 @@
+const CONFIG_PATH = "ngeapp-config.json";
 
-
-async function ready(splashEl){
+function updateProgress(
+    splashEl,
+    lastFile,
+    done,
+    total,
+    doneBytes,
+    totalBytes,
+    status,
+    buttonLabel
+){
     const infoLast = splashEl.querySelector(".lastIndexed");
     const titleEl = splashEl.querySelector("h2");
     const progressBar = splashEl.querySelector("progress");
     const button = splashEl.querySelector("button#play");
+    const infoFiles = splashEl.querySelector(".files");
+    const infoSizes = splashEl.querySelector(".size");
 
-    if(titleEl) titleEl.textContent = "Ready";
-    if(infoLast) infoLast.textContent = "";
-    if(progressBar) {
-        progressBar.value = 100;
-        progressBar.max = 100;
+    if(titleEl) titleEl.textContent = status;
+    if(infoLast) infoLast.textContent = lastFile;
+
+    if(done !=null && total != null) {
+        if(infoFiles){
+            const v = done + "/" + total;
+            infoFiles.textContent = v;
+        }
+        if(progressBar) {
+            const progress = total > 0 ? (done / total) : 1;
+            progressBar.value = progress * 100;
+            progressBar.max = 100;
+        }
+    } else{
+        if(infoFiles){
+            infoFiles.textContent = "";
+        }
+        if(progressBar) {
+            progressBar.value = 100;
+            progressBar.max = 100;
+        }
     }
-    if(button) {
-        button.textContent = "Play";
+
+    if(doneBytes !=null && totalBytes != null && infoSizes) {
+        const totalGB = (totalBytes / (1024*1024*1024)).toFixed(2) + "GB";
+        const doneGB = (doneBytes / (1024*1024*1024)).toFixed(2) + "GB";
+        const v = doneGB + "/" + totalGB;
+        infoSizes.textContent = v;
+    } else if(infoSizes){
+        infoSizes.textContent = "";
     }
-    if('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: "stop-preload" });
+                
+    if(button && buttonLabel) { 
+        button.textContent = buttonLabel;
+        button.disabled = false;
+    } else {
+        button.textContent = "Loading...";
+        button.disabled = true;
     }
 }
 
-async function main(){
-    const splashEl = document.querySelector("#ngeSplash");
-    if(!splashEl){
-        console.warn("No splash element found");
-        ready(splashEl);
-        return;
+async function ready(splashEl){
+    updateProgress(splashEl, "", null, null, null, null, "Ready", "Play");
+    if('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "stop-preload" });
     }
 
-    const infoFiles = splashEl.querySelector(".files");
-    const infoSizes = splashEl.querySelector(".size");
-    const infoLast = splashEl.querySelector(".lastIndexed");
-    const progressBar = splashEl.querySelector("progress");
-    const button = splashEl.querySelector("button#play");
-    button.addEventListener("click", (e) => {
-        ready(splashEl);
-        splashEl.remove();
+    console.log("Loading launcher");
+    if(!document.head.querySelector("#ngeLauncher")){
+        console.log("Loading launcher script");
+        const script = document.createElement("script");
+        script.type = "module";
+        script.id = "ngeLauncher";
+        script.src = "launcher.js";
+        document.head.appendChild(script);
+    }
+}
+
+async function applyConfig(config){
+    if(config.bundle&&!'serviceWorker' in navigator){
+        alert("This application requires a browser with Service Worker support.");
+        throw new Error("Service workers required");
+    }
+}
+
+async function loadConfig(){
+    const url = CONFIG_PATH;
+    return fetch(url).then(r=> r.json()).catch(e=>{
+        console.warn("Failed to load config", e);
+        return {};
     });
+}
+
+async function start(splashEl){
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
+        navigator.serviceWorker.register('/sw.js', {
+            type: 'module'
+        }).then(reg => {
             if (!navigator.serviceWorker.controller) {
                 window.location.reload();
             } else {
-                navigator.serviceWorker.controller.postMessage({ type: "start-preload" });
+                navigator.serviceWorker.controller.postMessage({ type: "start-preload", config: CONFIG_PATH });
             }
         });
         navigator.serviceWorker.addEventListener("message", (event) => {
@@ -54,26 +110,18 @@ async function main(){
             )  return;
 
             if (event.data.type === "preload-progress") {
-                if(infoFiles) {
-                    const v = event.data.done + "/" + event.data.total;
-                    infoFiles.textContent = v;
-                }
-
-                const progress = event.data.total > 0 ? (event.data.done / event.data.total) : 1;
-                if(progressBar) {
-                    progressBar.value = progress * 100;
-                }
-
-                if(infoSizes) {
-                    const totalGB = (event.data.totalBytes / (1024*1024*1024)).toFixed(2) + "GB";
-                    const doneGB = (event.data.doneBytes / (1024*1024*1024)).toFixed(2) + "GB";
-                    const v = doneGB + "/" + totalGB;
-                    infoSizes.textContent = v;
-                }
-
-                if (infoLast && event.data.last) {
-                    infoLast.textContent = "Loading " + event.data.last+"...";
-                }
+                const canSkip = event.data.canSkip;
+                const status = event.data.status || "Loading...";
+                updateProgress(
+                    splashEl,
+                    event.data.last || "",
+                    event.data.done,
+                    event.data.total,
+                    event.data.doneBytes,
+                    event.data.totalBytes,
+                    status,
+                    canSkip ? "Skip and Play" : null
+                );
                 
                 if (event.data.done >= event.data.total) {
                     ready(splashEl);
@@ -85,6 +133,31 @@ async function main(){
         console.warn("Service workers are not supported.");
         ready(splashEl);
     }
+
+    
+}
+
+ 
+async function main(){
+    const splashEl = document.querySelector("#ngeSplash");
+    if(!splashEl){
+        console.warn("No splash element found");
+        ready(splashEl);
+        return;
+    }
+
+    const button = splashEl.querySelector("button#play");
+    button.addEventListener("click", (e) => {
+        ready(splashEl);
+        splashEl.remove();
+    });
+
+    updateProgress(splashEl, "", null, null, null, null, "Starting...", null);
+
+    const config = await loadConfig();
+    await applyConfig(config);
+    await  start(splashEl);
+    
 }
 
 
