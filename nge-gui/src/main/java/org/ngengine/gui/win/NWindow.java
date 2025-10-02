@@ -164,6 +164,7 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
     protected abstract void compose(Vector3f size, T args) throws Throwable;
 
     protected final void onShow() {
+        setCullHint(CullHint.Always);
         for (NWindowListener listener : listeners) {
             listener.onShow(this);
         }
@@ -272,10 +273,15 @@ public abstract class NWindow<T> extends Container implements GuiUpdateListener,
 
     @Override
     public final void guiUpdate(GuiControl source, float tpf) {
+      
         if (initStage == 0) {
             if (reloadNow()) initStage = 1;
         } else if (initStage == 1) {
             if (reloadNow()) initStage = 2;
+        } else if(initStage == 2){
+            initStage = 3;
+        } else if(initStage == 3){
+            setCullHint(CullHint.Inherit);
         }
         if (center) {
             recenter(getSize());
