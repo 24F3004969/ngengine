@@ -14,67 +14,81 @@ function newId(){
     return id;
 }
 
+
+
+
 class ProxiedRTCDataChannel {
-    constructor(label, id){
+    constructor(label, id, connId, parentP){
+        this.connId = connId;
+        this.create = id == null;
         this.id = id || newId();
         this.label = label;        
         this.readyState = "connecting";
-        this.b = Promise.resolve();
+        this.parentP = parentP;
         this.onopen = ()=>{};
         this.onclose = ()=>{};
         this.onmessage = (msg)=>{};
-        this.onerror = (err)=>{};
-        Binds.addEventListener("rtcOnDataChannelStateChange", (channelId, state) => {
-            if(channelId !== this.id) return;
-            this.b = this.b.then(()=>{
-                this.readyState = state;
-            });
-        });
-        Binds.addEventListener("rtcOnDataChannelOpen", (channelId) => {
-            if(channelId !== this.id) return;
-            this.b = this.b.then(()=>{
-                this.readyState = "open";
-                if(this.onopen) this.onopen();
-            });
-        });
-        Binds.addEventListener("rtcOnDataChannelClose", (channelId) => {
-            if(channelId !== this.id) return;
-            this.b = this.b.then(()=>{
-                this.readyState = "closed";
-                if(this.onclose) this.onclose();
-            });
-        });
-        Binds.addEventListener("rtcOnDataChannelMessage", (channelId, data) => {
-            if(channelId !== this.id) return;
-            this.b = this.b.then(()=>{
-                if(this.onmessage) this.onmessage(data);
-            });
-        });
-        Binds.addEventListener("rtcOnDataChannelError", (channelId, error) => {
-            if(channelId !== this.id) return;
-            this.b = this.b.then(()=>{
-                if(this.onerror) this.onerror({
-                    error: error
+        this.onerror = (err)=>{};       
+    }
+
+    async init(){
+        if(this.b)return this.b;
+        return this.b = new Promise(async (res,rej)=>{
+            try{
+                Binds.addEventListener("rtcOnDataChannelStateChange", (channelId, state) => {
+                    if (channelId !== this.id) return;
+                    this.readyState = state;
                 });
-            });
+                Binds.addEventListener("rtcOnDataChannelOpen", (channelId) => {
+                    if (channelId !== this.id) return;
+                    if (this.onopen) this.onopen();
+                });
+                Binds.addEventListener("rtcOnDataChannelClose", (channelId) => {
+                    if (channelId !== this.id) return;
+                     if (this.onclose) this.onclose();
+                });
+                Binds.addEventListener("rtcOnDataChannelMessage", (channelId, data) => {
+                    if (channelId !== this.id) return;
+                    if (this.onmessage) this.onmessage(data);
+                });
+                Binds.addEventListener("rtcOnDataChannelError", (channelId, error) => {
+                    if (channelId !== this.id) return;
+                    console.log(error);
+                    if (this.onerror) this.onerror({
+                        error: error
+                    });
+                });
+                if(this.create){
+                    await Binds.fireEvent("rtcCreateDataChannel", this.connId, this.id, this.label);
+                }
+                res();
+            }catch(e){
+                rej(e);
+            }   
         });
     }
 
+    async enqueue(r) {
+        await this.parentP;
+        if(!this.q) this.q = this.init();
+        await this.q;
+        return r();
+    }
     set binaryType(v){
-        this.b.then(()=>{
-          Binds.fireEvent("rtcSetDataChannelBinaryType", this.id, v);
+        this.enqueue( ()=>{
+            return Binds.fireEvent("rtcSetDataChannelBinaryType", this.connId, this.id, v);
         });
     }
 
     send(buffer){
-        this.b.then(()=>{   
-            Binds.fireEvent("rtcSendDataChannelMessage", this.id, buffer);
+        return this.enqueue( ()=>{   
+            return Binds.fireEvent("rtcSendDataChannelMessage", this.connId, this.id, buffer);
         });
     }
 
     close(){
-        this.b.then(()=>{
-            Binds.fireEvent("rtcCloseDataChannel", this.id);
+        return this.enqueue( ()=>{
+            return Binds.fireEvent("rtcCloseDataChannel", this.connId, this.id);
         });
     }   
 
@@ -83,6 +97,7 @@ class ProxiedRTCDataChannel {
 class ProxiedRTCPeerConnection {
     
     constructor(conf){
+        this.conf=conf;
         this.id = newId();
         this.connectionState="new";
         this.iceConnectionState="new";
@@ -90,78 +105,86 @@ class ProxiedRTCPeerConnection {
         this.onconnectionstatechange = ()=>{};
         this.oniceconnectionstatechange = ()=>{};
         this.ondatachannel = ()=>{};
-        this.b = Binds.fireEvent("rtcCreatePeerConnection", this.id, conf);
-        Binds.addEventListener("rtcOnConnectionStateChange", (connId, state) => {
-            if(connId !== this.id) return;
-            this.b = this.b.then(()=>{
-                this.connectionState = state;
-                if(this.onconnectionstatechange) this.onconnectionstatechange();
-            });
-        }); 
-        Binds.addEventListener("rtcOnIceConnectionStateChange", (connId, state) => {
-            if(connId !== this.id) return;
-            this.b = this.b.then(()=>{
-                this.iceConnectionState = state;
-                if(this.oniceconnectionstatechange) this.oniceconnectionstatechange();
-            });
-        });
-        Binds.addEventListener("rtcOnIceCandidate", (connId, candidate) => {
-            if(connId !== this.id) return;
-            this.b = this.b.then(()=>{
-                if(this.onicecandidate) this.onicecandidate({
-                    candidate: new ProxiedRTCIceCandidate(candidate)
-                });
-            });
-        });
-        Binds.addEventListener("rtcOnDataChannel", (connId, channelId, label, readyState) => {
-            if(connId !== this.id) return;
-            const channel = new ProxiedRTCDataChannel(label, channelId);
-            channel.readyState = readyState;
-            this.b = this.b.then(()=>{
-                if(this.ondatachannel) this.ondatachannel({
-                    channel: channel
-                });
-            });
-        });
+      
 
     }
 
-    setLocalDescription(obj){
-        return this.b = this.b.then(()=>{
-            return Binds.fireEvent("rtcSetLocalDescription", this.id, obj);
+    async init(){
+        if(this.b)return this.b;
+        this.b = new Promise(async (res, rej) => {
+            try{
+                Binds.addEventListener("rtcOnConnectionStateChange", (connId, state) => {
+                    if(connId !== this.id) return;
+                    this.connectionState = state;
+                    if(this.onconnectionstatechange) this.onconnectionstatechange();
+                }); 
+                Binds.addEventListener("rtcOnIceConnectionStateChange", (connId, state) => {
+                    if(connId !== this.id) return;
+                    this.iceConnectionState = state;
+                    if(this.oniceconnectionstatechange) this.oniceconnectionstatechange();
+                });
+                Binds.addEventListener("rtcOnIceCandidate", (connId, candidate) => {
+                    if(connId !== this.id) return;
+                    if(this.onicecandidate) this.onicecandidate({
+                        candidate: new ProxiedRTCIceCandidate(candidate)
+                    });
+                });
+                Binds.addEventListener("rtcOnDataChannel", (connId, channelId, label, readyState) => {
+                    if(connId !== this.id) return;
+                    const channel = new ProxiedRTCDataChannel(label, channelId, connId, this.init);
+                    channel.readyState = readyState;
+                    if(this.ondatachannel) this.ondatachannel({
+                        channel: channel
+                    });
+                });
+                await Binds.fireEvent("rtcCreatePeerConnection", this.id, this.conf);
+                res();
+            }catch(e){
+                rej(e);
+            }
         });
+        return this.b;
+    }
+    async enqueue(r) {
+        if (!this.q) this.q = this.init();
+        await this.q;
+        return r();
+    }
+    setLocalDescription(obj){
+        return this.enqueue(()=>{
+            return Binds.fireEvent("rtcSetLocalDescription", this.id, obj);
+        });       
     }
 
     setRemoteDescription(obj){
-        return this.b = this.b.then(()=>{
+
+        return this.enqueue(()=>{
             return Binds.fireEvent("rtcSetRemoteDescription", this.id, obj);
         });
+    
     }
 
     createOffer(options){
-        return this.b = this.b.then(()=>{
+        return this.enqueue(()=>{
             return Binds.fireEvent("rtcCreateOffer", this.id, options);
         });
     }
     
     createAnswer(options){  
-        return this.b = this.b.then(()=>{
+        return this.enqueue(()=>{
             return Binds.fireEvent("rtcCreateAnswer", this.id, options);
         });
     }
      
 
     createDataChannel(label){
-        const dataChannel = new ProxiedRTCDataChannel(label);
-        dataChannel.b = this.b.then(()=>{
-            Binds.fireEvent("rtcCreateDataChannel", this.id, dataChannel.id, dataChannel.label);
-        })
+        const dataChannel = new ProxiedRTCDataChannel(label, null, this.id, this.q);
         return dataChannel;
     }
 
     addIceCandidate(candidate){
-        this.b.then(()=>{
-            Binds.fireEvent("rtcAddIceCandidate", this.id, {
+        return this.enqueue(()=>{
+            return Binds.fireEvent("rtcAddIceCandidate", this.id, {
                 candidate: candidate.options.candidate,
                 sdpMid: candidate.options.sdpMid,
                 sdpMLineIndex: candidate.options.sdpMLineIndex
@@ -170,8 +193,8 @@ class ProxiedRTCPeerConnection {
     }
 
     close(){
-        this.b.then(()=>{
-            Binds.fireEvent("rtcClosePeerConnection", this.id);
+        return this.enqueue(()=>{
+            return Binds.fireEvent("rtcClosePeerConnection", this.id);
         });
     }
 }
@@ -199,19 +222,37 @@ async function inject(){
 
 
 function bind(){
-
+ 
     const resources = {};
+
+    const waitForResource = (id,timeout = 60000) => {
+        return new Promise((res,rej)=>{
+            const start = Date.now();
+            const retry = () => {
+                if(resources[id]){
+                    res(resources[id]);
+                }else if(Date.now() - start > timeout){
+                    rej("Timeout waiting for resource: " + id);
+                }else{
+                    setTimeout(retry,10);
+                }
+            };
+            retry();
+        });
+    };
+
     const bindChannel = (channelId, channel) => {
-        channel.onopen = (ev) => {
-            Binds.fireEvent("rtcOnDataChannelStateChange", channelId, channel.readyState);
+        channel.onopen = async (ev) => {
+                    Binds.fireEvent("rtcOnDataChannelStateChange", channelId, channel.readyState);
         };
-        channel.onclose = (ev) => {
-            Binds.fireEvent("rtcOnDataChannelStateChange", channelId, channel.readyState);
+        channel.onclose = async  (ev) => {
+                    Binds.fireEvent("rtcOnDataChannelStateChange", channelId, channel.readyState);
         };
-        channel.onerror = (ev) => {
+        channel.onerror = async (ev) => {
+            console.log("Error",ev)
             Binds.fireEvent("rtcOnDataChannelError", channelId, ev.message);
         };
-        channel.onmessage = (ev) => {
+        channel.onmessage = async (ev) => {
             Binds.fireEvent("rtcOnDataChannelMessage", channelId, {
                 data:ev.data
             });
@@ -224,6 +265,7 @@ function bind(){
         conn.onconnectionstatechange = (ev) => {
             Binds.fireEvent("rtcOnConnectionStateChange", id, conn.connectionState);
         };
+
         conn.oniceconnectionstatechange = (ev) => {
             Binds.fireEvent("rtcOnIceConnectionStateChange", id, conn.iceConnectionState);
         };
@@ -236,31 +278,32 @@ function bind(){
                 });
             } 
         };
-        conn.ondatachannel = (ev) => {
+        conn.ondatachannel = async (ev) => {
             const channel = ev.channel;
             const channelId = newId();
             resources[channelId] = channel;
-            Binds.fireEvent("rtcOnDataChannel", id, channelId, channel.label, channel.readyState);
             bindChannel(channelId, channel);
+            Binds.fireEvent("rtcOnDataChannel", id, channelId, channel.label, channel.readyState);
         };
-        resources[id] = conn;
-        return Promise.resolve();
-    });
-    Binds.addEventListener("rtcSetLocalDescription", (id, desc) => {
-        const conn = resources[id];
-        if(!conn) return Promise.reject("PeerConnection not found: " + id);
-        console.log(desc)
-        return conn.setLocalDescription(new RTCSessionDescription(desc));
+        resources[id] = conn;        
     });
 
-    Binds.addEventListener("rtcSetRemoteDescription", (id, desc) => {
-        const conn = resources[id];
+    Binds.addEventListener("rtcSetLocalDescription", async (id, desc) => {
+        const conn = await waitForResource(id);
         if(!conn) return Promise.reject("PeerConnection not found: " + id);
-        return conn.setRemoteDescription(new RTCSessionDescription(desc));
+        const  p = await conn.setLocalDescription(new RTCSessionDescription(desc));
+        return p;
     });
 
-    Binds.addEventListener("rtcCreateOffer", (id, options) => {
-        const conn = resources[id];
+    Binds.addEventListener("rtcSetRemoteDescription", async (id, desc) => {
+        const conn = await waitForResource(id);
+        if(!conn) return Promise.reject("PeerConnection not found: " + id);
+        const p = await conn.setRemoteDescription(new RTCSessionDescription(desc));
+        return p;
+    });
+
+    Binds.addEventListener("rtcCreateOffer", async (id, options) => {
+        const conn = await waitForResource(id);
         if(!conn) return Promise.reject("PeerConnection not found: " + id);
         return conn.createOffer(options).then( (offer) => {
             return {
@@ -270,8 +313,8 @@ function bind(){
         });
     });
 
-    Binds.addEventListener("rtcCreateAnswer", (id, options) => {
-        const conn = resources[id];
+    Binds.addEventListener("rtcCreateAnswer", async (id, options) => {
+        const conn = await waitForResource(id);
         if(!conn) return Promise.reject("PeerConnection not found: " + id);
         return conn.createAnswer(options).then( (answer) => {
             return {
@@ -281,49 +324,56 @@ function bind(){
         });
     });
 
-    Binds.addEventListener("rtcCreateDataChannel", (connId, channelId, label) => {
-        const conn = resources[connId];
+    Binds.addEventListener("rtcCreateDataChannel", async (connId, channelId, label) => {
+        const conn = await waitForResource(connId);
         if(!conn) return;
-        const channel = conn.createDataChannel(label);
+        const channel = await conn.createDataChannel(label);
         bindChannel(channelId, channel);
         resources[channelId] = channel;
     });
 
-    Binds.addEventListener("rtcSetDataChannelBinaryType", (channelId, binaryType) => {
-        const channel = resources[channelId];
+    Binds.addEventListener("rtcSetDataChannelBinaryType", async (connId, channelId, binaryType) => {
+        const conn = await waitForResource(connId);
+        if(!conn) return;
+        const channel = await waitForResource(channelId);
         if(!channel) return;
         channel.binaryType = binaryType;
     });
 
-    Binds.addEventListener("rtcSendDataChannelMessage", (channelId, data) => {
-        const channel = resources[channelId];
+    Binds.addEventListener("rtcSendDataChannelMessage", async (connId, channelId, data) => {
+        const conn =  await waitForResource(connId);
+        if(!conn) return;
+        const channel = await waitForResource(channelId);
         if(!channel) return;
         channel.send(data);
     });
 
-    Binds.addEventListener("rtcCloseDataChannel", (channelId) => {
-        const channel = resources[channelId];
+    Binds.addEventListener("rtcCloseDataChannel", async (connId, channelId) => {
+        const conn = await waitForResource(connId);
+        if(!conn) return;
+        const channel = await waitForResource(channelId);
         if(!channel) return;
         channel.close();
         delete resources[channelId];
     });
 
-    Binds.addEventListener("rtcAddIceCandidate", (connId, candidate) => {
-        const conn = resources[connId];
+    Binds.addEventListener("rtcAddIceCandidate", async (connId, candidate) => {
+        const conn =  await waitForResource(connId);
         if(!conn) return;
         if(candidate){
             conn.addIceCandidate(new RTCIceCandidate(candidate));
         }  
     });
 
-    Binds.addEventListener("rtcClosePeerConnection", (id) => {
-        const conn = resources[id];
+    Binds.addEventListener("rtcClosePeerConnection",async (id) => {
+        const conn = await waitForResource(id);
         if(!conn) return;
         conn.close();
         delete resources[id];
     });
 
 
+    
 
 }
 export default { inject, bind};
