@@ -15,14 +15,43 @@ public class TScheduledThreadPoolExecutor implements Executor {
 
     private class ExecutorThread implements Executor {
         private  String name = "Executor";
-
+        private final LinkedList<Runnable> tasks = new LinkedList<>();
+        private  volatile boolean running = false;
 
         public ExecutorThread(int n){
             
         }
 
-        public void start(){
-      
+        public void start() {
+            if(running)return;
+            running = true;
+            
+            Thread t = new Thread(() -> {
+                while (running) {
+                    Runnable task = null;
+                    synchronized (tasks) {
+                        if (tasks.isEmpty()) {
+                            try {
+                                tasks.wait(100);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            continue;
+                        }
+                        if (!tasks.isEmpty()) {
+                            task = tasks.removeFirst();
+                        }
+                    }
+                    try {
+                        if (task != null) task.run();
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            t.setName(name + " Worker");
+            t.start();
+
         }
 
         public void setName(String name){
@@ -31,22 +60,33 @@ public class TScheduledThreadPoolExecutor implements Executor {
         }
 
 
-
         @Override
         public void execute(Runnable command) {
-
-            Thread t = new Thread(command);
-            t.setName(name+" Worker");
+            if(!running) throw new IllegalStateException("Executor already shutdown");
+            Thread t = new Thread(()->{
+                synchronized (tasks) {
+                    tasks.add(command);
+                    tasks.notifyAll();
+                }
+            });
+            t.setName(name+" Scheduler");
             t.start();
         }
 
         public void close() {
-    
+            running = false;
+            Thread t = new Thread(()->{
+                synchronized (tasks) {
+                    tasks.notifyAll();
+                }
+            });
+            t.setName(name+" Closer");
+            t.start();            
+            tasks.clear();
         }
     }
 
 
-    private  volatile boolean running = true;
     private final ExecutorThread thread;
 
 
@@ -60,14 +100,18 @@ public class TScheduledThreadPoolExecutor implements Executor {
     public <V> TFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
         if(delay == 0){ // shortcut for tasks without delay
             TFutureTask<V> futureTask = new TFutureTask<V>();
-            this.thread.execute(()->{
-                try {
-                    V res = callable.call();
-                    futureTask.setResult(res);
-                } catch (Exception e) {
-                    futureTask.setException(e);
-                }
-            });
+            try{
+                this.thread.execute(()->{
+                    try {
+                        V res = callable.call();
+                        futureTask.setResult(res);
+                    } catch (Exception e) {
+                        futureTask.setException(e);
+                    }
+                });
+            }catch(Exception e){
+                futureTask.setException(e);
+            }
             return futureTask;
         }
 
@@ -79,14 +123,18 @@ public class TScheduledThreadPoolExecutor implements Executor {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            this.thread.execute(()->{
-                try {
-                    V res = callable.call();
-                    futureTask.setResult(res);
-                } catch (Exception e) {
-                    futureTask.setException(e);
-                }
-            });
+            try{
+                this.thread.execute(()->{
+                    try {
+                        V res = callable.call();
+                        futureTask.setResult(res);
+                    } catch (Exception e) {
+                        futureTask.setException(e);
+                    }
+                });
+            }catch(Exception e){
+                futureTask.setException(e);
+            }
         });
         // get stacktrace
         StackTraceElement[] stack = Thread.currentThread().getStackTrace();
@@ -128,12 +176,11 @@ public class TScheduledThreadPoolExecutor implements Executor {
     }
 
     public  List<Runnable> shutdownNow() {
-        running = false;
+        this.thread.close();
         return new ArrayList<Runnable>();
     }
     
     public void shutdown() {
-        running = false;
         this.thread.close();
     }
 }
