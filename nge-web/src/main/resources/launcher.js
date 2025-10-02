@@ -67,6 +67,7 @@ window.addEventListener('load',  () => {
         Binds.fireEvent("resizeRenderTarget", width, height);
     }
     window.addEventListener('resize', resize);
+    canvas.addEventListener('resize', resize);
 
     // Bind client actions
     const renderTarget = USE_OFFSCREEN_CANVAS ? canvas.transferControlToOffscreen() : canvas;
@@ -96,7 +97,9 @@ window.addEventListener('load',  () => {
         if (RUN_IN_WORKER){
              Binds.addEventListener("ready", ()=>{
                 console.log("NGE worker is ready");
-                Binds.fireEvent("main", []);       
+                Binds.fireEvent("main", []).then(()=>{
+                    resize();
+                })   
             });
             const worker = new Worker("./worker.js", { type: 'module' });
             Binds.registerWorker(worker);
@@ -105,6 +108,7 @@ window.addEventListener('load',  () => {
             const { main } = await import("./webapp.js");
             Binds.addEventListener("ready", ()=>{
                 main([]);
+                resize();
             });           
             Binds.fireEvent("ready");
         }

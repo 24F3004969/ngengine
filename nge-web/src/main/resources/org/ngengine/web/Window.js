@@ -45,7 +45,7 @@ function bind(canvas, renderTarget){
 }
 
 function bindListeners(canvas,renderTarget){
-     let PIXELS_PER_LINE = null;
+    let PIXELS_PER_LINE = null;
     const prepareEvent = (inputEvent) => {
         const event = {};
         const keys = [
@@ -82,7 +82,7 @@ function bindListeners(canvas,renderTarget){
                     el.style.cssText = "position:absolute;visibility:hidden;font-size:16px;line-height:1.2;margin:0;padding:0;border:0;";
                     el.textContent = "X";
                     doc.body.appendChild(el);
-                    const cs = g.getComputedStyle ? g.getComputedStyle(el) : null;
+                    const cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
                     const lh = cs && cs.lineHeight && cs.lineHeight.endsWith("px")
                         ? parseFloat(cs.lineHeight)
                         : (el.offsetHeight || 16);
@@ -99,7 +99,7 @@ function bindListeners(canvas,renderTarget){
             } else {
                 // pages -> pixels
                 const viewportHeight = doc && doc.documentElement
-                    ? Math.max(doc.documentElement.clientHeight, g.innerHeight || 0)
+                    ? Math.max(doc.documentElement.clientHeight, window.innerHeight || 0)
                     : 800;
                 const estimatedLinesPerPage = Math.max(1, Math.floor(viewportHeight / pixelsPerLine));
                 event.deltaY = deltaValue * pixelsPerLine * estimatedLinesPerPage;
