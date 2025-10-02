@@ -130,8 +130,8 @@ async function decodeImage (data, filename, scaleW, scaleH) { /*
         ctx.clearRect(0, 0, dw, dh);
         ctx.fillStyle = 'rgba(0,0,0,0)';
         ctx.fillRect(0, 0, dw, dh);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
+        // ctx.imageSmoothingEnabled = true;
+        // ctx.imageSmoothingQuality = 'high';
 
         if (svgText) {
             img.width = dw;
