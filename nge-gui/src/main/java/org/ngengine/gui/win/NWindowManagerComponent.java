@@ -46,10 +46,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,15 +55,15 @@ import java.util.logging.Logger;
 import org.ngengine.ViewPortManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
-import org.ngengine.components.fragments.GuiViewPortFragment;
 import org.ngengine.components.fragments.InputHandlerFragment;
+import org.ngengine.components.fragments.LogicFragment;
 import org.ngengine.gui.win.NToast.ToastType;
 import org.ngengine.gui.win.std.NErrorWindow;
 import org.ngengine.runner.MainThreadRunner;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
-public class NWindowManagerComponent implements Component<Object>, GuiViewPortFragment, InputHandlerFragment {
+public class NWindowManagerComponent implements Component<Object>, LogicFragment, InputHandlerFragment {
 
     private static final Logger log = Logger.getLogger(NWindowManagerComponent.class.getName());
     private final ArrayList<NWindow<?>> windowsStack = new ArrayList<>();
@@ -76,7 +74,8 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
     private DataStoreProvider dataStoreProvider;
     private ComponentManager mng;
 
- 
+    private int width = 0;
+    private int height = 0;
 
     public void showCursor(boolean v) {
         mng.getGlobalInstance(InputManager.class).setCursorVisible(v);
@@ -333,11 +332,14 @@ public class NWindowManagerComponent implements Component<Object>, GuiViewPortFr
             toastContainer.getParent().removeFromParent();
         }
     }
+    
 
+    
     @Override
-    public void updateGuiViewPort(ViewPort vp, float tpf) {
-        int width = vp.getCamera().getWidth();
-        int height = vp.getCamera().getHeight();
+    public void updateAppLogic(ComponentManager mng, float tpf){
+        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPort vp= vpm.getGuiViewPort();
+        
         if (toastsStack.size() > 0) {
             Instant now = Instant.now();
             Iterator<NToast> it = toastsStack.iterator();
