@@ -35,6 +35,8 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import java.util.Objects;
 
+import org.ngengine.platform.NGEPlatform;
+
 /**
  * Run in the jme3 main thread. The same as Jme3's {@link com.jme3.app.Application#enqueue(Runnable)} but the
  *
@@ -61,11 +63,9 @@ public class MainThreadRunner extends BaseAppState implements Runner {
 
     @Override
     public void run(Runnable task) {
-        if (Thread.currentThread() == mainThread) {
-            task.run();
-        } else {
-            getApplication().enqueue(task);
-        }
+        NGEPlatform.get().runInThread(mainThread, r->{
+            getApplication().enqueue(r);
+        }, task);
     }
 
     @Override
