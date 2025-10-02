@@ -311,7 +311,8 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
 
     public void setSize( Vector3f size ) {
         if( size.x < 0 || size.y < 0 || size.z < 0 ) {
-            throw new IllegalArgumentException("Size cannot be negative:" + size + " for:" + getNode());
+            // throw new IllegalArgumentException("Size cannot be negative:" + size + " for:" + getNode());
+            return;
         }
         lastSize.set(size);
 
