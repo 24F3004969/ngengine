@@ -103,7 +103,7 @@ async function decodeImage (data, filename, scaleW, scaleH) { /*
             }
         }
 
-        // Apply requested scaling (maintain aspect if only one provided)
+        // scale texture
         let dw = (typeof scaleW === 'number' && scaleW > 0) ? scaleW | 0 : 0;
         let dh = (typeof scaleH === 'number' && scaleH > 0) ? scaleH | 0 : 0;
         if (dw && !dh) {
@@ -113,6 +113,14 @@ async function decodeImage (data, filename, scaleW, scaleH) { /*
         }
         if (!dw) dw = w;
         if (!dh) dh = h;
+
+        // Enforce maximum texture size of 4096x4096
+        const MAX_TEXTURE_SIZE = 4096;
+        if (dw > MAX_TEXTURE_SIZE || dh > MAX_TEXTURE_SIZE) {
+            const scale = Math.min(MAX_TEXTURE_SIZE / dw, MAX_TEXTURE_SIZE / dh);
+            dw = Math.floor(dw * scale);
+            dh = Math.floor(dh * scale);
+        }
 
         // canvas = doc.createElement('canvas');
         canvas = new g.OffscreenCanvas(dw, dh);
