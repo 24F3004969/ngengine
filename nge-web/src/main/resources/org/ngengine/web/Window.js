@@ -1,4 +1,5 @@
 import Binds from "./WebBindsHub.js";
+const IS_CAPACITOR = typeof Capacitor !== "undefined" && Capacitor.getPlatform
 
 let fullscreen = false;
 let pointerLock = false;
@@ -10,6 +11,7 @@ function bind(canvas, renderTarget){
     });
 
     Binds.addEventListener("toggleFullscreen", (v)=>{
+        if(IS_CAPACITOR)return;
         fullscreen = v;
     });
 

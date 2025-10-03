@@ -6,15 +6,20 @@ import WindowHooks from "./org/ngengine/web/Window.js";
 import WebRTCProxy from "./org/ngengine/web/WebRTCProxy.js";
 import ClipboardProxy from "./org/ngengine/web/ClipboardProxy.js";
 
-const USE_OFFSCREEN_CANVAS = true;
-const RUN_IN_WORKER = true;
+
+const IS_CAPACITOR = typeof Capacitor !== "undefined" && Capacitor.getPlatform
+const USE_OFFSCREEN_CANVAS = !IS_CAPACITOR;
+const RUN_IN_WORKER = !IS_CAPACITOR;
 
 let loadingAnimationTimer = null;
 let loadingAnimation = null;
+let render = true;
 
 function animLoop(){
     window.requestAnimationFrame(()=>{
-        Binds.fireEvent("render");
+        if(render){
+            Binds.fireEvent("render");
+        }
         animLoop();
     });
 }
@@ -70,6 +75,20 @@ async function main(){
     }
     window.addEventListener('resize', resize);
     canvas.addEventListener('resize', resize);
+
+    // listen to loss of webgl context
+    canvas.addEventListener("webglcontextlost", (event) => {
+        event.preventDefault();
+        console.warn("WebGL context lost");
+        render = false;
+        Binds.fireEvent("webglcontextlost");
+    });
+
+    canvas.addEventListener("webglcontextrestored", (event) => {
+        console.info("WebGL context restored");
+        render = true;
+        Binds.fireEvent("webglcontextrestored");
+    });
 
     // Bind client actions
     const renderTarget = USE_OFFSCREEN_CANVAS ? canvas.transferControlToOffscreen() : canvas;
