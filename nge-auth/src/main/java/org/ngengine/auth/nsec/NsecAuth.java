@@ -90,8 +90,12 @@ public class NsecAuth extends Auth {
         List<String> files = store.list();
         for (String file : files) {
             if (file.endsWith(".nsecAuth")) {
-                String username = file.substring(0, file.length() - ".nsecAuth".length());
-                users.add(username);
+                try{
+                    String username = file.substring(0, file.length() - ".nsecAuth".length());
+                    users.add(username);
+                } catch(Exception e){
+                    log.log(java.util.logging.Level.WARNING, "Error listing saved identity: " + file, e);
+                }
             }
         }
         return users;
@@ -100,17 +104,17 @@ public class NsecAuth extends Auth {
     @Override
     public void save(DataStore store, NostrSigner sn, String password) throws IOException {
         // we won't save cleartext keys
-                    Objects.requireNonNull(password, "Password cannot be null");
+        Objects.requireNonNull(password, "Password cannot be null");
 
         NostrKeyPairSigner signer = (NostrKeyPairSigner) sn;
         NostrPublicKey pubKey = signer.getKeyPair().getPublicKey();
-            if (password.isEmpty()) {
-                throw new RuntimeException("Password cannot be empty");
-            }
-            String pub = pubKey.asBech32();
-            String filePath = pub + ".nsecAuth";
-            NostrPrivateKeySavableWrapper wrap = new NostrPrivateKeySavableWrapper(signer.getKeyPair().getPrivateKey(), password);
-            store.write(filePath, wrap);
+        if (password.isEmpty()) {
+            throw new RuntimeException("Password cannot be empty");
+        }
+        String pub = pubKey.asBech32();
+        String filePath = pub + ".nsecAuth";
+        NostrPrivateKeySavableWrapper wrap = new NostrPrivateKeySavableWrapper(signer.getKeyPair().getPrivateKey(), password);
+        store.write(filePath, wrap);
      
 
     }

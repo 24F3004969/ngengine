@@ -33,12 +33,16 @@ package org.ngengine.auth;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.ngengine.gui.win.NWindow;
 import org.ngengine.gui.win.NWindowManagerComponent;
 import org.ngengine.nostr4j.signer.NostrSigner;
 import org.ngengine.store.DataStore;
 
 public abstract class Auth {
+    private final static Logger logger = Logger.getLogger(Auth.class.getName());
 
     protected final AuthConfig options;
     protected final Class<? extends NWindow<AuthConfig>> authWindow;
@@ -103,21 +107,30 @@ public abstract class Auth {
 
     protected abstract List<String> listSaved(DataStore store)throws IOException ;
 
-    public List<String> listSaved() throws IOException {
-        DataStore store = getStore();
-        if (store != null) {
-            return listSaved(store);
-        } else {
-              return List.of();
+    public List<String> listSaved(){
+        try{
+            DataStore store = getStore();
+            if (store != null) {
+                return listSaved(store);
+            } else {
+                return List.of();
+            }
+        } catch(Exception ex){
+            logger.log(Level.WARNING, "Error listing saved identities", ex);
+            return List.of();
         }
     }
 
     protected abstract void save(DataStore store, NostrSigner signer, String encryptionKey) throws IOException;
 
-    public void save(NostrSigner signer, String encryptionKey) throws IOException {
-        DataStore store = getStore();
-        if (store != null) {
-            save(store, signer, encryptionKey);
-        }    
+    public void save(NostrSigner signer, String encryptionKey) {
+        try{
+            DataStore store = getStore();
+            if (store != null) {
+                save(store, signer, encryptionKey);
+            }    
+        } catch(Exception ex){
+            logger.log(Level.WARNING, "Error saving identity", ex);
+        }
     }
 }

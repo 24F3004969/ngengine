@@ -84,9 +84,13 @@ public class Nip46Auth extends Auth {
         List<String> files = store.list();
         List<String> users = new ArrayList<>();
         for (String file : files) {
-            if (file.endsWith(".nip46")) {
-                String username = file.substring(0, file.length() - ".nip46".length());
-                users.add(username);
+            try{
+                if (file.endsWith(".nip46")) {
+                    String username = file.substring(0, file.length() - ".nip46".length());
+                    users.add(username);
+                }
+            } catch(Exception e){
+                logger.log(java.util.logging.Level.WARNING, "Error listing saved identity: " + file, e);
             }
         }
         return users;
@@ -95,14 +99,14 @@ public class Nip46Auth extends Auth {
     @Override
     protected void save(DataStore store, NostrSigner s, String encryptionKey) throws IOException {
         try{
-        NostrNIP46Signer signer = (NostrNIP46Signer) s;
-        NostrPublicKey pubkey = signer.getPublicKey().await();
+            NostrNIP46Signer signer = (NostrNIP46Signer) s;
+            NostrPublicKey pubkey = signer.getPublicKey().await();
 
-        String pub = pubkey.asBech32();
-        String filePath = pub + ".nip46";
+            String pub = pubkey.asBech32();
+            String filePath = pub + ".nip46";
 
-        Nip46SignerSavableWrapper wrap = new Nip46SignerSavableWrapper(signer);
-        store.write(filePath,wrap);
+            Nip46SignerSavableWrapper wrap = new Nip46SignerSavableWrapper(signer);
+            store.write(filePath,wrap);
         } catch(Exception e){
             throw new IOException("Failed to save key", e);
         }
