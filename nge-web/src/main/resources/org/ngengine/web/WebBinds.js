@@ -3,6 +3,7 @@ import Binds from "./WebBindsHub.js";
 import ImageLoader from "./ImageLoader.js";
 import Nip07Proxy from "./Nip07Proxy.js";
 import WebRTCProxy from "./WebRTCProxy.js";
+import ClipboardProxy from "./ClipboardProxy.js";
 // convert various buffer types to Uint8Array
 const _u = (data) => {
     if (data instanceof Uint8Array) {
@@ -285,6 +286,11 @@ export const connectNip07BackendAsync = (res, rej) => {
 export const connectWebRTCBackendAsync = (res, rej) => {
     WebRTCProxy.inject().then(res).catch(e=>rej(String(e)));
 }
+
+export const connectClipboardBackendAsync = (res, rej) => {
+    ClipboardProxy.inject().then(res).catch(e=>rej(String(e)));
+}
+
 
 export const pingFrontEnd = () => {
     Binds.fireEvent("ping");

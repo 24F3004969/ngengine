@@ -164,4 +164,15 @@ public class WebBindsAsync {
             callback.error(new Exception(rej));
         }); 
     }
+
+
+    @Async
+    public static native void connectClipboardBackend();
+    private static void connectClipboardBackend(AsyncCallback<String> callback) {
+        WebBinds.connectClipboardBackendAsync( (res) -> {
+            callback.complete(res.toString());
+        }, (rej) -> {
+            callback.error(new Exception(rej));
+        });
+    }
 }

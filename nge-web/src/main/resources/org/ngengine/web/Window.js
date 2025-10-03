@@ -11,7 +11,7 @@ function bind(canvas, renderTarget){
 
     Binds.addEventListener("toggleFullscreen", (v)=>{
         fullscreen = v;
-    })
+    });
 
  
     Binds.addEventListener("setPageTitle", (title)=>{

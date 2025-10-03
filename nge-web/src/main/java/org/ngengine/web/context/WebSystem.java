@@ -71,6 +71,7 @@ public class WebSystem extends JmeSystemDelegate {
         
         WebBindsAsync.connectNip07Backend();
         WebBindsAsync.connectWebRTCBackend();
+        WebBindsAsync.connectClipboardBackend();
 
     }
     

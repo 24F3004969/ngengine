@@ -4,6 +4,7 @@ import ImageLoader from "./org/ngengine/web/ImageLoader.js";
 import Nip07Proxy from "./org/ngengine/web/Nip07Proxy.js";
 import WindowHooks from "./org/ngengine/web/Window.js";
 import WebRTCProxy from "./org/ngengine/web/WebRTCProxy.js";
+import ClipboardProxy from "./org/ngengine/web/ClipboardProxy.js";
 
 const USE_OFFSCREEN_CANVAS = true;
 const RUN_IN_WORKER = true;
@@ -35,7 +36,8 @@ function bind(canvas, renderTarget){
     Nip07Proxy.bind();
     WebRTCProxy.bind();
     WindowHooks.bind(canvas, renderTarget);
-    WindowHooks.bindListeners(canvas, renderTarget);    
+    WindowHooks.bindListeners(canvas, renderTarget);  
+    ClipboardProxy.bind();  
     Binds.addEventListener("ping",()=>{
         if(loadingAnimation){
             loadingAnimation.remove();

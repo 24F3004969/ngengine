@@ -250,5 +250,10 @@ public class WebBinds implements JSObject {
     @JSTopLevel
     @JSModule("./org/ngengine/web/WebBinds.js")
     public static native void runWithDelay(JSConsumer<Void> callback, int msDelay);
+
+
+    @JSTopLevel
+    @JSModule("./org/ngengine/web/WebBinds.js")
+    public static native void connectClipboardBackendAsync(JSConsumer<Void> resolve, JSConsumer<String> reject);
 }
 
