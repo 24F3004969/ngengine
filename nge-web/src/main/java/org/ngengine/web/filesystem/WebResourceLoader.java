@@ -1,7 +1,6 @@
 package org.ngengine.web.filesystem;
 
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +15,7 @@ import java.util.Enumeration;
 
 import org.ngengine.platform.NGEPlatform;
 import org.ngengine.platform.NGEUtils;
-import org.ngengine.platform.transport.NGEHttpResponse;
+import org.ngengine.platform.transport.NGEHttpResponseStream;
 import org.ngengine.web.WebBindsAsync;
 
 import com.jme3.util.res.ResourceLoader;
@@ -60,14 +59,10 @@ public class WebResourceLoader implements ResourceLoader {
                 @Override
                 public InputStream getInputStream() throws IOException {
                     try{
-                        NGEHttpResponse req = NGEPlatform.get().httpRequest("GET", url.toString(), null, null, null).await();
-                        if(!req.status()){
-                            throw new IOException("Failed to get resource: "+url.toString()+" - "+req.statusCode());
-                        }
-                        byte[] data = req.body();
-                        return new ByteArrayInputStream(data);
+                        NGEHttpResponseStream req = NGEPlatform.get().httpRequestStream("GET", url.toString(), null, null, null).await();
+                        return req.body;
                     } catch(Exception ex){
-                        throw new IOException("Failed to get resource: "+url.toString()+" - "+ex.getMessage());
+                        throw new IOException("Failed to get resource: "+url.toString()+" - "+ex.toString());
                     }
                 }
             };

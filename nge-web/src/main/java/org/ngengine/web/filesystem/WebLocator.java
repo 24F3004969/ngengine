@@ -2,19 +2,10 @@
 package org.ngengine.web.filesystem;
 
 import com.jme3.asset.*;
-import com.jme3.asset.plugins.UrlAssetInfo;
-import com.jme3.system.JmeSystem;
 import com.jme3.util.res.Resources;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.List;
 import java.util.logging.Logger;
-
-import org.ngengine.platform.NGEPlatform;
-import org.ngengine.platform.transport.NGEHttpResponse;
  
 public class WebLocator implements AssetLocator {
 
@@ -55,19 +46,8 @@ public class WebLocator implements AssetLocator {
         if (url == null){
             return null;
         }
-      
-        
- 
-        try {
-            NGEHttpResponse res = NGEPlatform.get().httpRequest("GET", url.toString(), null,null, null).await();
-            if(!res.status()){
-                throw new IOException("Failed to read URL " + url+": "+res.statusCode());        
-            }
-            WebAssetInfo info = new WebAssetInfo(manager, key, res.body);                    
-            return info;
-        } catch (Exception e) {
-            throw new AssetLoadException("Failed to read URL " + url, e);                
-        }
+        WebAssetInfo info = new WebAssetInfo(manager, key, url, null);         
+        return info;
           
     }
 }
