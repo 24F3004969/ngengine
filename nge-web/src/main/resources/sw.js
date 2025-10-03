@@ -1,5 +1,4 @@
-import * as _z from "./zip-core.js";
-
+importScripts("./zip-core.js");
 const USE_CACHE = true;
 const INDEX_URL = "./resources.index.txt";
 const PRELOAD_IGNORE_URL = "./preload-ignore.txt";
@@ -86,9 +85,15 @@ async function updateBundle(url, hash) {
     console.log("Bundle updated");
 }
 
+async function getZip(){
+   return globalThis.zip;
+}
+
 async function loadBundledResources() {
     if (!bundledLoaded) return [];
     if (bundleEntries) return bundleEntries;
+
+    const Zip = await getZip();
 
     const cache = await getCache();
     const resp = await cache.match(BUNDLE_KEY);
@@ -99,15 +104,17 @@ async function loadBundledResources() {
         return [];
     }
 
+
     const blob = await resp.blob();
-    const blobReader = new zip.BlobReader(blob);
-    const zipReader = new zip.ZipReader(blobReader);
+    const blobReader = new Zip.BlobReader(blob);
+    const zipReader = new Zip.ZipReader(blobReader);
     bundleEntries = await zipReader.getEntries();
     return bundleEntries;
 }
 
 
 async function getContent(url) {
+    const Zip = await getZip();
     const entries = await loadBundledResources();
     let path;
     if (entries) {
@@ -116,13 +123,13 @@ async function getContent(url) {
         path = decodeURIComponent(path);
         const entry = entries.find(e => e.filename === path);
         if (entry) {
-            const blob = await entry.getData(new zip.BlobWriter());
+            const blob = await entry.getData(new Zip.BlobWriter());
             return new Response(blob, {
                 headers: { "Content-Type": guessMime(path) }
             });
         }
     } else {
-        console.log((path||url), "not found in bundle", "bundleEntries =", entries);
+        console.log((path || url), "not found in bundle", "bundleEntries =", entries);
     }
 
     return fetch(url);
@@ -504,7 +511,7 @@ async function startPreload(configUrl) {
     for (const request of requests) {
         const url = request.url;
         // Skip system entries
-        if (!url.trim() || url.endsWith(BUNDLE_KEY)||url.endsWith(HASHES_STORE)) continue;
+        if (!url.trim() || url.endsWith(BUNDLE_KEY) || url.endsWith(HASHES_STORE)) continue;
         // If not in index, delete from cache
         let relPath = url.replace(self.location.origin, "");
         if (relPath.startsWith("/")) relPath = relPath.substring(1);

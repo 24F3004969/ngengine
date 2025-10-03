@@ -92,14 +92,15 @@ async function loadConfig(){
 
 async function start(splashEl){
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', {
-            type: 'module'
-        }).then(reg => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
             if (!navigator.serviceWorker.controller) {
                 window.location.reload();
             } else {
                 navigator.serviceWorker.controller.postMessage({ type: "start-preload", config: CONFIG_PATH });
             }
+        }).catch(e => {
+            console.error("Service worker registration failed", e);
+            alert("Service worker registration failed");
         });
         navigator.serviceWorker.addEventListener("message", (event) => {
             if (
