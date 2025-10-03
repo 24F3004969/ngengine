@@ -106,7 +106,6 @@ public class NGEApplication {
             }
 
             GuiGlobals.initialize(this);
-            NGEStyle.installAndUse();
             stateManager.attach(new DevMode());
 
             getStateManager().attach(cmng);

@@ -57,6 +57,7 @@ import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.InputHandlerFragment;
 import org.ngengine.components.fragments.LogicFragment;
+import org.ngengine.gui.NGEStyle;
 import org.ngengine.gui.win.NToast.ToastType;
 import org.ngengine.gui.win.std.NErrorWindow;
 import org.ngengine.runner.MainThreadRunner;
@@ -309,6 +310,8 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
     @Override
     public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider,
             boolean firstTime, Object slot) {
+        NGEStyle.installAndUse();
+
         this.mng = mng;
         int width = getWidth();
         int height = getHeight();
@@ -360,6 +363,7 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
         if (width != cam.getWidth() || height != cam.getHeight()) {
             width = cam.getWidth();
             height = cam.getHeight();
+            NGEStyle.installAndUse();
             for (NWindow<?> window : windowsStack) {
                 window.invalidate();
             }
