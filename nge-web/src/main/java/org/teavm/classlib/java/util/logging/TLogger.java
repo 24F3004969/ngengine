@@ -295,7 +295,7 @@ public class TLogger {
     }
 
     public boolean isLoggable(@SuppressWarnings("unused") TLevel level) {
-        return level.intValue() >= TLevel.FINE.intValue();
+        return level.intValue() >= TLevel.INFO.intValue();
     }
 
     public String getName() {
