@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSObject;
-import org.teavm.jso.browser.Window;
  
 
 public class WebContext implements JmeContext, Runnable {
@@ -378,6 +377,7 @@ public class WebContext implements JmeContext, Runnable {
         doInit();  
 
         Object lock = new Object();
+        AtomicBoolean slept = new AtomicBoolean(false);
         while(true){
             if(!loop())return;
             long timeNow = timer.getTime();
@@ -388,10 +388,12 @@ public class WebContext implements JmeContext, Runnable {
                 pingDelta = 0;
             }
 
+            slept.set(false);
             if(settings.isVSync()){
                 WebBinds.waitNextFrame(n->{
                     new Thread(()->{
                         synchronized(lock){
+                            slept.set(true);
                             lock.notifyAll();
                         }
                     }).start();
@@ -399,16 +401,18 @@ public class WebContext implements JmeContext, Runnable {
             } else {
                 int fps = settings.getFrameRate();
                 long gapTo = timer.getResolution() / fps + timeThen;
-                gapTo = timer.getResolution() / fps + timeThen;
                 long sleepTime = gapTo - timeNow - timeLate;
                 if(sleepTime>0){
                     WebBinds.runWithDelay(m->{
                         new Thread(()->{
                             synchronized(lock){
+                                slept.set(true);
                                 lock.notifyAll();
                             }
                         }).start();
-                    }, (int)sleepTime);
+                    }, (int)(sleepTime/1_000_000l));
+                } else {
+                    slept.set(true);
                 }
                 if (gapTo < timeNow) {
                     timeLate = timeNow - gapTo;
@@ -417,14 +421,15 @@ public class WebContext implements JmeContext, Runnable {
                 }
             }
 
+            if(!slept.get()){
+                synchronized(lock){   
+                    try{
+                        lock.wait(100);
+                    }catch(InterruptedException ex){
+                    }
+                }   
+            }    
             timeThen = timeNow;
-
-            synchronized(lock){   
-                try{
-                    lock.wait(100);
-                }catch(InterruptedException ex){
-                }
-            }   
         }             
     }
 
