@@ -1,0 +1,68 @@
+{
+    "bundle": null,
+    "bundleHash": null,
+    "AppId": "npub146wutmuxfmnlx9fcty0lkns2rpwhnl57kpes26mmt4hygalsakrsdllryz",
+    "Display": 0,
+    "CenterWindow": true,
+    "Width": 1280,
+    "Height": 720,
+    "BitsPerPixel": 24,
+    "DepthBits": 24,
+    "StencilBits": 8,
+    "Samples": 2,
+    "Fullscreen": false,
+    "Title": "Nostr Game Engine Application",
+    "DisableJoysticks": false,
+    "UseInput": true,
+    "VSync": true,
+    "Framerate": -1,
+    "GammaCorrection": true,
+    "Resizable": true,
+    "X11PlatformPreferred": false,
+    "TouchEmulateMouse": true,
+    "ScreenOrientation": "landscape",
+    "relays":{
+        "blossom":{
+            "default": [
+                "https://blossom.primal.net",
+                "https://blossom.band/"    
+            ]
+        },
+        "nostr":{
+            "default":[
+                "wss://relay.ngengine.org",
+                "wss://relay2.ngengine.org",
+                "wss://nostr.rblb.it",
+                "wss://relay.damus.io",
+                "wss://relay.primal.net",
+                "wss://relay.nostr.band",
+                "wss://relay.snort.social",
+                "wss://nos.lol"
+            ],
+            "nip46": [
+                "wss://relay.nsec.app",
+                "wss://relay.ngengine.org",
+                "wss://relay2.ngengine.org"
+            ]
+        }
+    },
+    "requireRestart":[
+        "AppId",
+        "Display",
+        "Width",
+        "Height",
+        "BitsPerPixel",
+        "DepthBits",
+        "StencilBits",
+        "Samples",
+        "Fullscreen",
+        "Title",
+        "DisableJoysticks",
+        "UseInput",
+        "VSync",
+        "Framerate",
+        "GammaCorrection",
+        "Resizable",
+        "X11PlatformPreferred"
+    ]
+}

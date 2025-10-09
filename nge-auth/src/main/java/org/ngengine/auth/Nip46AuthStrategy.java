@@ -38,9 +38,9 @@ import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 
-import org.ngengine.config.Relays;
 import org.ngengine.export.Nip46MetadataSavableWrapper;
 import org.ngengine.export.NostrKeyPairSavableWrapper;
 import org.ngengine.nostr4j.keypair.NostrKeyPair;
@@ -48,7 +48,7 @@ import org.ngengine.nostr4j.keypair.NostrPrivateKey;
 import org.ngengine.nostr4j.nip46.Nip46AppMetadata;
 
 public class Nip46AuthStrategy implements Savable {
-    protected List<String> relays = Relays.nostr.get("nip46");
+    protected Collection<String> relays;
     protected Nip46AppMetadata metadata = new Nip46AppMetadata().setName("ngengine.org - Unnamed App");
     protected NostrKeyPair appKeyPair;
     protected boolean allowNostrConnect = true;
@@ -56,8 +56,17 @@ public class Nip46AuthStrategy implements Savable {
     protected Duration timeout = Duration.ofMinutes(60);
     protected Duration challengeTimeout = Duration.ofMinutes(20);
 
-    public Nip46AuthStrategy(NostrKeyPair appKeyPair) {
+    public Nip46AuthStrategy(Collection<String> relays, NostrKeyPair appKeyPair) {
         this.appKeyPair = appKeyPair;
+        this.relays = relays;
+    }
+
+    public Nip46AuthStrategy(Collection<String> relays) {
+        this.appKeyPair = new NostrKeyPair(NostrPrivateKey.generate());
+        this.relays = relays;
+    }
+
+    protected Nip46AuthStrategy() {
     }
 
     public Nip46AuthStrategy setTimeout(Duration timeout) {
@@ -78,9 +87,7 @@ public class Nip46AuthStrategy implements Savable {
         return timeout;
     }
 
-    public Nip46AuthStrategy() {
-        this.appKeyPair = new NostrKeyPair(NostrPrivateKey.generate());
-    }
+ 
 
     public Nip46AuthStrategy withBunkerFlow() {
         this.allowBunker = true;
@@ -110,10 +117,7 @@ public class Nip46AuthStrategy implements Savable {
         return allowBunker;
     }
 
-    public Nip46AuthStrategy setRelays(List<String> relays) {
-        this.relays = relays;
-        return this;
-    }
+ 
 
     public Nip46AuthStrategy setMetadata(Nip46AppMetadata metadata) {
         this.metadata = metadata;
@@ -124,7 +128,7 @@ public class Nip46AuthStrategy implements Savable {
         return metadata;
     }
 
-    public List<String> getRelays() {
+    public Collection<String> getRelays() {
         return relays;
     }
 
@@ -137,7 +141,7 @@ public class Nip46AuthStrategy implements Savable {
         OutputCapsule capsule = ex.getCapsule(this);
 
         String relaysStr[] = new String[relays.size()];
-        for (int i = 0; i < relays.size(); i++) relaysStr[i] = relays.get(i);
+        relays.toArray(relaysStr);
 
         capsule.write(relaysStr, "relays", new String[0]);
 

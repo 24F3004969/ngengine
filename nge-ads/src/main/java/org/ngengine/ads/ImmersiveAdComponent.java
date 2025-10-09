@@ -36,6 +36,7 @@ import com.jme3.renderer.RenderManager;
 import jakarta.annotation.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -87,18 +88,20 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     private AdPriceSlot defaultPriceSlot = AdPriceSlot.BTC1_000;
     private List<AdTaxonomy.Term> defaultCategories;
     private List<String> defaultLanguages;
-    private final NostrPool pool;
+    private NostrPool pool;
     private ImmersiveAdViewer viewer;
     private Function<AdBidEvent, Boolean> filter = bid -> true;
+    private final Collection<String> relays;
 
-    public ImmersiveAdComponent(List<String> relays, NostrPublicKey appKey, @Nullable NostrPrivateKey userAdKey) {
+    public ImmersiveAdComponent(
+        @Nullable Collection<String> relays, 
+        NostrPublicKey appKey, 
+        @Nullable NostrPrivateKey userAdKey
+    ) {
         this.appKey = appKey;
-        this.userAdKey = userAdKey;
-        this.pool = new NostrPool();
-        for (String relay : relays) {
-            pool.connectRelay(new NostrRelay(relay));
-        }
+        this.userAdKey = userAdKey;       
         this.taxonomy = new AdTaxonomy();
+        this.relays = relays;
     }
 
     public void setFilter(Function<AdBidEvent, Boolean> filter) {
@@ -310,11 +313,23 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     @Override
     public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStore, boolean firstTime, Object arg) {
         this.mainRunner = runner;
+        this.pool = new NostrPool();
+        
+        Collection<String> relays = this.relays;
+        if(relays==null){
+            relays = mng.getSettings().getNostrRelays().get("ads");
+        }
+        for (String relay : relays) {
+            pool.connectRelay(new NostrRelay(relay));
+        }
+      
+
         DataStore store = dataStore.getDataStore("nostrads");
 
         if (viewer == null) {
-            viewer =
-                new ImmersiveAdCameraView(mng, mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera());
+            viewer = new ImmersiveAdCameraView(mng, 
+                mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera()
+            );
         }
 
         if (userAdKey == null) {
@@ -353,6 +368,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
 
     @Override
     public void onDisable(ComponentManager mng, Runner runner, DataStoreProvider dataStore) {
+        this.pool.close();
         if (displayClient != null) {
             displayClient.close();
             displayClient = null;

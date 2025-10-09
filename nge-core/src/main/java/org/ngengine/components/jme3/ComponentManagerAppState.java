@@ -57,6 +57,7 @@ import org.ngengine.components.ComponentLoader;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.ComponentUpdater;
 import org.ngengine.components.StallingComponent;
+import org.ngengine.config.NGEAppSettings;
 import org.ngengine.runner.MainThreadRunner;
 import org.ngengine.store.DataStoreProvider;
 
@@ -102,10 +103,16 @@ public class ComponentManagerAppState extends BaseAppState implements ComponentM
 
     private DataStoreProvider dataStoreProvider;
     private Application app;
+    private final NGEAppSettings settings;
 
-    public ComponentManagerAppState(Application app) {
+    public ComponentManagerAppState(NGEAppSettings settings, Application app) {
         super();
         this.app = app;
+        this.settings = settings;
+    }
+
+    public NGEAppSettings getSettings(){
+        return this.settings;
     }
 
     public void addInitializer(ComponentInitializer initializer) {
@@ -152,7 +159,7 @@ public class ComponentManagerAppState extends BaseAppState implements ComponentM
 
     public DataStoreProvider getDataStoreProvider() {
         if (dataStoreProvider == null) {
-            String id = this.app.getContext().getSettings().getString("appId");
+            String id = getSettings().getAppId().asBech32();
             if (id == null || id.isEmpty()) {
                 id = this.app.getContext().getSettings().getTitle();
             }

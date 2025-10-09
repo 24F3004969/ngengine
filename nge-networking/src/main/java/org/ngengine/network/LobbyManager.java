@@ -48,7 +48,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import org.ngengine.config.Relays;
 import org.ngengine.nostr4j.NostrFilter;
 import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
@@ -63,7 +62,6 @@ import org.ngengine.platform.AsyncExecutor;
 import org.ngengine.platform.AsyncTask;
 import org.ngengine.platform.NGEPlatform;
 import org.ngengine.platform.NGEUtils;
-import org.ngengine.runner.PassthroughRunner;
 import org.ngengine.runner.Runner;
 
 import jakarta.annotation.Nullable;
@@ -86,45 +84,12 @@ public class LobbyManager implements Closeable {
 
     private static final Logger log = Logger.getLogger(LobbyManager.class.getName());
 
-
-    /**
-     * @deprecated use {@link #LobbyManager(NostrSigner, String, int, Collection, Runner)}
-     */
-    @Deprecated
-    public LobbyManager(NostrSigner signer, String gameName, int gameVersion, Collection<String> relays) {
-        this(signer, gameName, gameVersion, relays, new PassthroughRunner());
-    }
-
-    /**
-     * @deprecated use another constructor and call setTurnServer() instead
-     */
-    @Deprecated
-    public LobbyManager(NostrSigner signer, String gameName, int gameVersion, Collection<String> relays, String turnServer) {
-        this(signer, gameName, gameVersion, relays, new PassthroughRunner());
-        setTurnServer(turnServer, forceTurn);
-    }
  
-
-    /**
-     * @deprecated use {@link #LobbyManager(NostrSigner, String, String, Runner)}
-     
-     */
-    @Deprecated
-    public LobbyManager(NostrSigner signer, String gameName, int gameVersion) {
-        this(signer, gameName, gameVersion, null, new PassthroughRunner());
-    }
-
-
-     
-    public LobbyManager(NostrSigner signer, String gameName, int gameVersion, Runner dispatcher) {
-        this(signer, gameName, gameVersion, null, dispatcher);
-    }
-
     public LobbyManager(
+        Collection<String> relays,
         NostrSigner signer,
         String gameName,
         int gameVersion,
-        Collection<String> relays,
         Runner dispatcher
     ) {
         this.dispatcher = dispatcher;
@@ -134,8 +99,7 @@ public class LobbyManager implements Closeable {
         this.gameName = gameName;
         this.gameVersion = gameVersion;
 
-        if(relays==null) relays = Relays.nostr.get("lobby");
-
+ 
         this.masterServersPool = new NostrPool();
         for (String server : relays) {
             try {

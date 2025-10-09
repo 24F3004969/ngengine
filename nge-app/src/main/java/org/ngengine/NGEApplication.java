@@ -39,6 +39,8 @@ import com.jme3.system.JmeSystem;
 import com.jme3.system.Platform;
 import com.jme3.util.res.Resources;
 import com.simsilica.lemur.GuiGlobals;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -52,8 +54,7 @@ import org.ngengine.components.jme3.AppComponentLoader;
 import org.ngengine.components.jme3.AppComponentUpdater;
 import org.ngengine.components.jme3.AppViewPortComponentUpdater;
 import org.ngengine.components.jme3.ComponentManagerAppState;
-import org.ngengine.config.Relays;
-import org.ngengine.gui.NGEStyle;
+import org.ngengine.config.NGEAppSettings;
 import org.ngengine.gui.win.NWindowManagerComponent;
 import org.ngengine.nostr4j.keypair.NostrPrivateKey;
 import org.ngengine.nostr4j.keypair.NostrPublicKey;
@@ -63,9 +64,14 @@ public class NGEApplication {
     private static final Logger logger = Logger.getLogger(NGEApplication.class.getName());
 
     private final Jme3Application app;
-    private final String defaultAppId = "npub146wutmuxfmnlx9fcty0lkns2rpwhnl57kpes26mmt4hygalsakrsdllryz";
- 
     private final AppSettings settings;
+    private final NGEAppSettings ngeSettings;
+    // private final String defaultAppId = "npub146wutmuxfmnlx9fcty0lkns2rpwhnl57kpes26mmt4hygalsakrsdllryz";
+ 
+
+    public NGEAppSettings getAppSettings() {
+        return ngeSettings;
+    }
 
     public static class Jme3Application extends SimpleApplication {
 
@@ -89,7 +95,7 @@ public class NGEApplication {
 
             flyCam.setEnabled(false);
 
-            ComponentManagerAppState cmng = new ComponentManagerAppState(this);
+            ComponentManagerAppState cmng = new ComponentManagerAppState(ngeapp.getAppSettings(), this);
 
             AsyncAssetManager assetManager = AsyncAssetManager.of(this.assetManager, this);
 
@@ -120,31 +126,21 @@ public class NGEApplication {
         }
     }
 
-    NGEApplication(NostrPublicKey appId, Consumer<NGEApplication> onReady) {
-        this(appId, null, onReady);
-    }
+    NGEApplication(NGEAppSettings settings, Consumer<NGEApplication> onReady) {
+        if(settings==null){
+            settings = new NGEAppSettings();
+        }
+        this.ngeSettings= settings;
 
-    NGEApplication(NostrPublicKey appId, AppSettings settings, Consumer<NGEApplication> onReady) {
         AppSettings baseSettings = new AppSettings(true);
         baseSettings.setRenderer(AppSettings.LWJGL_OPENGL32);
-        baseSettings.setWidth(1280);
-        baseSettings.setHeight(720);
-        baseSettings.setGammaCorrection(true);
-        baseSettings.setSamples(4);
-        baseSettings.setStencilBits(8);
-        baseSettings.setDepthBits(24);
-        baseSettings.setVSync(true);
-        baseSettings.setTitle("Nostr Game Engine");
+        baseSettings.copyFrom(settings.getJmeAppSettings());
+        
 
-        if (settings != null) {
-            baseSettings.copyFrom(settings);
-        }
 
-        String sappId = appId != null ? appId.asHex() : defaultAppId;
-        baseSettings.put("appId", sappId);
 
         this.settings = baseSettings;
-        logger.info("Starting app " + sappId + " with settings " + baseSettings);
+        logger.info("Starting app " + settings.getAppId() + " with settings " + baseSettings);
 
         app =
             new Jme3Application(
@@ -207,16 +203,15 @@ public class NGEApplication {
         return enableAds(userAdsKey, null);
     }
 
-    public ImmersiveAdComponent enableAds(NostrPrivateKey userAdsKey, List<String> relays) {
-        String appId = (String) app.getContext().getSettings().get("appId");
-        NostrPublicKey appKey = appId.startsWith("npub") ? NostrPublicKey.fromBech32(appId) : NostrPublicKey.fromHex(appId);
+    public ImmersiveAdComponent enableAds(NostrPrivateKey userAdsKey, Collection<String> relays) {
+        NostrPublicKey appKey = ngeSettings.getAppId();
         ImmersiveAdComponent ads = getComponentManager().getComponent(ImmersiveAdComponent.class);
         if (ads == null) {
             getComponentManager()
                 .addAndEnableComponent(
                     ads =
                         new ImmersiveAdComponent(
-                            relays != null && !relays.isEmpty() ? relays : Relays.nostr.get("ads"),
+                            relays != null && !relays.isEmpty() ? relays : ngeSettings.getNostrRelays().get("ads"),
                             appKey,
                             userAdsKey
                         )
@@ -239,8 +234,8 @@ public class NGEApplication {
         }
     }
 
-    public static NGEAppRunner createApp(NostrPublicKey appId, AppSettings settings, Consumer<NGEApplication> onReady) {
-        NGEApplication app = new NGEApplication(appId, settings, onReady);
+    public static NGEAppRunner createApp(NGEAppSettings settings, Consumer<NGEApplication> onReady) {
+        NGEApplication app = new NGEApplication(settings, onReady);
         return new NGEAppRunner() {
             @Override
             public NGEApplication app() {
@@ -255,27 +250,10 @@ public class NGEApplication {
         };
     }
 
-    public static NGEAppRunner createApp(NostrPublicKey appId, Consumer<NGEApplication> onReady) {
-        NGEApplication app = new NGEApplication(appId, onReady);
-        return new NGEAppRunner() {
-            @Override
-            public NGEApplication app() {
-                return app;
-            }
+    
 
-            @Override
-            public NGEApplication start() {
-                app.start();
-                return app;
-            }
-        };
-    }
-
-    public static NGEAppRunner createApp(AppSettings settings, Consumer<NGEApplication> onReady) {
-        return createApp(null, settings, onReady);
-    }
-
+ 
     public static NGEAppRunner createApp(Consumer<NGEApplication> onReady) {
-        return createApp(null, null, onReady);
+        return createApp( null, onReady);
     }
 }

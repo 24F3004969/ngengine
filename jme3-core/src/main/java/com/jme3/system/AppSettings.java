@@ -433,7 +433,7 @@ public final class AppSettings extends HashMap<String, Object> {
         if (val == null) {
             return defaultValue;
         }
-        return (Integer) val;
+        return ((Number) val).intValue();
     }
 
     /**
@@ -463,7 +463,7 @@ public final class AppSettings extends HashMap<String, Object> {
         if (val == null) {
             return defaultValue;
         }
-        return (Boolean) val;
+        return Boolean.TRUE.equals(val);
     }
 
     /**
@@ -493,7 +493,7 @@ public final class AppSettings extends HashMap<String, Object> {
         if (val == null) {
             return defaultValue;
         }
-        return (String) val;
+        return val.toString();
     }
 
     /**
@@ -523,7 +523,7 @@ public final class AppSettings extends HashMap<String, Object> {
         if (val == null) {
             return defaultValue;
         }
-        return (Float) val;
+        return ((Number) val).floatValue();
     }
 
     /**

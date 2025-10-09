@@ -33,7 +33,6 @@ package org.ngengine.player;
 
 import com.jme3.network.HostedConnection;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.logging.Level;
@@ -41,7 +40,6 @@ import java.util.logging.Logger;
 import org.ngengine.AsyncAssetManager;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
-import org.ngengine.config.Relays;
 import org.ngengine.network.P2PChannel;
 import org.ngengine.network.RemotePeer;
 import org.ngengine.nostr4j.NostrPool;
@@ -53,7 +51,6 @@ import org.ngengine.store.DataStoreProvider;
 
 public class PlayerManagerComponent implements Component<Object> {
 
-    public static final List<String> DEFAULT_ID_RELAYS = Relays.nostr.get("id");
     private static final Logger log = Logger.getLogger(PlayerManagerComponent.class.getName());
     protected Collection<String> connectToRelays;
     protected NostrPool nostrPool;
@@ -95,7 +92,7 @@ public class PlayerManagerComponent implements Component<Object> {
         if (!externalPool) {
             this.nostrPool = new NostrPool();
             if (connectToRelays == null) {
-                connectToRelays = DEFAULT_ID_RELAYS;
+                connectToRelays = mng.getSettings().getNostrRelays().get("id");
             }
             for (String relay : connectToRelays) {
                 try {

@@ -33,6 +33,7 @@ package org.ngengine.components;
 
 import java.util.List;
 import org.ngengine.components.fragments.Fragment;
+import org.ngengine.config.NGEAppSettings;
 import org.ngengine.store.DataStoreProvider;
 
 /**
@@ -312,4 +313,7 @@ public interface ComponentManager {
      * @return The global object of the specified type, or null if not found
      */
     <T> T getGlobalInstance(Class<T> type);
+
+    NGEAppSettings getSettings();
 }
+
