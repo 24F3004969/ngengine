@@ -25,7 +25,7 @@ public class WebTouchInput implements TouchInput{
     private RawInputListener listener;
     private boolean initialized = false;
     private boolean simulateMouse;
-    private boolean keyboardEventsEnabled = false;
+    private boolean simulateKeyboard;
     private boolean flipX = false;
     private boolean flipY = false;
     @SuppressWarnings("rawtypes")
@@ -38,8 +38,6 @@ public class WebTouchInput implements TouchInput{
     private static class TouchStatus {
         boolean undefinedPos;
         int xPos, yPos;
-
-
     }
     private final List<TouchStatus> touchStatus = new ArrayList<>();
     private final List<MouseMotionEvent> mouseMotionEvents = new ArrayList<>();
@@ -123,12 +121,12 @@ public class WebTouchInput implements TouchInput{
 
     @Override
     public void setSimulateKeyboard(boolean simulate) {
-              keyboardEventsEnabled = simulate;
+        simulateKeyboard = simulate;
     }
 
     @Override
     public boolean isSimulateKeyboard() {
-        return keyboardEventsEnabled;
+        return simulateKeyboard;
     }
 
     @Override
