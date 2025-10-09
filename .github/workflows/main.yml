@@ -21,11 +21,11 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup Java 11
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
 
       - name: Check java version
         run: java -version
@@ -91,14 +91,7 @@ jobs:
       - name: Clone the repo
         uses: actions/checkout@v4
 
-
-      - name: Setup the java 11
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-
-      - name: Setup the java 21
+      - name: Setup the java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
