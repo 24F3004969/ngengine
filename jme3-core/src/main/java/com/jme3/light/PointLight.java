@@ -228,7 +228,7 @@ public class PointLight extends Light {
         }
         
         if (radius == Float.POSITIVE_INFINITY) {
-            // radius = Float.MAX_VALUE/4f;
+            radius = Float.MAX_VALUE/4f;
         }
         
         this.radius = radius;
