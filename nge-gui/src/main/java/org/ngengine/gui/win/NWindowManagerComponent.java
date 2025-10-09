@@ -310,11 +310,12 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
     @Override
     public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider,
             boolean firstTime, Object slot) {
-        NGEStyle.installAndUse();
 
         this.mng = mng;
         int width = getWidth();
         int height = getHeight();
+        NGEStyle.installAndUse(width,height);
+
         Node guiNode = getGuiNode();
         {
             Container toastParent = new Container(new BorderLayout());
@@ -363,7 +364,7 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
         if (width != cam.getWidth() || height != cam.getHeight()) {
             width = cam.getWidth();
             height = cam.getHeight();
-            NGEStyle.installAndUse();
+            NGEStyle.installAndUse(width,height);
             for (NWindow<?> window : windowsStack) {
                 window.invalidate();
             }

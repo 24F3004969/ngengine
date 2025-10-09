@@ -81,9 +81,13 @@ public class NGEStyle {
         DevMode.registerReloadCallback(NGEStyle.class, NGEStyle::install);
     }
 
-    public static void installAndUse() {
-        install();
+    public static void installAndUse(int width, int height) {
+        install(width, height);
         use();
+    }
+
+    public static void  installAndUse() {
+        installAndUse(-1, -1);
     }
 
     public static void use() {
@@ -91,8 +95,8 @@ public class NGEStyle {
         globals.getStyles().setDefaultStyle(NAME);
     }
 
-    static int width = 1280;
-    static int height = 720;
+    private static int width = 1280;
+    private static int height = 720;
 
     public static int vmin(float f) {
         return (int) (Math.min((double) width, (double) height) / 100. * f);
@@ -109,10 +113,13 @@ public class NGEStyle {
     public static int vh(float f) {
         return (int) ((double) height / 100. * f);
     }
-
     public static void install() {
-        NGEStyle.width = 1280;
-        NGEStyle.height = 720;
+        install(-1, -1);
+    }
+
+    public static void install(int width, int height) {
+        if(width>2)NGEStyle.width = 1280 ;
+        if(height>2)NGEStyle.height =720 ;
 
         System.out.println("Installing NGEStyle");
         GuiGlobals gui = GuiGlobals.getInstance();
