@@ -2025,7 +2025,6 @@ public final class GLRenderer implements Renderer {
     }
 
     private void bindFrameBuffer(FrameBuffer fb) {
-        boolean isSrgb;
         if (fb == null) {
             if (context.boundFBO != defaultFBO) {
                 glfbo.glBindFramebufferEXT(GLFbo.GL_FRAMEBUFFER_EXT, defaultFBO);
@@ -2033,7 +2032,6 @@ public final class GLRenderer implements Renderer {
                 context.boundFBO = defaultFBO;
                 context.boundFB = null;
             }
-            isSrgb = mainFrameBufferSrgb;
         } else {
             assert fb.getId() != -1 && fb.getId() != 0;
             if (context.boundFBO != fb.getId()) {
@@ -2044,8 +2042,11 @@ public final class GLRenderer implements Renderer {
             } else {
                 statistics.onFrameBufferUse(fb, false);
             }
-            isSrgb = fb.isSrgb();
         }
+    }
+
+    private void toggleFramebufferSrgb(FrameBuffer fb) {
+        boolean isSrgb = fb == null ? mainFrameBufferSrgb : fb.isSrgb();
 
         if(isSrgb != context.srgbWriteEnabled) {
             if (caps.contains(Caps.Srgb)) {
@@ -2060,7 +2061,6 @@ public final class GLRenderer implements Renderer {
             context.srgbWriteEnabled = isSrgb;
         }
     }
-
     public void updateFrameBuffer(FrameBuffer fb) {
         if (fb.getNumColorBuffers() == 0 && fb.getDepthBuffer() == null) {
             throw new IllegalArgumentException("The framebuffer: " + fb
@@ -2194,6 +2194,7 @@ public final class GLRenderer implements Renderer {
 
         if (context.boundFB == fb) {
             if (fb == null || !fb.isUpdateNeeded()) {
+                toggleFramebufferSrgb(fb);  
                 return;
             }
         }
@@ -2245,6 +2246,7 @@ public final class GLRenderer implements Renderer {
                 if (fb.getName() != null) glext.glObjectLabel(GL3.GL_FRAMEBUFFER, fb.getId(), fb.getName());
             }
         }
+        toggleFramebufferSrgb(fb);  
     }
 
     @Override
