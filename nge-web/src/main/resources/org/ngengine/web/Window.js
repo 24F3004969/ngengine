@@ -1,7 +1,4 @@
 import Binds from "./WebBindsHub.js";
-const IS_CAPACITOR = typeof Capacitor !== "undefined" && Capacitor.getPlatform
-
-let fullscreen = false;
 let pointerLock = false;
 
 function bind(canvas, renderTarget){
@@ -10,10 +7,7 @@ function bind(canvas, renderTarget){
         return renderTarget;
     });
 
-    Binds.addEventListener("toggleFullscreen", (v)=>{
-        if(IS_CAPACITOR)return;
-        fullscreen = v;
-    });
+ 
 
  
     Binds.addEventListener("setPageTitle", (title)=>{
@@ -33,11 +27,6 @@ function bind(canvas, renderTarget){
     });
 
     canvas.addEventListener("click", (e) => {
-        if (fullscreen) {
-            canvas.requestFullscreen();
-        } else if(document.fullscreenElement === canvas){
-            document.exitFullscreen();
-        }
         if (pointerLock) {
             canvas.requestPointerLock();
         } else if(document.pointerLockElement === canvas){
@@ -53,12 +42,33 @@ function bindListeners(canvas,renderTarget){
         const keys = [
             "type", "clientX", "clientY", "screenX", "screenY", "button", "buttons",
             "ctrlKey", "shiftKey", "altKey", "metaKey", "deltaY", "deltaMode",
-            "key", "code", "pointerId", "pointerType", "movementX", "movementY",
-            "touches", "changedTouches", "targetTouches"
+            "key", "code", "pointerId", "pointerType", "movementX", "movementY"
         ];
         for(const key of keys) {
             if (inputEvent[key] !== undefined) event[key] = inputEvent[key];
         }
+
+        const makeTouchesClonable = (tx)=>{
+            const touches = [];
+            for (let i = 0; i < tx.length; i++) {
+                const t = tx[i];
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                touches.push({
+                    identifier: t.identifier,
+                    clientX: Math.round((t.clientX - rect.left) * scaleX),
+                    clientY: Math.round(canvas.height - ((t.clientY - rect.top) * scaleY)),
+                    screenX: t.screenX,
+                    screenY: t.screenY,
+                    force: t.force,
+                });
+            }
+            return touches;
+        }
+        event.touches = inputEvent.touches ? makeTouchesClonable(inputEvent.touches) : [];
+        event.targetTouches = inputEvent.targetTouches ? makeTouchesClonable(inputEvent.targetTouches) : [];
+        event.changedTouches = inputEvent.changedTouches ? makeTouchesClonable(inputEvent.changedTouches) : [];
 
         if (event.clientX !== undefined) {
             const rect = canvas.getBoundingClientRect();    

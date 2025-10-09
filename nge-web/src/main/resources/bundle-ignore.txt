@@ -6,7 +6,7 @@ electrolize-font/
 webapp.js
 worker.js
 launcher.js
-ngeapp-config.json
+ngeapp.json
 resources.index.txt
 zip-core.js
 manifest.json

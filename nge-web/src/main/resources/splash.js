@@ -1,5 +1,6 @@
-const CONFIG_PATH = "ngeapp-config.json";
+const CONFIG_PATH = "ngeapp.json";
 
+// update the splash screen progress bar
 function updateProgress(
     splashEl,
     lastFile,
@@ -58,39 +59,32 @@ function updateProgress(
     }
 }
 
+
+// toggle the splash screen to ready state (=everything loaded)
 async function ready(splashEl){
     updateProgress(splashEl, "", null, null, null, null, "Ready", "Play");
     if('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: "stop-preload" });
-    }
-
-    console.log("Loading launcher");
-    if(!document.head.querySelector("#ngeLauncher")){
-        console.log("Loading launcher script");
-        const script = document.createElement("script");
-        script.type = "module";
-        script.id = "ngeLauncher";
-        script.src = "launcher.js";
-        document.head.appendChild(script);
-    }
+    }    
 }
 
-async function applyConfig(config){
-    if(config.bundle&&!'serviceWorker' in navigator){
-        alert("This application requires a browser with Service Worker support.");
-        throw new Error("Service workers required");
-    }
-}
-
+// load the config file
 async function loadConfig(){
     const url = CONFIG_PATH;
-    return fetch(url).then(r=> r.json()).catch(e=>{
+    const config = fetch(url).then(r=> r.json()).catch(e=>{
         console.warn("Failed to load config", e);
         return {};
     });
+    if (config.bundle && !'serviceWorker' in navigator) {
+        alert("This application requires a browser with Service Worker support.");
+        throw new Error("Service workers required");
+    }
+    return config;
 }
 
-async function start(splashEl){
+
+// start the  launcher
+async function startPreloader(splashEl){
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').then(reg => {
             if (!navigator.serviceWorker.controller) {
@@ -138,6 +132,17 @@ async function start(splashEl){
     
 }
 
+// launch the web app
+async function launchWebApp(splashEl,config){
+    splashEl.remove();
+    await import("./launcher.js").then(m=>{
+        m.default(config);
+    }).catch(e=>{
+        console.error("Failed to launch application", e);
+        alert("Failed to launch application: " + e);
+    });
+}
+
  
 async function main(){
     const splashEl = document.querySelector("#ngeSplash");
@@ -146,18 +151,17 @@ async function main(){
         ready(splashEl);
         return;
     }
+    const config = await loadConfig();
 
     const button = splashEl.querySelector("button#play");
     button.addEventListener("click", (e) => {
         ready(splashEl);
-        splashEl.remove();
+        launchWebApp(splashEl, config);
     });
 
     updateProgress(splashEl, "", null, null, null, null, "Starting...", null);
 
-    const config = await loadConfig();
-    await applyConfig(config);
-    await  start(splashEl);
+    await startPreloader(splashEl);
     
 }
 

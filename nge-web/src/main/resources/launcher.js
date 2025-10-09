@@ -7,13 +7,12 @@ import WebRTCProxy from "./org/ngengine/web/WebRTCProxy.js";
 import ClipboardProxy from "./org/ngengine/web/ClipboardProxy.js";
 
 
-const IS_CAPACITOR = typeof Capacitor !== "undefined" && Capacitor.getPlatform
-const USE_OFFSCREEN_CANVAS = !IS_CAPACITOR;
-const RUN_IN_WORKER = !IS_CAPACITOR;
+
 
 let loadingAnimationTimer = null;
 let loadingAnimation = null;
 let render = true;
+let fullscreen = false;
 
 function animLoop(){
     window.requestAnimationFrame(()=>{
@@ -57,21 +56,73 @@ function bind(canvas, renderTarget){
     });
 }
 
-async function main(){
 
-    const canvas = document.querySelector('canvas#nge');
-    const splashEl = document.querySelector("#ngeSplash");
-    const button = splashEl.querySelector("button#play");
+function showFullscreenButton(config, canvas, show){
+    if(!config.showFullScreenButton) return;
+    if(fullscreen === show) return;
+    fullscreen = show;
+    if(show){
+        const el = document.createElement("div");
+        el.setAttribute("id", "ngeFullscreenButton");
+        el.innerHTML = '<span class="ngeFullscreenIcon"></span>';  
+        document.body.appendChild(el);
+        el.addEventListener("click", (e) => {
+            if (fullscreen) {
+                canvas.requestFullscreen();
+            }  
+        });
+    }else if(!show && button){
+        const button = document.querySelector("#ngeFullscreenButton");
+        if(button){
+            button.remove();
+        }
+    }   
+}
 
+function tweakConfig(config){
+    if(!config) config = {};
+    if(typeof config.is_capacitor === "undefined"){
+        config.is_capacitor = typeof Capacitor !== "undefined" && Capacitor.getPlatform
+    };
+    if(typeof config.run_in_worker === "undefined"){
+        config.run_in_worker = !config.is_capacitor;
+    }
+    if(typeof config.use_offscreen_canvas === "undefined"){
+        config.use_offscreen_canvas = config.run_in_worker;
+    }
+    if(typeof config.canvasSelector === "undefined"){
+        config.canvasSelector = 'canvas#nge';
+    }
+    if(typeof config.showFullScreenButton === "undefined"){
+        config.showFullScreenButton = !config.is_capacitor;
+    }
+    return config;
+}
 
+export default async function launch(config){
+    config = tweakConfig(config);
+    console.log("Launch with config",config)
+
+    const canvas = document.querySelector(config.canvasSelector);
+    Binds.addEventListener("toggleFullscreen", (v) => {
+        showFullscreenButton(config, canvas,v);
+    });
 
     // make canvas always full screen
+    let resizeTimeout = null;
     function resize() {
-        canvas.style.width = window.innerWidth + 'px';
-        canvas.style.height = window.innerHeight + 'px';
-        const width = window.innerWidth * devicePixelRatio;
-        const height = window.innerHeight * devicePixelRatio;
-        Binds.fireEvent("resizeRenderTarget", width, height);
+        if(resizeTimeout){
+            clearTimeout(resizeTimeout);
+        }
+        resizeTimeout = setTimeout(()=>{
+            let r = 1;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            const width = window.innerWidth * r;
+            const height = window.innerHeight * r;
+            Binds.fireEvent("resizeRenderTarget", width, height);
+            resizeTimeout = null;
+        },100);     
     }
     window.addEventListener('resize', resize);
     canvas.addEventListener('resize', resize);
@@ -91,15 +142,14 @@ async function main(){
     });
 
     // Bind client actions
-    const renderTarget = USE_OFFSCREEN_CANVAS ? canvas.transferControlToOffscreen() : canvas;
+    const renderTarget = config.use_offscreen_canvas ? canvas.transferControlToOffscreen() : canvas;
     bind(canvas, renderTarget);
 
 
     // Start anim loop trigger
     animLoop();
 
-    // resize canvas the first time the backend 
-    // comes alive
+    // resize canvas the first time the backend comes alive
     let firstPing = true;
     Binds.addEventListener("ping", () => {
         if (!firstPing) return;
@@ -107,41 +157,29 @@ async function main(){
         firstPing = false;
     })
 
-    let loading = false;
-    button.addEventListener('click', async () => {
-        if (loading) return;
-        loading = true;
 
-        canvas.style.visibility = 'visible';
-        console.log("Starting nge...");
-        renderLoadingAnimation();
-        if (RUN_IN_WORKER) {
-            Binds.addEventListener("ready", () => {
-                console.log("NGE worker is ready");
-                Binds.fireEvent("main", []).then(() => {
-                    resize();
-                })
-            });
-            const worker = new Worker("./worker.js", { type: 'module' });
-            Binds.registerWorker(worker);
-
-        } else {
-            const { main } = await import("./webapp.js");
-            Binds.addEventListener("ready", () => {
-                main([]);
+       
+    canvas.style.visibility = 'visible';
+    console.log("Starting nge...");
+    renderLoadingAnimation();
+    if (config.run_in_worker) {
+        Binds.addEventListener("ready", () => {
+            console.log("NGE worker is ready");
+            Binds.fireEvent("main", []).then(() => {
                 resize();
-            });
-            Binds.fireEvent("ready");
-        }
+            })
+        });
+        const worker = new Worker("./worker.js", { type: 'module' });
+        Binds.registerWorker(worker);
 
-    });
-}
-
-if (document.readyState === 'complete') {
-    main();
-}else{
-    window.addEventListener('load',  () => {
-        main();
-    });
+    } else {
+        const { main } = await import("./webapp.js");
+        Binds.addEventListener("ready", () => {
+            main([]);
+            resize();
+        });
+        Binds.fireEvent("ready");
+    }
+    
 
 }

@@ -5,7 +5,7 @@
     <title>Powered by Nostr Game Engine</title>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script type="text/javascript" src="splash.js"></script>
+    <script type="text/javascript" src="splash.js" type="module"></script>
     <style>
     
         @font-face {
@@ -66,6 +66,7 @@
             width: 100%;
             height: 100%;
             z-index:2;
+            flex-wrap: wrap;
         }
 
 
@@ -187,6 +188,33 @@
                 transform: rotate(360deg);
             }
         } 
+
+        #ngeFullscreenButton {
+            width:3rem;
+            height:3rem;
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--dark-purple);
+            border: 2px solid var(--medium-purple);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0.5;
+        }
+
+        #ngeFullscreenButton .ngeFullscreenIcon {
+            width: 1.5rem;
+            height: 1.5rem;
+            background: var(--text-color);
+            mask: url('icons/outline/scan.svg') no-repeat center;
+            -webkit-mask: url('icons/outline/scan.svg') no-repeat center;
+            mask-size: contain;
+            -webkit-mask-size: contain;
+        }
     </style>
 
 </head>
