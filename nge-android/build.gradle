@@ -1,0 +1,30 @@
+
+apply plugin: 'java'
+
+ 
+sourceSets {
+    main {
+        java {
+            srcDir 'src/androidx-stubs/java'
+        }
+    }
+}
+dependencies {
+    compileOnly libs.androidx.annotation
+    compileOnly libs.androidx.lifecycle.common
+    compileOnly 'android:android'
+
+    api project(':jme3-android')
+    api project(':jme3-android-native')
+    api project(':nge-app')
+    api "org.ngengine:nge-platform-common:${ngePlatformVersion}"
+}
+compileJava {
+    // The Android-Native Project requires the jni headers to be generated, so we do that here
+    options.compilerArgs += ["-h", "${project.rootDir}/jme3-android-native/src/native/headers"]
+}
+
+
+tasks.withType(Jar).configureEach {
+    exclude('androidx/**')
+}
