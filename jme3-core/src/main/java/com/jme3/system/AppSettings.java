@@ -292,7 +292,7 @@ public final class AppSettings extends HashMap<String, Object> {
         defaults.put("UseRetinaFrameBuffer", false);
         defaults.put("WindowYPosition", 0);
         defaults.put("WindowXPosition", 0);
-        defaults.put("X11PlatformPreferred", false);
+        defaults.put("X11PlatformPreferred", true);
         //  defaults.put("Icons", null);
     }
 
