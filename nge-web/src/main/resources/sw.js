@@ -119,6 +119,8 @@ async function getContent(url) {
     let path;
     if (entries) {
         path = new URL(url, self.location).pathname;
+        const parentPath = new URL("./", self.location).pathname;
+        if (path.startsWith(parentPath)) path = path.substring(parentPath.length);
         if (path.startsWith("/")) path = path.substring(1);
         path = decodeURIComponent(path);
         const entry = entries.find(e => e.filename === path);

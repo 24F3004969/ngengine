@@ -47,13 +47,7 @@
             user-select: none;
         }
 
-        #ngeSplash h2 {
-            font-size: 2rem;
-            margin: 0;
-            padding: 0;
-            
-
-        }
+     
 
         #ngeSplash {
             display: flex;
@@ -133,11 +127,7 @@
             opacity: 0.8;
         }
 
-        #ngeSplash img {
-            max-width: min(300px, 80vw);
-            opacity: 0.7;
-        }
-
+      
         #ngeSplash i {
             text-transform: none;
         }
@@ -215,6 +205,43 @@
             mask-size: contain;
             -webkit-mask-size: contain;
         }
+
+        #ngeSplash > div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #ngeSplash img {
+            max-width: min(300px, 40vmin);
+            opacity: 0.7;
+        }
+
+        #ngeSplash h2 {            
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 0;
+            padding: 0;
+        }
+
+        #ngeSplash .lastIndexed{
+            max-width: 90%;
+            text-align: center;
+            overflow: hidden;
+        }
+
+
+        @media (orientation: landscape) and (max-height: 600px) {
+           #ngeSplash {
+                flex-direction: row;
+                flex-wrap: nowrap;
+           }
+            #ngeSplash > div {
+                width: 50%;
+            }
+        }
+
     </style>
 
 </head>
@@ -222,13 +249,17 @@
 <body>
     <canvas style="visibility:hidden" id="nge"></canvas>
     <div id="ngeSplash">
-        <img src="logo.webp" />
-        <h2>Loading</h2>
-        <progress id="progressBar" value="0" max="100"></progress>
-        <i class="files">0/0</i>
-        <i class="size">-</i>
-        <i class="lastIndexed"></i>
-        <button disabled id="play">Play</button>
+        <div>
+            <img src="logo.webp" />
+            <h2>Loading</h2>
+            <progress id="progressBar" value="0" max="100"></progress>
+            <i class="files">0/0</i>
+            <i class="size">-</i>
+            <i class="lastIndexed"></i>
+        </div>
+        <div>
+            <button disabled id="play">Play</button>
+        </div>
     </div>
 </body>
 

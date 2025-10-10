@@ -274,7 +274,7 @@ export const getBaseURLAsync = (res, rej) => {
         return;
     }
     Binds.fireEvent("getBaseURL").then( (url) => {
-        baseUrl = url;
+        baseUrl = ""+url;
         res(url);
     }).catch(e=>rej(String(e)));
 }

@@ -86,7 +86,12 @@ async function loadConfig(){
 // start the  launcher
 async function startPreloader(splashEl){
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
+        const baseURL = new URL('./', window.location.href);
+        const serviceWorkerPath = new URL('sw.js', baseURL).pathname;
+        const serviceWorkerScope = baseURL.pathname;
+        navigator.serviceWorker.register(serviceWorkerPath,{
+            scope: serviceWorkerScope
+        }).then(reg => {
             if (!navigator.serviceWorker.controller) {
                 window.location.reload();
             } else {
@@ -100,9 +105,9 @@ async function startPreloader(splashEl){
             if (
                 !event.source ||
                 !event.source instanceof ServiceWorker ||
-                event.source.scriptURL !== location.origin + '/sw.js' ||
                 event.origin !== location.origin                
-            )  return;
+            ) return;
+            
 
             if (event.data.type === "preload-progress") {
                 const canSkip = event.data.canSkip;

@@ -38,9 +38,6 @@ public class WebResourceLoader implements ResourceLoader {
             resourcePath = classPath + "/" + path;
         }
         String url = WebBindsAsync.getBaseURL();
-        if(!url.endsWith("/")){
-            url+="/";
-        }
          if(resourcePath.startsWith("/")){
             resourcePath=resourcePath.substring(1);
         }
