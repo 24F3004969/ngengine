@@ -46,10 +46,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
-
+/**
+ * @author Riccardo Balbo
+ */
 public class StbImageLoader implements AssetLoader {
    
     private static native void info(ByteBuffer in, IntBuffer wb, IntBuffer hB, IntBuffer compB, IntBuffer formatB);

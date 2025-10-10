@@ -17,6 +17,12 @@
 #include <stdint.h>
 #include <string.h>
 
+
+/**
+ * @author Riccardo Balbo
+ */
+
+ 
 static void throwRuntime(JNIEnv* env, const char* msg){
     jclass ex = (*env)->FindClass(env, "java/lang/RuntimeException");
     if (ex) (*env)->ThrowNew(env, ex, msg ? msg : "native error");

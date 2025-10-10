@@ -18,6 +18,9 @@ import com.jme3.texture.Image.Format;
 import com.jme3.texture.image.ColorSpace;
 import com.jme3.util.BufferUtils;
 
+/**
+ * @author Riccardo Balbo
+ */
 public class SVGLoader implements AssetLoader {
 
     @Override
