@@ -37,3 +37,4 @@ APP_PLATFORM := android-19
 # change this to 'debug' to see android logs
 APP_OPTIM := release
 APP_ABI := all
+APP_STL := c++_static

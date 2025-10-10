@@ -1,4 +1,5 @@
 import Binds from "./WebBindsHub.js";
+import {loadHDR} from "./Hdr.js";
 function isWorker() {
     return (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
 }
@@ -25,10 +26,15 @@ function mimeFromFilename(name) {
     }
 }
 
+async function decodeHdrImage (data, filename) { 
+    return loadHDR(data);
+}
 
-async function decodeImage (data, filename, scaleW, scaleH) { /*
-    returns { data: Uint8Array, width: number, height: number }
-*/
+async function decodeImage (data, filename, scaleW, scaleH) { 
+   
+    /*
+        returns { data: Uint8Array, width: number, height: number }
+    */
     const g = s();
     const URL_ = g.URL || g.webkitURL;
 
@@ -172,10 +178,14 @@ function bind(){
     Binds.addEventListener("decodeImage", (data, filename, targetWidth, targetHeight) => {
         return decodeImage(data, filename, targetWidth, targetHeight);
     });
+    Binds.addEventListener("decodeHdrImage", (data, filename) => {
+        return decodeHdrImage(data, filename);
+    });
 }
 
 
 export default {
+    decodeHdrImage,
     decodeImage,
     bind
 }

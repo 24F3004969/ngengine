@@ -92,7 +92,7 @@ public class StbImageLoader implements AssetLoader {
 
             ByteBuffer jmeImageBuffer;
             Format format;
-            boolean is16Bit = STBImage.stbi_is_16_bit_from_memory(imageBuffer);
+            boolean is16Bit = STBImage.stbi_is_16_bit_from_memory(imageBuffer) || STBImage.stbi_is_hdr_from_memory(imageBuffer);
             if(is16Bit){
                 switch (compB.get(0)) {
                     case 1:
@@ -112,16 +112,19 @@ public class StbImageLoader implements AssetLoader {
                 }
 
                 FloatBuffer bbf = STBImage.stbi_loadf_from_memory(imageBuffer, wB, hB, compB, 0);
-                if (bbf == null) {
-                    throw new RuntimeException("Failed to load 16-bit image: " + STBImage.stbi_failure_reason());
-                }
+                try{
+                    if (bbf == null) {
+                        throw new RuntimeException("Failed to load 16-bit image: " + STBImage.stbi_failure_reason());
+                    }
 
-                jmeImageBuffer = BufferUtils.createByteBuffer(width * height * comp * 2);
-                for (int i = 0; i < bbf.capacity(); i++) {
-                    jmeImageBuffer.putShort(FastMath.convertFloatToHalf(bbf.get(i)));
+                    jmeImageBuffer = BufferUtils.createByteBuffer(width * height * comp * 2);
+                    for (int i = 0; i < bbf.capacity(); i++) {
+                        jmeImageBuffer.putShort(FastMath.convertFloatToHalf(bbf.get(i)));
+                    }
+                    jmeImageBuffer.flip();
+                } finally {
+                    STBImage.stbi_image_free(bbf);
                 }
-                jmeImageBuffer.flip();
-                STBImage.stbi_image_free(bbf);
             }else{
                 switch (compB.get(0)) {
                     case 1:
@@ -141,16 +144,19 @@ public class StbImageLoader implements AssetLoader {
                 }
 
                 ByteBuffer bbf = STBImage.stbi_load_from_memory(imageBuffer, wB, hB, compB, 0);
-                if (bbf == null) {
-                    throw new RuntimeException("Failed to load image: " + STBImage.stbi_failure_reason());
-                }
+                try{
+                    if (bbf == null) {
+                        throw new RuntimeException("Failed to load image: " + STBImage.stbi_failure_reason());
+                    }
 
-                jmeImageBuffer = BufferUtils.createByteBuffer(width * height * comp);
-                for (int i = 0; i < bbf.capacity(); i++) {
-                    jmeImageBuffer.put(bbf.get(i));
+                    jmeImageBuffer = BufferUtils.createByteBuffer(width * height * comp);
+                    for (int i = 0; i < bbf.capacity(); i++) {
+                        jmeImageBuffer.put(bbf.get(i));
+                    }
+                    jmeImageBuffer.flip();
+                } finally {
+                    STBImage.stbi_image_free(bbf);           
                 }
-                jmeImageBuffer.flip();
-                STBImage.stbi_image_free(bbf);           
 
             }
             Image image = new Image(format, wB.get(0), hB.get(0), jmeImageBuffer,format.isFloatingPont()? ColorSpace.Linear : ColorSpace.sRGB);

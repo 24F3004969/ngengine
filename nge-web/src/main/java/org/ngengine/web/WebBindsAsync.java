@@ -18,6 +18,17 @@ public class WebBindsAsync {
         });
     }
 
+    @Async
+    public static native WebHdrDecodedImage decodeHdrImage(byte[] data, String filename);
+
+    private static void decodeHdrImage( byte[] data, String filename, AsyncCallback<WebHdrDecodedImage> callback) {
+        WebBinds.decodeHdrImageAsync(data, filename,  (res) -> {
+            callback.complete(res);
+        }, (rej) -> {
+            callback.error(new Exception(rej));
+        });
+    }
+
 
     @Async
     public static native String loadScript(String script);

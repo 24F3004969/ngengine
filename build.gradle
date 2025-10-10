@@ -1,5 +1,6 @@
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import org.gradle.util.VersionNumber
 
 
 buildscript {
@@ -208,13 +209,35 @@ task configureAndroidNDK {
     }
 
     // ndkPath is defined in the root project gradle.properties file
-    String ndkBuildPath = ndkPath + File.separator + ndkBuildFile
+    String ndkBuildPath = null;
+
     //Use the environment variable for the NDK location if defined
     if (System.env.ANDROID_NDK != null) {
         ndkBuildPath = System.env.ANDROID_NDK + File.separator + ndkBuildFile
+    } else if (System.env.ANDROID_SDK != null) {
+        ndkBuildPath = System.env.ANDROID_SDK + File.separator + "ndk" + File.separator + ndkBuildFile
+    } else if (System.env.ANDROID_HOME != null) {
+        def ndkBase = new File(System.env.ANDROID_HOME + File.separator + "Sdk" + File.separator + "ndk");
+        if (ndkBase.exists()) {
+            def ndkDirs = ndkBase.listFiles()?.findAll { it.isDirectory() } ?: []
+            if (!ndkDirs.isEmpty()) {
+                def latest = ndkDirs
+                    .collect { [dir: it, ver: VersionNumber.parse(it.name)] }
+                    .max { it.ver }?.dir
+                if (latest) {
+                    ndkBuildPath = new File(latest, ndkBuildFile).absolutePath
+                }
+            }
+        }
     }
 
+    if (ndkBuildPath == null){
+        ndkBuildPath = ndkPath + File.separator + ndkBuildFile
+    }
+
+    println "Using NDK path: " + ndkBuildPath
     if (new File(ndkBuildPath).exists()) {
+        println "Found NDK build tool: " + ndkBuildPath
         ndkExists = true
         ndkCommandPath = ndkBuildPath
     }

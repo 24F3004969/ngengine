@@ -49,6 +49,17 @@ export const decodeImageAsync = (data /*byte[]*/, filename /*str*/ , targetWidth
    }
 }
 
+export const decodeHdrImageAsync = (data /*byte[]*/, filename /*str*/ , res, rej) => { /* {
+        data: Float32Array,
+        width: number,
+        height: number
+    
+    }*/
+   ImageLoader.decodeHdrImage(_u(data), filename ).then(res).catch(e=>rej( String(e)));  
+ 
+}
+
+
 export const helloBinds = () => {
     console.log("nge.js is loaded!");
     const g = s();

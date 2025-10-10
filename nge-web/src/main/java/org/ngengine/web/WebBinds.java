@@ -30,7 +30,11 @@ public class WebBinds implements JSObject {
 
   
 
+    @JSTopLevel
+    @JSModule("./org/ngengine/web/WebBinds.js")
+    public static native void decodeHdrImageAsync( @JSByRef byte[] data, String filename, JSConsumer<WebHdrDecodedImage> resolve, JSConsumer<String> reject);
 
+  
     @JSTopLevel
     @JSModule("./org/ngengine/web/WebBinds.js")
     public static native void loadScriptAsync(String script, JSConsumer<String> resolve, JSConsumer<String> reject);

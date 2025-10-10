@@ -9,6 +9,15 @@ A game engine and framework for building games and applications integrated with 
 - Release: [mavenCentral](https://central.sonatype.com/search?namespace=org.ngengine)
 - Documentation: https://ngengine.org/docs 
 
+
+## Build-time requirements
+
+- JDK 21+
+- Android SDK 33+
+- Android NDK 29+
+- Gradle 8.13+
+- cmake 3.16+
+
 ## Runtime Requirements
 
 ### Linux, Windows, macOS (portable jar)

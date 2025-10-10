@@ -125,7 +125,6 @@ public class WebSystem extends JmeSystemDelegate {
         assetManager.registerLoader(com.jme3.material.plugins.ShaderNodeDefinitionLoader.class, "j3sn");
         assetManager.registerLoader(com.jme3.font.plugins.BitmapFontLoader.class, "fnt");
         assetManager.registerLoader(com.jme3.texture.plugins.DDSLoader.class, "dds");
-        assetManager.registerLoader(com.jme3.texture.plugins.HDRLoader.class, "hdr");
         assetManager.registerLoader(com.jme3.texture.plugins.TGALoader.class, "tga");
         assetManager.registerLoader(com.jme3.export.binary.BinaryLoader.class, "j3o", "j3f");
         assetManager.registerLoader(com.jme3.scene.plugins.OBJLoader.class, "obj");
@@ -134,7 +133,7 @@ public class WebSystem extends JmeSystemDelegate {
         assetManager.registerLoader(com.jme3.scene.plugins.gltf.GltfLoader.class, "gltf");
         assetManager.registerLoader(com.jme3.scene.plugins.gltf.BinLoader.class, "bin");
         assetManager.registerLoader(com.jme3.scene.plugins.gltf.GlbLoader.class, "glb");
-        assetManager.registerLoader(org.ngengine.web.filesystem.CanvasImageLoader.class, "png", "jpg", "jpeg", "webp", "svg");
+        assetManager.registerLoader(org.ngengine.web.filesystem.WebImageLoader.class, "png", "jpg", "jpeg", "webp", "svg", "hdr");
         assetManager.registerLoader(com.jme3.audio.plugins.OGGLoader.class, "ogg");
     }
 

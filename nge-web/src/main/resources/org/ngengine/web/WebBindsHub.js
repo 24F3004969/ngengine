@@ -23,6 +23,13 @@ function makeTransferableList(args) {
         for (const a of args) {
             if (a instanceof ArrayBuffer) {
                 transferables.push(a);
+            } else if (typeof SharedArrayBuffer !== 'undefined' && a instanceof SharedArrayBuffer) {
+                transferables.push(a);
+            } else if (ArrayBuffer.isView(a) && a.buffer) { // Float32Array, Uint8Array, DataView, etc.
+                const buf = a.buffer;
+                if (buf instanceof ArrayBuffer || (typeof SharedArrayBuffer !== 'undefined' && buf instanceof SharedArrayBuffer)) {
+                    transferables.push(buf);
+                }
             } else if (a instanceof MessagePort) {
                 transferables.push(a);
             } else if (typeof OffscreenCanvas !== 'undefined' && a instanceof OffscreenCanvas) {
