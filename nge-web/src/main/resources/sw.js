@@ -2,6 +2,10 @@ importScripts("./zip-core.js");
 const USE_CACHE = true;
 const INDEX_URL = "./resources.index.txt";
 const PRELOAD_IGNORE_URL = "./preload-ignore.txt";
+const NON_CACHEABLE = [
+    INDEX_URL,
+    PRELOAD_IGNORE_URL
+];
 const CACHE_BASENAME = "ngeapp";
 const CACHE_VERSION = "v1";
 const PREFETCH_WORKERS = 5;
@@ -291,6 +295,12 @@ async function countPreloadEntries() {
 
 async function getFromCache(url) {
     if (!USE_CACHE) return null;
+
+    // skip non-cacheable
+    for (const skip of NON_CACHEABLE) {
+        if (url.endsWith(skip)) return null;
+    }
+
     // check if cached
     const hashes = await getStoredHashes();
     const cachedHash = hashes[url];
@@ -339,6 +349,12 @@ async function createHash(response) {
 }
 
 async function fetchAndCache(request, awaitCaching = false) {
+    for(const skip of NON_CACHEABLE) {
+        if(request.url.endsWith(skip)) {
+            return await fetch(request, {cache: "no-cache" });
+        }
+    }
+
     const resp = await getContent(request.url);
     if (resp.ok) {
         const cachable = resp.clone();
@@ -363,7 +379,8 @@ async function fetchAndCache(request, awaitCaching = false) {
 // otherwise fetch and cache
 self.addEventListener("fetch", (event) => {
     event.respondWith((async () => {
-
+       
+       
         const cached = await getFromCache(event.request.url);
         if (cached) return cached;
 

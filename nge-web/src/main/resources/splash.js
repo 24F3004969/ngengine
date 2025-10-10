@@ -19,21 +19,28 @@ function updateProgress(
     const infoSizes = splashEl.querySelector(".size");
 
     if(titleEl) titleEl.textContent = status;
-    if(infoLast) infoLast.textContent = lastFile;
+    if(infoLast) {
+        const maxLen = 32;
+        let lastFileShort = lastFile;
+        if(lastFile.length > maxLen) {
+            const extIndex = lastFile.lastIndexOf('.');
+            const ext = extIndex >=0 ? lastFile.substring(extIndex) : '';
+            const name = extIndex >=0 ? lastFile.substring(0, extIndex) : lastFile;
+            if(name.length > maxLen - ext.length - 3) {
+                lastFileShort = name.substring(0, (maxLen - ext.length - 3)/2) + "..." + name.substring(name.length - (maxLen - ext.length - 3)/2) + ext;
+            }
+        }
+        infoLast.textContent = lastFileShort;
+    }
 
     if(done !=null && total != null) {
         if(infoFiles){
             const v = done + "/" + total;
             infoFiles.textContent = v;
         }
-        if(progressBar) {
-            const progress = total > 0 ? (done / total) : 1;
-            progressBar.value = progress * 100;
-            progressBar.max = 100;
-        }
     } else{
         if(infoFiles){
-            infoFiles.textContent = "";
+            infoFiles.textContent = " ";
         }
         if(progressBar) {
             progressBar.value = 100;
@@ -47,7 +54,17 @@ function updateProgress(
         const v = doneGB + "/" + totalGB;
         infoSizes.textContent = v;
     } else if(infoSizes){
-        infoSizes.textContent = "";
+        infoSizes.textContent = " ";
+    }
+    if (progressBar) {
+        let progress = 1.0;
+        if (doneBytes != null && totalBytes != null && totalBytes > 0) {
+            progress = doneBytes / totalBytes;
+        } else if (done != null && total != null && total > 0) {
+            progress = done / total;
+        } 
+        progressBar.value = progress * 100;
+        progressBar.max = 100;
     }
                 
     if(button && buttonLabel) { 
