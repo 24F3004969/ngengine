@@ -62,7 +62,12 @@ import com.jme3.util.PrimitiveAllocator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.egl.EGLContext;
+import javax.microedition.khronos.egl.EGLDisplay;
+import javax.microedition.khronos.egl.EGLSurface;
 import javax.microedition.khronos.opengles.GL10;
 
 public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTextDialogInput {
@@ -134,21 +139,16 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
         androidInput.setView(view);
         androidInput.loadSettings(settings);
 
-        // setEGLContextClientVersion must be set before calling setRenderer
-        // this means it cannot be set in AndroidConfigChooser (too late)
-        // use proper openGL ES version
-        view.setEGLContextClientVersion(info.reqGlEsVersion >> 16);
+        // Request GLES3 if available (API 18+), otherwise GLES2.
+        // Must be called before setRenderer.
+        int glesMajor = (Build.VERSION.SDK_INT >= 18) ? 3 : 2;
+        view.setEGLContextClientVersion(glesMajor);
 
         view.setFocusableInTouchMode(true);
         view.setFocusable(true);
 
-        // setFormat must be set before AndroidConfigChooser is called by the surfaceview.
-        // if setFormat is called after ConfigChooser is called, then execution
-        // stops at the setFormat call without a crash.
-        // We look at the user setting for alpha bits and set the surfaceview
-        // PixelFormat to either Opaque, Transparent, or Translucent.
-        // ConfigChooser will do its best to honor the alpha requested by the user
-        // For best rendering performance, use Opaque (alpha bits = 0).
+        // Surface pixel format based on requested alpha bits.
+        // For best performance and sRGB support, prefer OPAQUE (alphaBits = 0).
         int curAlphaBits = settings.getAlphaBits();
         logger.log(Level.FINE, "curAlphaBits: {0}", curAlphaBits);
         if (curAlphaBits >= 8) {
@@ -165,12 +165,92 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
 
         AndroidConfigChooser configChooser = new AndroidConfigChooser(settings);
         view.setEGLConfigChooser(configChooser);
+
+        // High-priority context when available (EGL_IMG_context_priority)
+        view.setEGLContextFactory(new GLSurfaceView.EGLContextFactory() {
+            // Spec-defined constants
+            private static final int EGL_CONTEXT_CLIENT_VERSION     = 0x3098;
+            private static final int EGL_CONTEXT_PRIORITY_LEVEL_IMG = 0x3100;
+            private static final int EGL_CONTEXT_PRIORITY_HIGH_IMG  = 0x3101;
+
+            @Override
+            public EGLContext createContext(EGL10 egl,
+                                            EGLDisplay display,
+                                            EGLConfig config) {
+
+                String ext = egl.eglQueryString(display, EGL10.EGL_EXTENSIONS);
+                boolean hasPrio = ext != null && ext.contains("EGL_IMG_context_priority");
+
+                int[] attribs = hasPrio
+                        ? new int[] {
+                            EGL_CONTEXT_CLIENT_VERSION, glesMajor,
+                            EGL_CONTEXT_PRIORITY_LEVEL_IMG, EGL_CONTEXT_PRIORITY_HIGH_IMG,
+                            EGL10.EGL_NONE
+                        }
+                        : new int[] {
+                            EGL_CONTEXT_CLIENT_VERSION, glesMajor,
+                            EGL10.EGL_NONE
+                        };
+
+                EGLContext ctx = egl.eglCreateContext(display, config, EGL10.EGL_NO_CONTEXT, attribs);
+                if (ctx == null || ctx == EGL10.EGL_NO_CONTEXT) {
+                    // Fallback without priority if that failed
+                    attribs = new int[] { EGL_CONTEXT_CLIENT_VERSION, glesMajor, EGL10.EGL_NONE };
+                    ctx = egl.eglCreateContext(display, config, EGL10.EGL_NO_CONTEXT, attribs);
+                }
+                return ctx;
+            }
+
+            @Override
+            public void destroyContext(EGL10 egl,
+                                       javax.microedition.khronos.egl.EGLDisplay display,
+                                       EGLContext context) {
+                egl.eglDestroyContext(display, context);
+            }
+        });
+
+        // sRGB window surface (gamma-correct output) when requested
+        final boolean isSrgb = settings.isGammaCorrection();
+        view.setEGLWindowSurfaceFactory(new GLSurfaceView.EGLWindowSurfaceFactory() {
+            private static final int EGL_GL_COLORSPACE_KHR      = 0x309D;
+            private static final int EGL_GL_COLORSPACE_SRGB_KHR = 0x3089;
+
+            @Override
+            public EGLSurface createWindowSurface(
+                    EGL10 egl, EGLDisplay display,
+                    EGLConfig config, Object nativeWindow) {
+
+                String ext = egl.eglQueryString(display, EGL10.EGL_EXTENSIONS);
+                boolean hasColorspace = ext != null && ext.contains("EGL_KHR_gl_colorspace");
+
+                int[] attribs = (isSrgb && hasColorspace)
+                        ? new int[]{EGL_GL_COLORSPACE_KHR, EGL_GL_COLORSPACE_SRGB_KHR, EGL10.EGL_NONE}
+                        : null;
+
+                EGLSurface surface =
+                        egl.eglCreateWindowSurface(display, config, nativeWindow, attribs);
+
+                if (surface == null || surface == EGL10.EGL_NO_SURFACE) {
+                    // Fallback without colorspace attribs
+                    surface = egl.eglCreateWindowSurface(display, config, nativeWindow, null);
+                }
+
+                // Note: EGL10 has no eglSwapInterval; Android compositor enforces vsync.
+
+                return surface;
+            }
+
+            @Override
+            public void destroySurface(EGL10 egl,
+                    EGLDisplay display,
+                    EGLSurface surface) {
+                egl.eglDestroySurface(display, surface);
+            }
+        });
+
         view.setRenderer(this);
 
         // Attempt to preserve the EGL Context on app pause/resume.
-        // Not destroying and recreating the EGL context
-        // will help with resume time by reusing the existing context to avoid
-        // reloading all the OpenGL objects.
         if (Build.VERSION.SDK_INT >= 11) {
             view.setPreserveEGLContextOnPause(true);
         }
@@ -248,20 +328,14 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
 
             listener.destroy();
             // releases the view holder from the Android Input Resources
-            // releasing the view enables the context instance to be
-            // reclaimed by the GC.
-            // if not released; it leads to a weak reference leak
-            // disabling the destruction of the Context View Holder.
             androidInput.setView(null);
 
             // nullifying the references
-            // signals their memory to be reclaimed
             listener = null;
             renderer = null;
             timer = null;
             androidInput = null;
 
-            // do android specific cleaning here
             logger.fine("Display destroyed.");
 
             renderable.set(false);
@@ -397,8 +471,6 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
 
             // Enforce a FPS cap
             if (updateDelta < minFrameDuration) {
-                //                    logger.log(Level.INFO, "lastUpdateTime: {0}, updateDelta: {1}, minTimePerFrame: {2}",
-                //                            new Object[]{lastUpdateTime, updateDelta, minTimePerFrame});
                 try {
                     Thread.sleep(minFrameDuration - updateDelta);
                 } catch (InterruptedException e) {}
