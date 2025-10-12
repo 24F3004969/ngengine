@@ -100,13 +100,15 @@ public class NGEApplication {
             AsyncAssetManager assetManager = AsyncAssetManager.of(this.assetManager, this);
 
             try {
-                String resPath = "com/jme3/awt.cfg";
-                if (JmeSystem.getPlatform().getOs() == Platform.Os.MacOS && JmeSystem.getPlatform().isGraalVM()) {
-                    // macos dislikes AWT, expecially on GraalVM
-                    logger.log(Level.WARNING, "Running on MacOS with GraalVM, using no-awt configuration");
-                    resPath = "org/ngengine/NGE-noawt.cfg";
+                if (
+                    JmeSystem.getPlatform().getOs() != Platform.Os.Web
+                    && (JmeSystem.getPlatform().getOs() != Platform.Os.MacOS || !JmeSystem.getPlatform().isGraalVM())
+                ) {
+                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/Awt.cfg"));
                 }
-                AssetConfig.loadText(assetManager, Resources.getResource(resPath));
+                if(JmeSystem.getPlatform().getOs() != Platform.Os.Web){
+                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/Legacy.cfg"));
+                }
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Failed to load NGE configuration file", e);
             }
