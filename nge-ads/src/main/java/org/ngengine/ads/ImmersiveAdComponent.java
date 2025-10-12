@@ -33,7 +33,11 @@ package org.ngengine.ads;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.renderer.RenderManager;
+import com.jme3.util.res.Resources;
+
 import jakarta.annotation.Nullable;
+
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -100,7 +104,19 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     ) {
         this.appKey = appKey;
         this.userAdKey = userAdKey;       
-        this.taxonomy = new AdTaxonomy();
+        InputStream taxonomyIs = null;
+        try{
+            taxonomyIs = Resources.getResourceAsStream("org/ngengine/nostrads/taxonomy/nostr-content-taxonomy.csv");
+        }catch(Exception e){
+            logger.warning("Could not load taxonomy resource: " + e.getMessage());
+        }
+        try{
+            this.taxonomy = new AdTaxonomy(taxonomyIs);
+        }catch(Exception e){
+            logger.warning("Could not load taxonomy: " + e.getMessage());
+            this.taxonomy = new AdTaxonomy();
+        }
+        
         this.relays = relays;
     }
 
