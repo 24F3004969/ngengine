@@ -25,9 +25,12 @@ public class SceneGraphThreadWarden {
      * If THREAD_WARDEN_ENABLED is true AND asserts are on the checks are made.
      * This parameter is here to allow asserts to run without thread warden checks (by setting this parameter to false)
      */
-    public static boolean THREAD_WARDEN_ENABLED = !Boolean.getBoolean("nothreadwarden");
+    public static boolean THREAD_WARDEN_ENABLED = Boolean.getBoolean("threadwarden");
+    public static boolean ASSERTS_ENABLED = false;
 
-    public static boolean ASSERTS_ENABLED = true;
+    static{
+        assert ASSERTS_ENABLED = true;     
+    }
 
  
 
