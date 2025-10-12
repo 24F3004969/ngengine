@@ -158,32 +158,12 @@ public class WebContext implements JmeContext, Runnable {
         timer = new NanoTimer();
         canvasTarget  = WebBindsAsync.getRenderTarget();
 
-        // WebBinds.addEventListener("resizeRenderTarget", (CanvasResizeHandler)(width, height) -> {
-        //     canvasWidth = width;
-        //     canvasHeight = height;
-        //     System.out.println("Resize render target: "+width+"x"+height);
-        // });
-
-        // WebBinds.addEventListener("resizeRenderTarget", new CanvasResizeHandler() {
-        //     @Override
-        //     public void onResize(int width, int height) {
-        //         canvasWidth = width;
-        //         canvasHeight = height;
-        //         System.out.println("Resize render target: "+width+"x"+height);
-        //     }
-        // });
-
 
         WebBinds.addResizeRenderTargetListener((width,height)->{
             canvasWidth = width;
             canvasHeight = height;
-            System.out.println("Resize render target: "+width+"x"+height);
         });
-        // WebBinds.addEventListener("swapRenderTarget", (CanvasSwapHandler)(c -> {
-        //     if (this.canvasTarget != c) {
-        //         this.canvasTarget = c;
-        //     }
-        // }));
+
 
         WebBinds.addSwapRenderTargetListener(c -> {
             if (canvasTarget != c) {
@@ -280,8 +260,6 @@ public class WebContext implements JmeContext, Runnable {
             listener.reshape(w, h);
             internalTargetW = w;
             internalTargetH = h;
-            
-            System.out.println("Reshape to "+w+"x"+h);
         }
     }
 
@@ -359,11 +337,7 @@ public class WebContext implements JmeContext, Runnable {
             throw new RuntimeException(e);
         }       
 
-        // if (!settings.isVSync()) {
-        //     sync(frameRate>0?frameRate:60);
-        // } else{
-        //     vsync();
-        // }
+       
 
       
         return true;

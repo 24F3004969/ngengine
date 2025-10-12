@@ -23,6 +23,8 @@ import org.teavm.classlib.java.lang.TThrowable;
 import org.teavm.classlib.java.util.THashMap;
 import org.teavm.classlib.java.util.TMap;
 import org.teavm.jso.JSBody;
+import org.teavm.jso.JSExceptions;
+import org.teavm.jso.JSObject;
 import org.teavm.jso.impl.JS;
 
 public class TLogger {
@@ -62,7 +64,14 @@ public class TLogger {
 
     public void log(TLogRecord record) {
         if(!isLoggable(record.getLevel())) return;
+        
         if (record.getThrown() != null) {
+            try{
+                JSObject jsExc = JSExceptions.getJSException(record.getThrown());
+                if(jsExc!=null) errorJSO(jsExc);
+            } catch (Throwable ex){
+                // ignore
+            }
             record.getThrown().printStackTrace();
         }
 
@@ -327,4 +336,11 @@ public class TLogger {
                 + "console.error(message);"
             + "}")
     private static native void error(String message);
+
+
+    @JSBody(params = "message", script = ""
+            + "if (console) {"
+                + "console.error(message);"
+            + "}")
+    private static native void errorJSO(JSObject message);
 }
