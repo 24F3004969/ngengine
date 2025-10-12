@@ -77,6 +77,7 @@ public class WebMouseInput implements MouseInput {
             if (isLocked() && !undefinedPos) { // captured pointer mode
                 dX = (int) ev.getMovementX();
                 dY = (int) ev.getMovementY();
+                dY = -dY;
                 xPos += dX;
                 yPos += dY;
             } else {
