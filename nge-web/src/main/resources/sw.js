@@ -8,15 +8,17 @@ if (globalThis.zip && typeof globalThis.zip.configure === "function") {
 const USE_CACHE = true;
 const INDEX_URL = "./resources.index.txt";
 const PRELOAD_IGNORE_URL = "./preload-ignore.txt";
-const NON_CACHEABLE = [
-    INDEX_URL,
-    PRELOAD_IGNORE_URL
-];
 const CACHE_BASENAME = "ngeapp";
 const CACHE_VERSION = "v1";
 const PREFETCH_WORKERS = 5;
 const HASHES_STORE = "__hashes__";
 const BUNDLE_KEY = "bundle.zip";
+
+const NON_CACHEABLE = [
+    INDEX_URL,
+    PRELOAD_IGNORE_URL,
+    BUNDLE_KEY
+];
 
 let CACHE = null;
 let HASHES = null;
@@ -30,11 +32,56 @@ let BYTES_PREFETCHED = 0;
 let PRELOAD_IGNORE_LIST = null;
 
 let bundledLoaded = false;
-let bundleEntries = undefined
 
+let bundleEntries = undefined;
+let bundleOpenPromise = null;
+let bundleBlob = null;
+let bundleBlobReader = null;
+let bundleZipReader = null;
+let bundleUpdatePromise = null;
+let bundleEntryMap = null;
+let COUNT_PROMISE = null;
+
+function closeBundleReaders() {
+  try { bundleZipReader && bundleZipReader.close && bundleZipReader.close(); } catch(_) {}
+  bundleZipReader = null;
+  bundleBlobReader = null;
+  bundleBlob = null;
+  bundleEntries = undefined;
+  bundleEntryMap = null;
+}
 
 async function getZip(){
    return globalThis.zip;
+}
+
+// Normalize a URL pathname to scope-relative path used by resources.index.txt
+function toScopeRelative(pathname) {
+    const base = new URL(self.registration.scope).pathname; // exact scope path
+    let p = pathname || "/";
+    if (p.startsWith(base)) p = p.slice(base.length);
+    if (p.startsWith("/")) p = p.slice(1);
+    return decodeURIComponent(p);
+}
+
+// Build normalized non-cacheable list (scope-relative)
+const NON_CACHEABLE_REL = (() => {
+    const keys = NON_CACHEABLE.concat([HASHES_STORE]);
+    const out = [];
+    for (const k of keys) {
+        try {
+            const p = new URL(k, self.location).pathname;
+            out.push(toScopeRelative(p));
+        } catch {
+            out.push(String(k).replace(/^\.\//, ""));
+        }
+    }
+    return out;
+})();
+
+function isNonCacheablePathname(pathname) {
+    const rel = toScopeRelative(pathname);
+    return NON_CACHEABLE_REL.includes(rel);
 }
 
 async function updateBundle(url, hash) {
@@ -62,7 +109,7 @@ async function updateBundle(url, hash) {
 
     if (acceptRanges && totalBytes && totalBytes > 0) {
         // Resumable ranged download streamed into Cache
-        const CHUNK = 8 * 1024 * 1024; // 8 MiB
+        const CHUNK = 2 * 1024 * 1024; // 2 MiB
         let offset = 0;
         let received = 0;
 
@@ -75,16 +122,17 @@ async function updateBundle(url, hash) {
                 const end = Math.min(offset + CHUNK, totalBytes);
                 let attempt = 0;
                 for (;;) {
+                    let reader = null;
                     try {
                         const resp = await fetch(url, {
                             headers: { Range: `bytes=${offset}-${end - 1}` },
                             cache: "no-store"
                         });
-                        if (resp.status !== 206) {
+                        if (resp.status !== 206 || !resp.body) {
                             throw new Error(`Range fetch failed: ${resp.status}`);
                         }
-                        const reader = resp.body.getReader();
-                        for (;;) {
+                        reader = resp.body.getReader();
+                        while (true) {
                             const { done, value } = await reader.read();
                             if (value && value.length) {
                                 controller.enqueue(value);
@@ -97,11 +145,11 @@ async function updateBundle(url, hash) {
                         break; // chunk done
                     } catch (e) {
                         attempt++;
+                        try { reader && reader.cancel && reader.cancel(); } catch(_) {}
                         if (attempt > 4) {
                             controller.error(e);
                             return;
                         }
-                        // backoff and retry this chunk
                         await new Promise(r => setTimeout(r, attempt * 500));
                     }
                 }
@@ -115,7 +163,7 @@ async function updateBundle(url, hash) {
 
         if (received !== totalBytes) {
             // Extra guard if server lied about size
-            await caches.delete(await (await getCache()).keys());
+            await cache.delete(BUNDLE_KEY);
             throw new Error(`Bundle size mismatch: got ${received} of ${totalBytes}`);
         }
     } else {
@@ -129,15 +177,19 @@ async function updateBundle(url, hash) {
         let received = 0;
         const stream = new ReadableStream({
             async pull(controller) {
-                const { done, value } = await reader.read();
-                if (value && value.length) {
-                    controller.enqueue(value);
-                    received += value.length;
-                    updateProgress("", 0, 1, received, totalHdr, "Downloading bundled resources...", false);
+                try {
+                    const { done, value } = await reader.read();
+                    if (value && value.length) {
+                        controller.enqueue(value);
+                        received += value.length;
+                        updateProgress("", 0, 1, received, totalHdr, "Downloading bundled resources...", false);
+                    }
+                    if (done) controller.close();
+                } catch (e) {
+                    controller.error(e);
                 }
-                if (done) controller.close();
             },
-            cancel() { try { reader.cancel(); } catch(_) {} }
+            cancel() { try { reader.releaseLock(); } catch(_) {} }
         });
 
         await cache.put(BUNDLE_KEY, new Response(stream, {
@@ -145,11 +197,12 @@ async function updateBundle(url, hash) {
         }));
 
         if (totalHdr != null && received !== totalHdr) {
+            await cache.delete(BUNDLE_KEY);
             throw new Error(`Bundle truncated: got ${received} of ${totalHdr} bytes`);
         }
     }
 
-    // Validate ZIP from cache (no big RAM spike)
+    // Validate ZIP from cache  
     const stored = await cache.match(BUNDLE_KEY);
     if (!stored) throw new Error("Bundle missing from cache after download");
     const blob = await stored.blob();
@@ -164,77 +217,98 @@ async function updateBundle(url, hash) {
         }
     } catch (e) {
         console.error("Bundle validation failed:", e);
-        // remove bad cache entry
         await cache.delete(BUNDLE_KEY);
         throw e;
     }
+    
+    closeBundleReaders();
 
     if (hash) await storeHash(BUNDLE_KEY, hash);
     bundledLoaded = true;
-    bundleEntries = undefined;
     console.log("Bundle updated");
 }
+
 async function loadBundledResources() {
-    if (!bundledLoaded) return [];
     if (bundleEntries) return bundleEntries;
+    if (bundleOpenPromise) return bundleOpenPromise;
 
-    const Zip = await getZip();
-
-    const cache = await getCache();
-    const resp = await cache.match(BUNDLE_KEY);
-    if (!resp) {
-        console.error("No bundle in cache");
-        bundleEntries = [];
-        return [];
+    // If an update is in flight, await it to avoid opening a half-written ZIP
+    if (bundleUpdatePromise) {
+        try { await bundleUpdatePromise; } catch (_) { /* ignored here; will fall back */ }
     }
 
-    const blob = await resp.blob();
+    bundleOpenPromise = (async () => {
+        const Zip = await getZip();
+        const cache = await getCache();
+        const resp = await cache.match(BUNDLE_KEY);
+        if (!resp) {
+            bundleEntries = [];
+            bundleEntryMap = Object.create(null);
+            return bundleEntries;
+        }
+        bundledLoaded = true;
+
+        bundleBlob = await resp.blob();
+        try {
+            bundleBlobReader = new Zip.BlobReader(bundleBlob);
+            bundleZipReader = new Zip.ZipReader(bundleBlobReader);
+            bundleEntries = await bundleZipReader.getEntries();
+            bundleEntryMap = Object.create(null);
+            for (const e of bundleEntries) {
+                bundleEntryMap[e.filename] = e;
+            }
+        } catch (e) {
+            console.error("Failed to open bundle:", e);
+            closeBundleReaders();
+            bundleEntries = [];
+            bundleEntryMap = Object.create(null);
+        }
+        return bundleEntries;
+    })();
+
     try {
-        const zipReader = new Zip.ZipReader(new Zip.BlobReader(blob));
-        bundleEntries = await zipReader.getEntries();  
-    } catch (e) {
-        console.error("Failed to open bundle:", e);
-        bundleEntries = [];
+        return await bundleOpenPromise;
+    } finally {
+        bundleOpenPromise = null;
     }
-    return bundleEntries;
 }
 
 async function getContent(url) {
     const Zip = await getZip();
     const entries = await loadBundledResources();
     let path;
-    if (entries) {
-        path = new URL(url, self.location).pathname;
-        const parentPath = new URL("./", self.location).pathname;
-        if (path.startsWith(parentPath)) path = path.substring(parentPath.length);
-        if (path.startsWith("/")) path = path.substring(1);
-        path = decodeURIComponent(path);
-        const entry = entries.find(e => e.filename === path);
+    if (entries && entries.length) {
+        path = toScopeRelative(new URL(url, self.location).pathname);
+
+        const entry = bundleEntryMap ? bundleEntryMap[path] : undefined;
         if (entry) {
             const blob = await entry.getData(new Zip.BlobWriter());
-            return new Response(blob, {
-                headers: { "Content-Type": guessMime(path) }
-            });      
+            return new Response(blob, { headers: { "Content-Type": guessMime(path) } });
         }
-    } else {
-        console.log((path || url), "not found in bundle", "bundleEntries =", entries);
     }
-
-    return fetch(url);
+    return fetch(url, { cache: "no-cache" });
 }
-
-
 
 function guessMime(path) {
     if (path.endsWith(".png")) return "image/png";
     if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+    if (path.endsWith(".webp")) return "image/webp";
+    if (path.endsWith(".gif")) return "image/gif";
     if (path.endsWith(".svg")) return "image/svg+xml";
-    if (path.endsWith(".js")) return "application/javascript";
+    if (path.endsWith(".js") || path.endsWith(".mjs")) return "application/javascript";
     if (path.endsWith(".css")) return "text/css";
-    if (path.endsWith(".html")) return "text/html";
+    if (path.endsWith(".html") || path.endsWith(".htm")) return "text/html";
+    if (path.endsWith(".json")) return "application/json";
+    if (path.endsWith(".wasm")) return "application/wasm";
+    if (path.endsWith(".mp3")) return "audio/mpeg";
+    if (path.endsWith(".ogg")) return "audio/ogg";
+    if (path.endsWith(".mp4")) return "video/mp4";
+    if (path.endsWith(".ttf")) return "font/ttf";
+    if (path.endsWith(".otf")) return "font/otf";
+    if (path.endsWith(".woff")) return "font/woff";
+    if (path.endsWith(".woff2")) return "font/woff2";
     return "application/octet-stream";
 }
-
 
 async function loadConfig(url) {
     return fetch(url).then(r => r.json()).catch(e => {
@@ -266,7 +340,6 @@ async function getCache() {
     if (!CACHE) throw new Error("Failed to open cache");
     return CACHE;
 }
-
 
 async function getStoredHashes() {
     if (HASHES) return HASHES;
@@ -325,7 +398,6 @@ async function canPreload(path) {
         if (path.startsWith(ignore)) return false;
     }
     return true;
-
 }
 
 async function getIndex() {
@@ -350,39 +422,54 @@ async function getIndex() {
         INDEX = {};
     }
     return INDEX;
-
 }
 
 async function getIndexEntry(urlOrPath) {
-    let path = decodeURIComponent(new URL(urlOrPath).pathname);
-    if (path.startsWith("/")) path = path.substring(1);
+    let pathname;
+    try {
+        pathname = new URL(urlOrPath, self.location.origin).pathname;
+    } catch (_) {
+        pathname = String(urlOrPath || "/");
+    }
+    const rel = toScopeRelative(pathname);
     const index = await getIndex();
-    return index[path];
+    return index[rel];
 }
 
 async function countPreloadEntries() {
-    if (NUM_ENTRIES_TO_PRELOAD) return [NUM_ENTRIES_TO_PRELOAD, BYTES_TO_PRELOAD];
-    const index = await getIndex();
-    NUM_ENTRIES_TO_PRELOAD = 0;
-    for (const path in index) {
-        if (await canPreload(path)) {
-            NUM_ENTRIES_TO_PRELOAD++;
-            BYTES_TO_PRELOAD += index[path].size;
-        }
+    if (NUM_ENTRIES_TO_PRELOAD != null && BYTES_TO_PRELOAD != null && NUM_ENTRIES_TO_PRELOAD !== 0) {
+        return [NUM_ENTRIES_TO_PRELOAD, BYTES_TO_PRELOAD];
     }
-    return [NUM_ENTRIES_TO_PRELOAD, BYTES_TO_PRELOAD];
+    if (COUNT_PROMISE) return COUNT_PROMISE;
+
+    COUNT_PROMISE = (async () => {
+        const index = await getIndex();
+        let count = 0;
+        let bytes = 0;
+        for (const path in index) {
+            if (await canPreload(path)) {
+                count++;
+                bytes += index[path].size;
+            }
+        }
+        NUM_ENTRIES_TO_PRELOAD = count;
+        BYTES_TO_PRELOAD = bytes;
+        return [count, bytes];
+    })();
+
+    try {
+        return await COUNT_PROMISE;
+    } finally {
+        COUNT_PROMISE = null;
+    }
 }
-
-
-
 
 async function getFromCache(url) {
     if (!USE_CACHE) return null;
 
-    // skip non-cacheable
-    for (const skip of NON_CACHEABLE) {
-        if (url.endsWith(skip)) return null;
-    }
+    // skip non-cacheable by pathname (normalized)
+    const pathname = new URL(url, self.location.origin).pathname;
+    if (isNonCacheablePathname(pathname)) return null;
 
     // check if cached
     const hashes = await getStoredHashes();
@@ -391,7 +478,7 @@ async function getFromCache(url) {
         return null;
     }
 
-    // check if still valid
+    // check if still valid (compare with index hash)
     const entry = await getIndexEntry(url);
     const hash = entry?.hash;
     if (hash !== cachedHash) {
@@ -420,61 +507,51 @@ async function storeInCache(url, response, hash) {
     }
 }
 
-async function createHash(response) {
-    const data = await response.arrayBuffer();
-    const digest = await crypto.subtle.digest("SHA-256", data);
-    let hex = "";
-    const bytes = new Uint8Array(digest);
-    for (let i = 0; i < bytes.length; i++) {
-        hex += bytes[i].toString(16).padStart(2, "0");
-    }
-    return hex;
-}
-
 async function fetchAndCache(request, awaitCaching = false) {
-    for(const skip of NON_CACHEABLE) {
-        if(request.url.endsWith(skip)) {
-            return await fetch(request, {cache: "no-cache" });
-        }
+    const pathname = new URL(request.url, self.location.origin).pathname;
+    if (isNonCacheablePathname(pathname)) {
+        return await fetch(request, { cache: "no-cache" });
     }
 
+    // Serve from bundle if present; else network
     const resp = await getContent(request.url);
     if (resp.ok) {
         const cachable = resp.clone();
         LAST_FETCHED = new URL(request.url).pathname;
-        const c = createHash(resp.clone()).then(hash => {
-            storeInCache(request.url, cachable, hash).catch(e => {
-                console.warn("Failed to store in cache", e);
-            }).then(r => {
-                // console.log("Cached ", request.url);
-            });
-        }).catch(e => {
-            console.warn("Failed to create hash", e);
-        });
+
+        // Use hash from index (no SHA-256 generation)
+        const entry = await getIndexEntry(request.url);
+        let c = Promise.resolve();
+        if (entry && entry.hash) {
+            c = storeInCache(request.url, cachable, entry.hash)
+                .catch(e => console.warn("Failed to store in cache", e));
+        }
         if (awaitCaching) await c;
     }
     return resp;
 }
-
 
 // intercept fetch requests
 // return cached value if available and up to date
 // otherwise fetch and cache
 self.addEventListener("fetch", (event) => {
     event.respondWith((async () => {
-       
-       
-        const cached = await getFromCache(event.request.url);
+        const req = event.request;
+        const url = new URL(req.url);
+        if (url.origin !== self.location.origin || (req.method !== "GET" && req.method !== "HEAD")) {
+            return fetch(req);
+        }
+
+        const cached = await getFromCache(req.url);
         if (cached) return cached;
 
         try {
-            return await fetchAndCache(event.request);
+            return await fetchAndCache(req);
         } catch (err) {
             return new Response("Offline", { status: 503 });
         }
     })());
 });
-
 
 async function prefetchResources() {
     if (!PREFETCH) return;
@@ -517,23 +594,20 @@ async function prefetchResources() {
                     console.warn(e);
                 }
 
-                updateClient();
             }
         }
     }
 
     const workers = [];
-    for (let i = 0; i < PREFETCH_WORKERS; i++) {
+    for (let w = 0; w < PREFETCH_WORKERS; w++) {
         workers.push(worker());
     }
     await Promise.all(workers);
 }
 
-
 async function stopPreload() {
     PREFETCH = false;
     console.log("Stopping preload as requested by client");
-
 }
 
 async function updateProgress(
@@ -558,40 +632,54 @@ async function updateProgress(
             canSkip: canSkip
         });
     }
-
 }
-let updateTask = null;
-async function updateClient() {
-    if (!updateTask) {
-        updateTask = setTimeout(async () => {
-            try {
-                updateTask = null
-                const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-                const [maxEntries, maxBytes] = await countPreloadEntries();
-                // for (const client of clients) {
-                //     client.postMessage({
-                //         type: "preload-progress",
-                //         total: maxEntries,
-                //         done: NUM_PREFETCHED,
-                //         last: LAST_FETCHED,
-                //         totalBytes: maxBytes,
-                //         doneBytes: BYTES_PREFETCHED
-                //     });
-                // }
-                updateProgress(
-                    LAST_FETCHED,
-                    NUM_PREFETCHED,
-                    maxEntries,
-                    BYTES_PREFETCHED,
-                    maxBytes,
-                    "Loading...",
-                    true
-                );
 
-            } catch (e) {
-                console.warn(e);
-            }
-        }, 200);
+let updating = false;
+let updateTask = null;
+async function updateClient(start) {
+    const update = async (force) =>{
+        try {
+            if(!force&&!updating) return;
+            const [maxEntries, maxBytes] = await countPreloadEntries();
+            if(!force&&!updating) return;
+            updateProgress(
+                LAST_FETCHED,
+                NUM_PREFETCHED,
+                maxEntries,
+                BYTES_PREFETCHED,
+                maxBytes,
+                "Loading...",
+                true
+            );
+        } catch (e) {
+            console.warn(e);
+        }
+    };
+    
+    if (start) {
+        if(updating) return;
+        updating = true;
+        const updateLoop = async () => {
+            updateTask = new Promise((res,rej)=>{
+                update().then(res).catch(rej);
+            });
+            await updateTask;
+            if(!updating) return;
+            setTimeout(()=>{
+                if (updating) {
+                    updateLoop().catch((e)=>{
+                        console.warn("Update loop failed", e);
+                    });
+                }
+            },200);
+        };
+        updateLoop();              
+    } else {
+        if (!updating) return;
+        updating = false;
+        if (updateTask) await updateTask;
+        await update(true);
+
     }
 }
 
@@ -600,11 +688,18 @@ async function startPreload(configUrl) {
     NUM_PREFETCHED = 0;
     BYTES_PREFETCHED = 0;
     LAST_FETCHED = "";
+    NUM_ENTRIES_TO_PRELOAD = null;
+    BYTES_TO_PRELOAD = 0;
+    PRELOAD_IGNORE_LIST = null;
+    COUNT_PROMISE = null;
 
     const config = await loadConfig(configUrl);
     if (config.bundle) {
         console.log("Download app bundle");
-        await updateBundle(config.bundle, config.bundleHash);
+        bundleUpdatePromise = updateBundle(config.bundle, config.bundleHash)
+            .catch(e => { throw e; })
+            .finally(() => { bundleUpdatePromise = null; });
+        await bundleUpdatePromise;
     }
 
     const cache = await getCache();
@@ -612,39 +707,36 @@ async function startPreload(configUrl) {
     const requests = await cache.keys();
     for (const request of requests) {
         const url = request.url;
-        // Skip system entries
-        if (!url.trim() || url.endsWith(BUNDLE_KEY) || url.endsWith(HASHES_STORE)) continue;
+        const pathname = new URL(url).pathname;
+
+        // Skip system entries (normalized)
+        if (isNonCacheablePathname(pathname)) continue;
+
         // If not in index, delete from cache
-        let relPath = url.replace(self.location.origin, "");
-        if (relPath.startsWith("/")) relPath = relPath.substring(1);
-        relPath = decodeURIComponent(relPath);
+        const relPath = toScopeRelative(pathname);
         if (!index[relPath]) {
             await cache.delete(request);
             console.log("Clearing stale cache for:", relPath);
         }
     }
 
+    await updateClient(true);
     await prefetchResources();
-    await updateClient(); // final update
+    await updateClient(false); // final update
 }
-
 
 self.addEventListener("message", (event) => {
     event.waitUntil((async () => {
         try {
-            if (
-                event.data &&
-                event.origin === location.origin &&
-                event.source &&
-                event.source instanceof WindowClient
-            ) {
-                if (event.data.type === "stop-preload") {
-                    await stopPreload();
-                } else if (event.data.type === "start-preload") {
-                    await startPreload(event.data.config);
-                } else {
-                    console.warn("Unknown message type", event.data.type);
-                }
+            const data = event.data || {};
+            const src = event.source;
+            const isWindow = src && (src.type === "window");
+            if (isWindow && data.type === "stop-preload") {
+                await stopPreload();
+            } else if (isWindow && data.type === "start-preload") {
+                await startPreload(data.config);
+            } else {
+                console.warn("Unknown message to service worker:", data);
             }
         } catch (e) {
             console.warn("Failed to process message", e);
@@ -652,18 +744,25 @@ self.addEventListener("message", (event) => {
     })());
 });
 
-
 // starts prefetching
 self.addEventListener("install", (event) => {
-    event.waitUntil((async () => {
-        self.skipWaiting();
-    })());
+    event.waitUntil(self.skipWaiting());
 });
 
-
-self.skipWaiting();
 self.addEventListener("activate", (event) => {
     event.waitUntil((async () => {
         await self.clients.claim();
+
+        try {
+            const cache = await getCache();
+            const resp = await cache.match(BUNDLE_KEY);
+            if (resp) {
+                bundledLoaded = true;
+                // Warm up entries (do not block activation)
+                loadBundledResources().catch(() => {});
+            }
+        } catch (e) {
+            // ignore
+        }
     })());
 });
