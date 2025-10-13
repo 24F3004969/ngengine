@@ -33,6 +33,7 @@ package com.jme3.app;
 
 import com.jme3.app.state.AppState;
 import com.jme3.app.state.AppStateManager;
+import com.jme3.asset.AssetConfig;
 import com.jme3.asset.AssetManager;
 import com.jme3.audio.AudioContext;
 import com.jme3.audio.AudioRenderer;
@@ -55,10 +56,13 @@ import com.jme3.system.JmeContext;
 import com.jme3.system.JmeContext.Type;
 import com.jme3.system.JmeSystem;
 import com.jme3.system.NanoTimer;
+import com.jme3.system.Platform;
 import com.jme3.system.SystemListener;
 import com.jme3.system.SystemListenerAggregator;
 import com.jme3.system.Timer;
 import com.jme3.util.res.Resources;
+
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.Callable;
@@ -237,6 +241,13 @@ public class LegacyApplication implements Application, SystemListener {
         }
         if (assetManager == null) {
             assetManager = JmeSystem.newAssetManager(assetCfgUrl);
+            if(JmeSystem.getPlatform().getOs() != Platform.Os.Web){
+                try {
+                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+                } catch (IOException e) {
+                    logger.log(Level.WARNING, "Failed to load Legacy.cfg");
+                }
+            }
         }
     }
 

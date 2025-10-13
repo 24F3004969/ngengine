@@ -106,9 +106,6 @@ public class NGEApplication {
                 ) {
                     AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Awt.cfg"));
                 }
-                if(JmeSystem.getPlatform().getOs() != Platform.Os.Web){
-                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
-                }
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Failed to load NGE configuration file", e);
             }
