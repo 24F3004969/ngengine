@@ -106,7 +106,7 @@ async function startPreloader(splashEl){
         const baseURL = new URL('./', window.location.href);
         const serviceWorkerPath = new URL('sw.js', baseURL).pathname;
         const serviceWorkerScope = baseURL.pathname;
-        navigator.serviceWorker.register(serviceWorkerPath,{
+        navigator.serviceWorker.register(serviceWorkerPath+"?t="+Date.now(),{
             scope: serviceWorkerScope
         }).then(reg => {
             if (!navigator.serviceWorker.controller) {
