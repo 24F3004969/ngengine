@@ -1,4 +1,10 @@
 importScripts("./zip-core.js");
+
+// Force in-thread codecs in Service Worker (no sub-workers allowed)
+if (globalThis.zip && typeof globalThis.zip.configure === "function") {
+  globalThis.zip.configure({ useWebWorkers: false });
+}
+
 const USE_CACHE = true;
 const INDEX_URL = "./resources.index.txt";
 const PRELOAD_IGNORE_URL = "./preload-ignore.txt";
@@ -12,7 +18,6 @@ const PREFETCH_WORKERS = 5;
 const HASHES_STORE = "__hashes__";
 const BUNDLE_KEY = "bundle.zip";
 
-
 let CACHE = null;
 let HASHES = null;
 let INDEX = null;
@@ -24,36 +29,31 @@ let BYTES_TO_PRELOAD = 0;
 let BYTES_PREFETCHED = 0;
 let PRELOAD_IGNORE_LIST = null;
 
-
-
 let bundledLoaded = false;
-let bundleEntries = undefined;
+let bundleEntries = undefined
 
+
+async function getZip(){
+   return globalThis.zip;
+}
 
 async function updateBundle(url, hash) {
-    updateProgress(
-        "",
-        0,
-        1,
-        null,
-        null,
-        "Downloading bundled resources...",
-        false
-    );
+    updateProgress("", 0, 1, null, null, "Downloading bundled resources...", false);
 
     const cache = await getCache();
 
-    // check if already up to date
+    // Check if already up to date
     const hashes = await getStoredHashes();
     const storedHash = hashes[BUNDLE_KEY];
     if (hash && storedHash === hash) {
         console.log("Bundle already up-to-date");
+        bundledLoaded = true;
         return;
     }
 
-    // fetch with progress
-    const resp = await fetch(url);
-    if (!resp.ok || !resp.body) throw new Error("Failed to fetch bundle");
+    // Bypass caches to avoid stale/corrupted intermediates
+    const resp = await fetch(url, { cache: "no-store" });
+    if (!resp.ok || !resp.body) throw new Error(`Failed to fetch bundle: ${resp.status}`);
 
     const totalBytes = Number(resp.headers.get("content-length")) || null;
     const reader = resp.body.getReader();
@@ -63,35 +63,43 @@ async function updateBundle(url, hash) {
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        chunks.push(value);
-        received += value.length;
-
-        updateProgress(
-            "",
-            0,
-            1,
-            received,
-            totalBytes,
-            "Downloading bundled resources...",
-            false
-        );
+        if (value && value.length) {
+            chunks.push(value);
+            received += value.length;
+            updateProgress("", 0, 1, received, totalBytes, "Downloading bundled resources...", false);
+        }
     }
 
-    const blob = new Blob(chunks);
+    if (totalBytes != null && received !== totalBytes) {
+        throw new Error(`Bundle truncated: got ${received} of ${totalBytes} bytes`);
+    }
 
-    // store bundle
+    const blob = new Blob(chunks, { type: "application/zip" });
+
+    // Validate ZIP before storing
+    const Zip = await getZip();
+    try {
+        const zipReader = new Zip.ZipReader(new Zip.BlobReader(blob));
+        const testEntries = await zipReader.getEntries();
+        if (!Array.isArray(testEntries) || testEntries.length === 0) {
+            await zipReader.close();
+            throw new Error("Invalid/empty ZIP");
+        }
+        await zipReader.close();
+    } catch (e) {
+        console.error("Bundle validation failed:", e);
+        throw e;
+    }
+
     console.log("Storing bundle in cache...");
-    await cache.put(BUNDLE_KEY, new Response(blob));
+    await cache.put(BUNDLE_KEY, new Response(blob, { headers: { "Content-Type": "application/zip" }}));
 
-    // store hash (generate if not provided)
     if (hash) await storeHash(BUNDLE_KEY, hash);
     bundledLoaded = true;
+    bundleEntries = undefined;  
     console.log("Bundle updated");
 }
 
-async function getZip(){
-   return globalThis.zip;
-}
 
 async function loadBundledResources() {
     if (!bundledLoaded) return [];
@@ -103,19 +111,20 @@ async function loadBundledResources() {
     const resp = await cache.match(BUNDLE_KEY);
     if (!resp) {
         console.error("No bundle in cache");
-        // bundle not available
         bundleEntries = [];
         return [];
     }
 
-
     const blob = await resp.blob();
-    const blobReader = new Zip.BlobReader(blob);
-    const zipReader = new Zip.ZipReader(blobReader);
-    bundleEntries = await zipReader.getEntries();
+    try {
+        const zipReader = new Zip.ZipReader(new Zip.BlobReader(blob));
+        bundleEntries = await zipReader.getEntries();  
+    } catch (e) {
+        console.error("Failed to open bundle:", e);
+        bundleEntries = [];
+    }
     return bundleEntries;
 }
-
 
 async function getContent(url) {
     const Zip = await getZip();
@@ -132,7 +141,7 @@ async function getContent(url) {
             const blob = await entry.getData(new Zip.BlobWriter());
             return new Response(blob, {
                 headers: { "Content-Type": guessMime(path) }
-            });
+            });      
         }
     } else {
         console.log((path || url), "not found in bundle", "bundleEntries =", entries);
@@ -140,6 +149,7 @@ async function getContent(url) {
 
     return fetch(url);
 }
+
 
 
 function guessMime(path) {
@@ -546,25 +556,27 @@ async function startPreload(configUrl) {
 }
 
 
-self.addEventListener("message", async (event) => {
-    try {
-        if (
-            event.data &&
-            event.origin === location.origin &&
-            event.source &&
-            event.source instanceof WindowClient
-        ) {
-            if (event.data.type === "stop-preload") {
-                await stopPreload();
-            } else if (event.data.type === "start-preload") {
-                await startPreload(event.data.config);
-            } else {
-                console.warn("Unknown message type", event.data.type);
+self.addEventListener("message", (event) => {
+    event.waitUntil((async () => {
+        try {
+            if (
+                event.data &&
+                event.origin === location.origin &&
+                event.source &&
+                event.source instanceof WindowClient
+            ) {
+                if (event.data.type === "stop-preload") {
+                    await stopPreload();
+                } else if (event.data.type === "start-preload") {
+                    await startPreload(event.data.config);
+                } else {
+                    console.warn("Unknown message type", event.data.type);
+                }
             }
+        } catch (e) {
+            console.warn("Failed to process message", e);
         }
-    } catch (e) {
-        console.warn("Failed to process message", e);
-    }
+    })());
 });
 
 
