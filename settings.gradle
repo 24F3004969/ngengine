@@ -3,6 +3,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         maven { url = uri("https://teavm.org/maven/repository") }
+        maven { url = uri("https://maven.ngengine.org/riccardobl/teavm") }
         mavenLocal()
     }
     plugins {
