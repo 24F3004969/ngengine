@@ -31,6 +31,9 @@
  */
 package jme3test.material;
 
+import java.io.IOException;
+
+import com.jme3.asset.AssetConfig;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.TextureKey;
 import com.jme3.material.Material;
@@ -38,13 +41,18 @@ import com.jme3.material.RenderState.BlendMode;
 import com.jme3.math.ColorRGBA;
 import com.jme3.system.JmeSystem;
 import com.jme3.texture.Texture;
+import com.jme3.util.res.Resources;
 
 public class TestMaterialCompare {
 
     public static void main(String[] args) {
         AssetManager assetManager = JmeSystem.newAssetManager(
                 TestMaterialCompare.class.getResource("/com/jme3/asset/Desktop.cfg"));
-        
+        try {
+            AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         // Cloned materials
         Material mat1 = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         mat1.setName("mat1");

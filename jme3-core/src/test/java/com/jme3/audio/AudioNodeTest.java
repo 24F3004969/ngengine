@@ -1,8 +1,13 @@
 package com.jme3.audio;
 
+import com.jme3.asset.AssetConfig;
 import com.jme3.asset.AssetManager;
 import com.jme3.math.Vector3f;
 import com.jme3.system.JmeSystem;
+import com.jme3.util.res.Resources;
+
+import java.io.IOException;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -16,7 +21,11 @@ public class AudioNodeTest {
     @Test
     public void testAudioNodeClone() {
         AssetManager assetManager = JmeSystem.newAssetManager(AudioNodeTest.class.getResource("/com/jme3/asset/Desktop.cfg"));
-
+        try {
+            AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         AudioNode audio = new AudioNode(assetManager,
                 "Sound/Effects/Bang.wav", AudioData.DataType.Buffer);
         audio.setDirection(new Vector3f(0, 1, 0));

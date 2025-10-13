@@ -7,6 +7,10 @@ import com.jme3.asset.plugins.ZipLocator;
 import com.jme3.audio.plugins.WAVLoader;
 import com.jme3.system.JmeSystem;
 import com.jme3.texture.plugins.AWTLoader;
+import com.jme3.util.res.Resources;
+
+import java.io.IOException;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,6 +19,11 @@ public class TestLocators {
     @Test
     public void testAbsoluteLocators() {
         AssetManager am = JmeSystem.newAssetManager(TestLocators.class.getResource("/com/jme3/asset/Desktop.cfg"));
+        try {
+            AssetConfig.loadText(am, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         am.registerLocator("/",  ClasspathLocator.class);
         am.registerLoader(WAVLoader.class, "wav");
         am.registerLoader(AWTLoader.class, "jpg");

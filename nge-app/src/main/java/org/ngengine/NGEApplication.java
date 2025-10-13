@@ -104,10 +104,10 @@ public class NGEApplication {
                     JmeSystem.getPlatform().getOs() != Platform.Os.Web
                     && (JmeSystem.getPlatform().getOs() != Platform.Os.MacOS || !JmeSystem.getPlatform().isGraalVM())
                 ) {
-                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/Awt.cfg"));
+                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Awt.cfg"));
                 }
                 if(JmeSystem.getPlatform().getOs() != Platform.Os.Web){
-                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/Legacy.cfg"));
+                    AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
                 }
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Failed to load NGE configuration file", e);

@@ -31,6 +31,7 @@
  */
 package com.jme3.scene.plugins.gltf;
 
+import com.jme3.asset.AssetConfig;
 import com.jme3.asset.AssetLoadException;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.DirectionalLight;
@@ -43,6 +44,9 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.system.JmeSystem;
+import com.jme3.util.res.Resources;
+
+import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -62,7 +66,11 @@ public class GltfLoaderTest {
     public void init() {
         assetManager = JmeSystem.newAssetManager(
                 TestMaterialWrite.class.getResource("/com/jme3/asset/Desktop.cfg"));
-
+        try {
+            AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test

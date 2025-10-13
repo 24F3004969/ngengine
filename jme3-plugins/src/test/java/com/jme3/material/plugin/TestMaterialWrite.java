@@ -31,6 +31,7 @@
  */
 package com.jme3.material.plugin;
 
+import com.jme3.asset.AssetConfig;
 import com.jme3.asset.AssetInfo;
 import com.jme3.asset.AssetKey;
 import com.jme3.asset.AssetManager;
@@ -42,6 +43,8 @@ import com.jme3.material.plugins.J3MLoader;
 import com.jme3.math.ColorRGBA;
 import com.jme3.system.JmeSystem;
 import com.jme3.texture.Texture;
+import com.jme3.util.res.Resources;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,7 +63,11 @@ public class TestMaterialWrite {
     public void init() {
         assetManager = JmeSystem.newAssetManager(
                 TestMaterialWrite.class.getResource("/com/jme3/asset/Desktop.cfg"));
-
+        try {
+            AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 

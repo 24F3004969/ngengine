@@ -37,6 +37,8 @@ import com.jme3.material.plugin.export.materialdef.J3mdExporter;
 import com.jme3.material.plugins.J3MLoader;
 import com.jme3.shader.*;
 import com.jme3.system.JmeSystem;
+import com.jme3.util.res.Resources;
+
 import org.junit.*;
 
 import java.io.*;
@@ -55,7 +57,11 @@ public class TestMaterialDefWrite {
         assetManager = JmeSystem.newAssetManager(
                 TestMaterialDefWrite.class.getResource("/com/jme3/asset/Desktop.cfg"));
 
-
+        try {
+            AssetConfig.loadText(assetManager, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

@@ -38,6 +38,7 @@ import com.jme3.app.LegacyApplication;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.AppState;
 import com.jme3.app.state.ScreenshotAppState;
+import com.jme3.asset.AssetConfig;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.DesktopAssetManager;
 import com.jme3.input.InputManager;
@@ -50,9 +51,12 @@ import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
 import com.jme3.system.JmeSystem;
 import com.jme3.system.NullRenderer;
+import com.jme3.util.res.Resources;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -109,6 +113,17 @@ public class PreventCoreIssueRegressions {
     @Test
     public void testIssue1138() {
         AssetManager am = JmeSystem.newAssetManager(PreventCoreIssueRegressions.class.getResource("/com/jme3/asset/Desktop.cfg"));
+            try {
+            AssetConfig.loadText(am, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            AssetConfig.loadText(am, Resources.getResource("com/jme3/asset/Legacy.cfg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         Node cgModel = (Node)am.loadModel("Models/Elephant/Elephant.mesh.xml");
         cgModel.rotate(0f, -1f, 0f);
         cgModel.scale(0.04f);
