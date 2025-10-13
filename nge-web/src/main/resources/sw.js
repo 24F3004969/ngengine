@@ -41,8 +41,6 @@ async function updateBundle(url, hash) {
     updateProgress("", 0, 1, null, null, "Downloading bundled resources...", false);
 
     const cache = await getCache();
-
-    // Check if already up to date
     const hashes = await getStoredHashes();
     const storedHash = hashes[BUNDLE_KEY];
     if (hash && storedHash === hash) {
@@ -51,56 +49,131 @@ async function updateBundle(url, hash) {
         return;
     }
 
-    // Bypass caches to avoid stale/corrupted intermediates
-    const resp = await fetch(url, { cache: "no-store" });
-    if (!resp.ok || !resp.body) throw new Error(`Failed to fetch bundle: ${resp.status}`);
+    // Probe server for size and range support
+    let totalBytes = null;
+    let acceptRanges = false;
+    try {
+        const head = await fetch(url, { method: "HEAD", cache: "no-store" });
+        totalBytes = Number(head.headers.get("content-length")) || null;
+        acceptRanges = /\bbytes\b/i.test(head.headers.get("accept-ranges") || "");
+    } catch (_) {
+        // ignore, fallback below
+    }
 
-    const totalBytes = Number(resp.headers.get("content-length")) || null;
-    const reader = resp.body.getReader();
-    const chunks = [];
-    let received = 0;
+    if (acceptRanges && totalBytes && totalBytes > 0) {
+        // Resumable ranged download streamed into Cache
+        const CHUNK = 8 * 1024 * 1024; // 8 MiB
+        let offset = 0;
+        let received = 0;
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value && value.length) {
-            chunks.push(value);
-            received += value.length;
-            updateProgress("", 0, 1, received, totalBytes, "Downloading bundled resources...", false);
+        const stream = new ReadableStream({
+            async pull(controller) {
+                if (offset >= totalBytes) {
+                    controller.close();
+                    return;
+                }
+                const end = Math.min(offset + CHUNK, totalBytes);
+                let attempt = 0;
+                for (;;) {
+                    try {
+                        const resp = await fetch(url, {
+                            headers: { Range: `bytes=${offset}-${end - 1}` },
+                            cache: "no-store"
+                        });
+                        if (resp.status !== 206) {
+                            throw new Error(`Range fetch failed: ${resp.status}`);
+                        }
+                        const reader = resp.body.getReader();
+                        for (;;) {
+                            const { done, value } = await reader.read();
+                            if (value && value.length) {
+                                controller.enqueue(value);
+                                received += value.length;
+                                updateProgress("", 0, 1, received, totalBytes, "Downloading bundled resources...", false);
+                            }
+                            if (done) break;
+                        }
+                        offset = end;
+                        break; // chunk done
+                    } catch (e) {
+                        attempt++;
+                        if (attempt > 4) {
+                            controller.error(e);
+                            return;
+                        }
+                        // backoff and retry this chunk
+                        await new Promise(r => setTimeout(r, attempt * 500));
+                    }
+                }
+            }
+        });
+
+        // Put streamed response into cache 
+        await cache.put(BUNDLE_KEY, new Response(stream, {
+            headers: { "Content-Type": "application/zip" }
+        }));
+
+        if (received !== totalBytes) {
+            // Extra guard if server lied about size
+            await caches.delete(await (await getCache()).keys());
+            throw new Error(`Bundle size mismatch: got ${received} of ${totalBytes}`);
+        }
+    } else {
+        // Fallback: single GET 
+        const resp = await fetch(url, { cache: "no-store" });
+        if (!resp.ok || !resp.body) throw new Error(`Failed to fetch bundle: ${resp.status}`);
+
+        const totalHdr = Number(resp.headers.get("content-length")) || null;
+        const reader = resp.body.getReader();
+
+        let received = 0;
+        const stream = new ReadableStream({
+            async pull(controller) {
+                const { done, value } = await reader.read();
+                if (value && value.length) {
+                    controller.enqueue(value);
+                    received += value.length;
+                    updateProgress("", 0, 1, received, totalHdr, "Downloading bundled resources...", false);
+                }
+                if (done) controller.close();
+            },
+            cancel() { try { reader.cancel(); } catch(_) {} }
+        });
+
+        await cache.put(BUNDLE_KEY, new Response(stream, {
+            headers: { "Content-Type": "application/zip" }
+        }));
+
+        if (totalHdr != null && received !== totalHdr) {
+            throw new Error(`Bundle truncated: got ${received} of ${totalHdr} bytes`);
         }
     }
 
-    if (totalBytes != null && received !== totalBytes) {
-        throw new Error(`Bundle truncated: got ${received} of ${totalBytes} bytes`);
-    }
+    // Validate ZIP from cache (no big RAM spike)
+    const stored = await cache.match(BUNDLE_KEY);
+    if (!stored) throw new Error("Bundle missing from cache after download");
+    const blob = await stored.blob();
 
-    const blob = new Blob(chunks, { type: "application/zip" });
-
-    // Validate ZIP before storing
     const Zip = await getZip();
     try {
         const zipReader = new Zip.ZipReader(new Zip.BlobReader(blob));
-        const testEntries = await zipReader.getEntries();
-        if (!Array.isArray(testEntries) || testEntries.length === 0) {
-            await zipReader.close();
+        const entries = await zipReader.getEntries();
+        await zipReader.close();
+        if (!Array.isArray(entries) || entries.length === 0) {
             throw new Error("Invalid/empty ZIP");
         }
-        await zipReader.close();
     } catch (e) {
         console.error("Bundle validation failed:", e);
+        // remove bad cache entry
+        await cache.delete(BUNDLE_KEY);
         throw e;
     }
 
-    console.log("Storing bundle in cache...");
-    await cache.put(BUNDLE_KEY, new Response(blob, { headers: { "Content-Type": "application/zip" }}));
-
     if (hash) await storeHash(BUNDLE_KEY, hash);
     bundledLoaded = true;
-    bundleEntries = undefined;  
+    bundleEntries = undefined;
     console.log("Bundle updated");
 }
-
-
 async function loadBundledResources() {
     if (!bundledLoaded) return [];
     if (bundleEntries) return bundleEntries;
