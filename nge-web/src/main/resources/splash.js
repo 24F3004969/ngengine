@@ -1,5 +1,7 @@
 const CONFIG_PATH = "ngeapp.json";
 
+let updateComplete = false;
+
 // update the splash screen progress bar
 function updateProgress(
     splashEl,
@@ -9,8 +11,11 @@ function updateProgress(
     doneBytes,
     totalBytes,
     status,
-    buttonLabel
+    buttonLabel,
+    complete
 ){
+    if(updateComplete)return;
+    if(complete)updateComplete = true;
     const infoLast = splashEl.querySelector(".lastIndexed");
     const titleEl = splashEl.querySelector("h2");
     const progressBar = splashEl.querySelector("progress");
@@ -79,7 +84,7 @@ function updateProgress(
 
 // toggle the splash screen to ready state (=everything loaded)
 async function ready(splashEl){
-    updateProgress(splashEl, "", null, null, null, null, "Ready", "Play");
+    updateProgress(splashEl, "", null, null, null, null, "Ready", "Play", true);
     if('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: "stop-preload" });
     }    
@@ -106,18 +111,6 @@ async function startPreloader(splashEl){
         const baseURL = new URL('./', window.location.href);
         const serviceWorkerPath = new URL('sw.js', baseURL).pathname;
         const serviceWorkerScope = baseURL.pathname;
-        navigator.serviceWorker.register(serviceWorkerPath+"?t="+Date.now(),{
-            scope: serviceWorkerScope
-        }).then(reg => {
-            if (!navigator.serviceWorker.controller) {
-                window.location.reload();
-            } else {
-                navigator.serviceWorker.controller.postMessage({ type: "start-preload", config: CONFIG_PATH });
-            }
-        }).catch(e => {
-            console.error("Service worker registration failed", e);
-            alert("Service worker registration failed");
-        });
         navigator.serviceWorker.addEventListener("message", (event) => {
             if (
                 !event.source ||
@@ -145,6 +138,20 @@ async function startPreloader(splashEl){
                 }
             }
         });
+
+        navigator.serviceWorker.register(serviceWorkerPath+"?t="+Date.now(),{
+            scope: serviceWorkerScope
+        }).then(reg => {
+            if (!navigator.serviceWorker.controller) {
+                window.location.reload();
+            } else {
+                navigator.serviceWorker.controller.postMessage({ type: "start-preload", config: CONFIG_PATH });
+            }
+        }).catch(e => {
+            console.error("Service worker registration failed", e);
+            alert("Service worker registration failed");
+        });
+       
         console.log("Service worker registered");
     } else {
         console.warn("Service workers are not supported.");
