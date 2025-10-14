@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   release:
-    types: [published]
+    types: [published, released]
 
 jobs:
 
@@ -136,11 +136,8 @@ jobs:
           name: merged-natives
           path: dist/merged-natives.zip
 
-      # TODO: Deploy merged natives to natives snapshot repository
-
-
       - name: Publish Snapshot
-        if: matrix.deploy==true && github.event_name != 'pull_request' && github.event_name != 'release'
+        if: matrix.deploy == true && github.event_name != 'pull_request' && ( github.event_name != 'release' || github.event.release.prerelease == true )
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
@@ -158,7 +155,7 @@ jobs:
            publishToSonatype publishAllPublicationsToDistFolderRepository --info
 
       - name: Publish Release
-        if: matrix.deploy==true && github.event_name != 'pull_request' && github.event_name == 'release'
+        if: matrix.deploy == true && github.event_name == 'release' && github.event.release.prerelease == false
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
