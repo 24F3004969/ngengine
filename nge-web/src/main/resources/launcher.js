@@ -81,14 +81,17 @@ function showFullscreenButton(config, canvas, show){
 
 function tweakConfig(config){
     if(!config) config = {};
+    if(typeof config.run_in_worker !== "undefined" && typeof config.runInWebWorker === "undefined"){
+        config.runInWebWorker = config.run_in_worker;
+    }    
     if(typeof config.is_capacitor === "undefined"){
         config.is_capacitor = typeof Capacitor !== "undefined" && Capacitor.getPlatform
     };
-    if(typeof config.run_in_worker === "undefined"){
-        config.run_in_worker = !config.is_capacitor;
+    if(typeof config.runInWebWorker === "undefined"){
+        config.runInWebWorker = !config.is_capacitor;
     }
     if(typeof config.use_offscreen_canvas === "undefined"){
-        config.use_offscreen_canvas = config.run_in_worker;
+        config.use_offscreen_canvas = config.runInWebWorker;
     }
     if(typeof config.canvasSelector === "undefined"){
         config.canvasSelector = 'canvas#nge';
@@ -162,7 +165,7 @@ export default async function launch(config){
     canvas.style.visibility = 'visible';
     console.log("Starting nge...");
     renderLoadingAnimation();
-    if (config.run_in_worker) {
+    if (config.runInWebWorker) {
         Binds.addEventListener("ready", () => {
             console.log("NGE worker is ready");
             Binds.fireEvent("main", []).then(() => {
