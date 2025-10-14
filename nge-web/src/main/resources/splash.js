@@ -139,14 +139,24 @@ async function startPreloader(splashEl){
             }
         });
 
+     
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('New service worker controller available');
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ 
+                    type: "start-preload", 
+                    config: CONFIG_PATH 
+                });
+            }
+        });
+        
         navigator.serviceWorker.register(serviceWorkerPath+"?t="+Date.now(),{
             scope: serviceWorkerScope
         }).then(reg => {
             if (!navigator.serviceWorker.controller) {
+                console.log("No active service worker - reloading");
                 window.location.reload();
-            } else {
-                navigator.serviceWorker.controller.postMessage({ type: "start-preload", config: CONFIG_PATH });
-            }
+            } 
         }).catch(e => {
             console.error("Service worker registration failed", e);
             alert("Service worker registration failed");
