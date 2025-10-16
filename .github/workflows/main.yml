@@ -147,7 +147,8 @@ jobs:
           export VERSION=""
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
               export VERSION=${GITHUB_REF#refs/tags/}
-              echo "Publishing release $VERSION"
+              export VERSION="${VERSION}rc-SNAPSHOT"
+              echo "Publishing snapshot $VERSION"
           fi
           ./gradlew --no-daemon --no-parallel configureVersionInfo \
           -PjmeVersionName="$VERSION" \
