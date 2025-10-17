@@ -3,19 +3,14 @@ package org.ngengine.web.input;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.teavm.jso.browser.Window;
 import org.teavm.jso.dom.events.Event;
 import org.teavm.jso.dom.events.EventListener;
 import org.teavm.jso.dom.events.KeyboardEvent;
 
 import com.jme3.input.KeyInput;
-import com.jme3.input.MouseInput;
 import com.jme3.input.RawInputListener;
 import com.jme3.input.event.KeyInputEvent;
-import com.jme3.input.event.MouseMotionEvent;
-
 import org.ngengine.web.WebBinds;
-import org.ngengine.web.context.WebCanvasElement;
 
 public class WebKeyInput implements KeyInput {
     private boolean initialized = false;

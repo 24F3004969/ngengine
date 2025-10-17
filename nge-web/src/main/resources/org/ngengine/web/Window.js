@@ -70,6 +70,20 @@ function bindListeners(canvas,renderTarget){
         event.targetTouches = inputEvent.targetTouches ? makeTouchesClonable(inputEvent.targetTouches) : [];
         event.changedTouches = inputEvent.changedTouches ? makeTouchesClonable(inputEvent.changedTouches) : [];
 
+        {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            if(event.movementY) {
+                event.movementY = -event.movementY * scaleY; 
+            } 
+
+            if(event.movementX){
+                event.movementX = event.movementX * scaleX;
+            }
+        }
+
         if (event.clientX !== undefined) {
             const rect = canvas.getBoundingClientRect();    
             const scaleX = canvas.width / rect.width;    
