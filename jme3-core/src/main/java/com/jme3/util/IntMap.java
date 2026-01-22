@@ -150,6 +150,17 @@ public final class IntMap<T> implements Iterable<Entry<T>>, Cloneable, JmeClonea
     }
 
     @SuppressWarnings("unchecked")
+    public T getOrDefault(int key, T defaultValue) {
+        int index = key & mask;
+        for (Entry e = table[index]; e != null; e = e.next){
+            if (e.key == key){
+                return (T) e.value;
+            }
+        }
+        return defaultValue;
+    }
+
+    @SuppressWarnings("unchecked")
     public T put(int key, T value) {
         int index = key & mask;
         // Check if key already exists.

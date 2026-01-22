@@ -32,18 +32,27 @@
 package com.jme3.input.controls;
 
 import com.jme3.input.Joystick;
+import com.jme3.input.JoystickButton;
 
 public class JoyButtonTrigger implements Trigger {
 
     private final int joyId, buttonId;
 
     /**
-     * Use {@link Joystick#assignButton(java.lang.String, int) } instead.
+     * Use {@link JoystickButtonTrigger#JoystickButtonTrigger(Joystick, String)}
      *
      * @param joyId the ID of a joystick
      * @param buttonId the index of a joystick button
      */
     public JoyButtonTrigger(int joyId, int buttonId) {
+        this.joyId = joyId;
+        this.buttonId = buttonId;
+    }
+
+    public JoyButtonTrigger(Joystick joy, String button){
+        int joyId = joy.getJoyId();
+        JoystickButton joyButton = joy.getButton(button);
+        int buttonId = joyButton != null ? joyButton.getButtonId() : -1;
         this.joyId = joyId;
         this.buttonId = buttonId;
     }

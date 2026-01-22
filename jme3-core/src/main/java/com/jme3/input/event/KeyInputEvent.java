@@ -32,18 +32,20 @@
 package com.jme3.input.event;
 
 import com.jme3.input.KeyInput;
+import com.jme3.input.Keyboard;
 
 /**
  * Keyboard key event.
  *
  * @author Kirill Vainer
  */
-public class KeyInputEvent extends InputEvent {
+public class KeyInputEvent extends InputEvent <Keyboard>{
 
     private final int keyCode;
     private final char keyChar;
     private final boolean pressed;
     private final boolean repeating;
+    private static final Keyboard keyboard = new Keyboard();
 
     public KeyInputEvent(int keyCode, char keyChar, boolean pressed, boolean repeating) {
         this.keyCode = keyCode;
@@ -113,4 +115,10 @@ public class KeyInputEvent extends InputEvent {
             return str + ", RELEASED)";
         }
     }
+
+    @Override
+    public Keyboard getDevice() {
+        return keyboard;
+    }
+
 }

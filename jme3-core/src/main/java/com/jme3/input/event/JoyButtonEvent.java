@@ -39,7 +39,7 @@ import com.jme3.input.JoystickButton;
  * 
  * @author Kirill Vainer, Paul Speed
  */
-public class JoyButtonEvent extends InputEvent {
+public class JoyButtonEvent extends InputEvent<Joystick> {
 
     private final JoystickButton button;
     private final boolean pressed;
@@ -91,7 +91,10 @@ public class JoyButtonEvent extends InputEvent {
     public boolean isPressed() {
         return pressed;
     }
-
-
+ 
+    @Override
+    public Joystick getDevice() {
+        return button.getJoystick();
+    }
 
 }

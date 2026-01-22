@@ -32,6 +32,7 @@
 package com.jme3.input.controls;
 
 import com.jme3.input.Joystick;
+import com.jme3.input.JoystickAxis;
 
 public class JoyAxisTrigger implements Trigger {
 
@@ -39,7 +40,7 @@ public class JoyAxisTrigger implements Trigger {
     private final boolean negative;
 
     /**
-     * Use {@link Joystick#assignAxis(java.lang.String, java.lang.String, int) }
+     * Use {@link JoyAxisTrigger#JoyAxisTrigger(Joystick, String, boolean)}
      * instead.
      *
      * @param joyId which joystick
@@ -47,6 +48,15 @@ public class JoyAxisTrigger implements Trigger {
      * @param negative true to negate input values, false to leave unchanged
      */
     public JoyAxisTrigger(int joyId, int axisId, boolean negative) {
+        this.joyId = joyId;
+        this.axisId = axisId;
+        this.negative = negative;
+    }
+
+    public JoyAxisTrigger(Joystick joy, String axis, boolean negative) {
+        int joyId = joy.getJoyId();
+        JoystickAxis joyAxis = joy.getAxis(axis);
+        int axisId = joyAxis != null ? joyAxis.getAxisId() : -1;
         this.joyId = joyId;
         this.axisId = axisId;
         this.negative = negative;

@@ -38,14 +38,9 @@ import java.util.List;
  *
  * @author Paul Speed, Kirill Vainer
  */
-public interface Joystick {
+public interface Joystick extends InputDevice {
 
-    /**
-     * Rumbles the joystick for the given amount/magnitude.
-     *
-     * @param amount The amount to rumble. Should be between 0 and 1.
-     */
-    public void rumble(float amount);
+ 
 
     /**
      * Assign the mapping name to receive events from the given button index
@@ -188,5 +183,15 @@ public interface Joystick {
      * @return the joyId of this joystick.
      */
     public int getJoyId();
+
+    @Override
+    public default String getDeviceName(){
+        return getName()+" ("+getJoyId()+")";
+    }
+
+    @Override
+    public default int getId(){
+        return getJoyId();
+    }
 
 }

@@ -31,6 +31,9 @@
  */
 package com.jme3.input.event;
 
+import com.jme3.input.InputDevice;
+import com.jme3.input.TouchScreen;
+
 /**
  * <code>TouchEvent</code> represents a single event from multi-touch input devices
  * @author larynx
@@ -125,6 +128,7 @@ public class TouchEvent extends InputEvent {
     private float scaleSpan;
     private float deltaScaleSpan;
     private boolean scaleSpanInProgress;
+    private final static TouchScreen touchScreen = new TouchScreen();
 
     public TouchEvent() {
         set(Type.IDLE, 0f, 0f, 0f, 0f);
@@ -254,4 +258,9 @@ public class TouchEvent extends InputEvent {
                 ", ScaleSpan="+scaleSpan+", dScaleSpan="+deltaScaleSpan+")";
     }
     
+    @Override
+    public InputDevice getDevice() {
+        return touchScreen;
+    }
+
 }

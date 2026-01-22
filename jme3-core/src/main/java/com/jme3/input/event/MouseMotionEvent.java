@@ -31,6 +31,9 @@
  */
 package com.jme3.input.event;
 
+import com.jme3.input.InputDevice;
+import com.jme3.input.Mouse;
+
 /**
  * Mouse movement event.
  * <p>
@@ -41,6 +44,7 @@ package com.jme3.input.event;
 public class MouseMotionEvent extends InputEvent {
 
     private final int x, y, dx, dy, wheel, deltaWheel;
+    private final static Mouse mouse = new Mouse();
 
     public MouseMotionEvent(int x, int y, int dx, int dy, int wheel, int deltaWheel) {
         this.x = x;
@@ -106,5 +110,11 @@ public class MouseMotionEvent extends InputEvent {
         return "MouseMotion(X="+x+", Y="+y+", DX="+dx+", DY="+dy+
                 ", Wheel="+wheel+", dWheel="+deltaWheel+")";
     }
+
+    @Override
+    public InputDevice getDevice() {
+        return mouse;
+    }
+
 
 }

@@ -31,6 +31,7 @@
  */
 package com.jme3.input.event;
 
+import com.jme3.input.Mouse;
 import com.jme3.input.MouseInput;
 
 /**
@@ -38,12 +39,13 @@ import com.jme3.input.MouseInput;
  *
  * @author Kirill Vainer
  */
-public class MouseButtonEvent extends InputEvent {
+public class MouseButtonEvent extends InputEvent<Mouse> {
 
     private final int x;
     private final int y;
     private final int btnIndex;
     private final boolean pressed;
+    private final static Mouse mouse = new Mouse();
 
     public MouseButtonEvent(int btnIndex, boolean pressed, int x, int y) {
         this.btnIndex = btnIndex;
@@ -106,4 +108,10 @@ public class MouseButtonEvent extends InputEvent {
             return str + ", RELEASED)";
         }
     }
+
+    @Override
+    public Mouse getDevice() {
+        return mouse;
+    }
+
 }

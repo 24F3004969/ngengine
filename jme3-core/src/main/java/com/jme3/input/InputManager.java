@@ -91,22 +91,18 @@ public class InputManager implements RawInputListener {
     private final JoyInput joystick;
     private final TouchInput touch;
     private float frameTPF;
-    private long lastLastUpdateTime = 0;
-    private long lastUpdateTime = 0;
-    private long frameDelta = 0;
     private boolean eventsPermitted = false;
     private boolean mouseVisible = true;
-    private boolean safeMode = false;
-    private float globalAxisDeadZone = 0.05f;
     private final Vector2f cursorPos = new Vector2f();
     private Joystick[] joysticks;
     private final IntMap<ArrayList<Mapping>> bindings = new IntMap<>();
     private final HashMap<String, Mapping> mappings = new HashMap<>();
-    private final IntMap<Long> pressedButtons = new IntMap<>();
-    private final IntMap<Float> axisValues = new IntMap<>();
     private final SafeArrayList<RawInputListener> rawListeners = new SafeArrayList<>(RawInputListener.class);
-    private final ArrayList<InputEvent> inputQueue = new ArrayList<>();
+    private final ArrayList<InputEvent<?>> inputQueue = new ArrayList<>();
     private final List<JoystickConnectionListener> joystickConnectionListeners = new ArrayList<>();
+    private float globalAxisDeadZone = 0.05f;
+    private final IntMap<Double> lastValues = new IntMap<>();
+    private final IntMap<InputEvent<?>> emulatedAnalogs = new IntMap<>();
 
     private static class Mapping {
 
@@ -150,125 +146,34 @@ public class InputManager implements RawInputListener {
             touch.setInputListener(this);
         }
 
-        keys.getInputTimeNanos();
     }
 
     public String getKeyName(int key){
         return keys.getKeyName(key);
     }
 
-    private void invokeActions(int hash, boolean pressed) {
+    private void updateEmulatedAnalogs(){
+        for( Entry<InputEvent<?>> entry : emulatedAnalogs ){
+            int hash = entry.getKey();
+            InputEvent<?> event = entry.getValue();
+            double v = lastValues.get(hash) + frameTPF;
+            invokeAnalogsAndActions(hash, v, event, false, false);
+            lastValues.put(hash, v);
+        }
+
+    }
+
+    private void invokeAnalogsAndActions(int hash, double value, InputEvent<?> event, boolean emulateAnalog, boolean forceValueChangeFlag) {
+  
         ArrayList<Mapping> maps = bindings.get(hash);
-        if (maps == null) {
-            return;
-        }
+        if (maps == null)  return;
+ 
+        double lastValue = lastValues.getOrDefault(hash, 0.0);
+        boolean isPressed = Math.abs(value) > 0;
+        boolean wasPressed = Math.abs(lastValue) > 0;
+        boolean valueChanged = forceValueChangeFlag || isPressed != wasPressed;
 
-        int size = maps.size();
-        for (int i = size - 1; i >= 0; i--) {
-            Mapping mapping = maps.get(i);
-            ArrayList<InputListener> listeners = mapping.listeners;
-            int listenerSize = listeners.size();
-            for (int j = listenerSize - 1; j >= 0; j--) {
-                InputListener listener = listeners.get(j);
-                if (listener instanceof ActionListener) {
-                    ((ActionListener) listener).onAction(mapping.name, pressed, frameTPF);
-                }
-            }
-        }
-    }
-
-    private float computeAnalogValue(long timeDelta) {
-        if (safeMode || frameDelta == 0) {
-            return 1f;
-        } else {
-            return FastMath.clamp(timeDelta / (float) frameDelta, 0, 1);
-        }
-    }
-
-    private void invokeTimedActions(int hash, long time, boolean pressed) {
-        if (!bindings.containsKey(hash)) {
-            return;
-        }
-
-        if (pressed) {
-            pressedButtons.put(hash, time);
-        } else {
-            Long pressTimeObj = pressedButtons.remove(hash);
-            if (pressTimeObj == null) {
-                return; // under certain circumstances it can be null, ignore
-            }                        // the event then.
-
-            long pressTime = pressTimeObj;
-            long lastUpdate = lastLastUpdateTime;
-            long releaseTime = time;
-            long timeDelta = releaseTime - Math.max(pressTime, lastUpdate);
-
-            if (timeDelta > 0) {
-                invokeAnalogs(hash, computeAnalogValue(timeDelta), false);
-            }
-        }
-    }
-
-    private void invokeUpdateActions() {
-        for (Entry<Long> pressedButton : pressedButtons) {
-            int hash = pressedButton.getKey();
-
-            long pressTime = pressedButton.getValue();
-            long timeDelta = lastUpdateTime - Math.max(lastLastUpdateTime, pressTime);
-
-            if (timeDelta > 0) {
-                invokeAnalogs(hash, computeAnalogValue(timeDelta), false);
-            }
-        }
-
-        for (Entry<Float> axisValue : axisValues) {
-            int hash = axisValue.getKey();
-            float value = axisValue.getValue();
-            invokeAnalogs(hash, value * frameTPF, true);
-        }
-    }
-
-    private void invokeAnalogs(int hash, float value, boolean isAxis) {
-        ArrayList<Mapping> maps = bindings.get(hash);
-        if (maps == null) {
-            return;
-        }
-
-        if (!isAxis) {
-            value *= frameTPF;
-        }
-
-        int size = maps.size();
-        for (int i = size - 1; i >= 0; i--) {
-            Mapping mapping = maps.get(i);
-            ArrayList<InputListener> listeners = mapping.listeners;
-            int listenerSize = listeners.size();
-            for (int j = listenerSize - 1; j >= 0; j--) {
-                InputListener listener = listeners.get(j);
-                if (listener instanceof AnalogListener) {
-                    // NOTE: multiply by TPF for any button bindings
-                    ((AnalogListener) listener).onAnalog(mapping.name, value, frameTPF);
-                }
-            }
-        }
-    }
-
-    private void invokeAnalogsAndActions(int hash, float value, float effectiveDeadZone, boolean applyTpf) {
-        if (value < effectiveDeadZone) {
-            invokeAnalogs(hash, value, !applyTpf);
-            return;
-        }
-
-        ArrayList<Mapping> maps = bindings.get(hash);
-        if (maps == null) {
-            return;
-        }
-
-        boolean valueChanged = !axisValues.containsKey(hash);
-        if (applyTpf) {
-            value *= frameTPF;
-        }
-
+   
         int size = maps.size();
         for (int i = size - 1; i >= 0; i--) {
             Mapping mapping = maps.get(i);
@@ -278,13 +183,26 @@ public class InputManager implements RawInputListener {
                 InputListener listener = listeners.get(j);
 
                 if (listener instanceof ActionListener && valueChanged) {
-                    ((ActionListener) listener).onAction(mapping.name, true, frameTPF);
+                    ((ActionListener) listener).onAction(mapping.name, isPressed, frameTPF);
                 }
-
+        
                 if (listener instanceof AnalogListener) {
-                    ((AnalogListener) listener).onAnalog(mapping.name, value, frameTPF);
-                }
+                    ((AnalogListener) listener).onAnalog(mapping.name, (float)value, frameTPF);
+                } 
 
+                if (listener instanceof UnifiedInputListener){
+                    ((UnifiedInputListener) listener).onUnifiedInput(mapping.name, valueChanged, (float)value, event, frameTPF);
+                }
+            }
+        }
+
+        if(value == 0.0) {
+            lastValues.remove(hash);
+            emulatedAnalogs.remove(hash);
+        } else {
+            lastValues.put(hash, value);
+            if(emulateAnalog) {
+                emulatedAnalogs.put(hash, event);
             }
         }
     }
@@ -303,61 +221,134 @@ public class InputManager implements RawInputListener {
     public void endInput() {
     }
 
+    private double calculateAnalogValue(InputEvent<?> evt){
+        double v = ((double)(evt.getTime() - keys.getInputTimeNanos()) / 1_000_000_000.0);
+        if(v<0.0001) v = 0.0001;
+        return v;
+    }
+
+    private void onMouseMotionEventQueued(MouseMotionEvent evt) {
+        if (evt.getDX() != 0) {
+            float val = Math.abs(evt.getDX()) / 1024f;
+            invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_X, evt.getDX() < 0), val, evt, false, true);
+        }
+        if (evt.getDY() != 0) {
+            float val = Math.abs(evt.getDY()) / 1024f;
+            invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_Y, evt.getDY() < 0), val, evt, false, true);
+        }
+        if (evt.getDeltaWheel() != 0) {
+            float val = Math.abs(evt.getDeltaWheel()) / 100f;
+            invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_WHEEL, evt.getDeltaWheel() < 0), val, evt, false, true);
+        }
+    }
+
+    private void onMouseButtonEventQueued(MouseButtonEvent evt) {
+        int hash = MouseButtonTrigger.mouseButtonHash(evt.getButtonIndex());      
+        invokeAnalogsAndActions(hash, evt.isPressed() ? calculateAnalogValue(evt): 0f, evt, true, false);
+    }
+
+
+    private void onKeyEventQueued(KeyInputEvent evt) {
+        if (evt.isRepeating()) {
+            return; // repeat events not used for bindings
+        }
+        int hash = KeyTrigger.keyHash(evt.getKeyCode());
+        invokeAnalogsAndActions(hash, evt.isPressed() ? calculateAnalogValue(evt): 0f, evt, true, false);
+    }
+
+    private void onJoyButtonEventQueued(JoyButtonEvent evt) {
+        int hash = JoyButtonTrigger.joyButtonHash(evt.getJoyIndex(), evt.getButtonIndex());
+        invokeAnalogsAndActions(hash, evt.isPressed() ? calculateAnalogValue(evt): 0f, evt, true, false);
+    }
+
     private void onJoyAxisEventQueued(JoyAxisEvent evt) {
-//        for (int i = 0; i < rawListeners.size(); i++){
-//            rawListeners.get(i).onJoyAxisEvent(evt);
-//        }
 
         int joyId = evt.getJoyIndex();
         int axis = evt.getAxisIndex();
         float value = evt.getValue();
-        float effectiveDeadZone = Math.max(globalAxisDeadZone, evt.getAxis().getDeadZone()); 
-        if (value < effectiveDeadZone && value > -effectiveDeadZone) {
+        
+        float deadzone = FastMath.clamp(Math.max(globalAxisDeadZone, evt.getAxis().getDeadZone()), 0f, 0.999f);
+        value = (FastMath.clamp(Math.abs(value) - deadzone, 0f, 1f) / (1f - deadzone)) * Math.signum(value);
+        
+        if (value == 0) { // turn off both directions
             int hash1 = JoyAxisTrigger.joyAxisHash(joyId, axis, true);
             int hash2 = JoyAxisTrigger.joyAxisHash(joyId, axis, false);
 
-            Float val1 = axisValues.get(hash1);
-            Float val2 = axisValues.get(hash2);
-
-            if (val1 != null && val1 > effectiveDeadZone) {
-                invokeActions(hash1, false);
-            }
-            if (val2 != null && val2 > effectiveDeadZone) {
-                invokeActions(hash2, false);
-            }
-
-            axisValues.remove(hash1);
-            axisValues.remove(hash2);
-
+            invokeAnalogsAndActions(hash1, 0, evt, false, false);
+            invokeAnalogsAndActions(hash2, 0, evt, false, false);
+            
         } else if (value < 0) {
             int hash = JoyAxisTrigger.joyAxisHash(joyId, axis, true);
             int otherHash = JoyAxisTrigger.joyAxisHash(joyId, axis, false);
 
-            // Clear the reverse direction's actions in case we
-            // crossed center too quickly
-            Float otherVal = axisValues.get(otherHash);
-            if (otherVal != null && otherVal > effectiveDeadZone) {
-                invokeActions(otherHash, false);
-            }
-
-            invokeAnalogsAndActions(hash, -value, effectiveDeadZone, true);
-            axisValues.put(hash, -value);
-            axisValues.remove(otherHash);
+            invokeAnalogsAndActions(otherHash, 0, evt, false, false); // clear other direction 
+            invokeAnalogsAndActions(hash, -value,  evt, false, false);
+         
         } else {
-            int hash = JoyAxisTrigger.joyAxisHash(joyId, axis, false);
+            int hash = JoyAxisTrigger.joyAxisHash(joyId, axis, false); 
             int otherHash = JoyAxisTrigger.joyAxisHash(joyId, axis, true);
-
-            // Clear the reverse direction's actions in case we
-            // crossed center too quickly
-            Float otherVal = axisValues.get(otherHash);
-            if (otherVal != null && otherVal > effectiveDeadZone) {
-                invokeActions(otherHash, false);
-            }
-
-            invokeAnalogsAndActions(hash, value, effectiveDeadZone, true);
-            axisValues.put(hash, value);
-            axisValues.remove(otherHash);
+          
+            invokeAnalogsAndActions(otherHash, 0, evt, false, false); // clear other direction
+            invokeAnalogsAndActions(hash, value, evt, false, false);
         }
+    }
+
+    /**
+     * Dispatches touch events to touch listeners
+     * @param evt The touch event to be dispatched to all onTouch listeners
+     */
+    public void onTouchEventQueued(TouchEvent evt) {
+        int hash = TouchTrigger.touchHash(evt.getKeyCode());
+        ArrayList<Mapping> maps = bindings.get(hash);
+        if (maps == null) {
+            return;
+        }
+
+        int size = maps.size();
+        for (int i = size - 1; i >= 0; i--) {
+            Mapping mapping = maps.get(i);
+            ArrayList<InputListener> listeners = mapping.listeners;
+            int listenerSize = listeners.size();
+            for (int j = listenerSize - 1; j >= 0; j--) {
+                InputListener listener = listeners.get(j);
+                if (listener instanceof TouchListener) {
+                    ((TouchListener) listener).onTouch(mapping.name, evt, frameTPF);
+                }
+                invokeAnalogsAndActions(hash, evt.getPressure(), evt, false, false);
+            }
+        }
+    }
+
+
+    /**
+     * Updates the <code>InputManager</code>.
+     * This will query current input devices and send
+     * appropriate events to registered listeners.
+     *
+     * @param tpf Time per frame value.
+     */
+    public void update(float tpf) {
+        frameTPF = tpf;
+
+
+        long currentTime = keys.getInputTimeNanos();
+
+        eventsPermitted = true;
+
+        keys.update();
+        mouse.update();
+        if (joystick != null) {
+            joystick.update();
+        }
+        if (touch != null) {
+            touch.update();
+        }
+
+        eventsPermitted = false;
+
+        processQueue();
+        updateEmulatedAnalogs();
+
     }
 
     /**
@@ -372,15 +363,6 @@ public class InputManager implements RawInputListener {
         inputQueue.add(evt);
     }
 
-    private void onJoyButtonEventQueued(JoyButtonEvent evt) {
-//        for (int i = 0; i < rawListeners.size(); i++){
-//            rawListeners.get(i).onJoyButtonEvent(evt);
-//        }
-
-        int hash = JoyButtonTrigger.joyButtonHash(evt.getJoyIndex(), evt.getButtonIndex());
-        invokeActions(hash, evt.isPressed());
-        invokeTimedActions(hash, evt.getTime(), evt.isPressed());
-    }
 
     /**
      * Callback from RawInputListener. Do not use.
@@ -392,25 +374,6 @@ public class InputManager implements RawInputListener {
         }
 
         inputQueue.add(evt);
-    }
-
-    private void onMouseMotionEventQueued(MouseMotionEvent evt) {
-//        for (int i = 0; i < rawListeners.size(); i++){
-//            rawListeners.get(i).onMouseMotionEvent(evt);
-//        }
-
-        if (evt.getDX() != 0) {
-            float val = Math.abs(evt.getDX()) / 1024f;
-            invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_X, evt.getDX() < 0), val, globalAxisDeadZone, false);
-        }
-        if (evt.getDY() != 0) {
-            float val = Math.abs(evt.getDY()) / 1024f;
-            invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_Y, evt.getDY() < 0), val, globalAxisDeadZone, false);
-        }
-        if (evt.getDeltaWheel() != 0) {
-            float val = Math.abs(evt.getDeltaWheel()) / 100f;
-            invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_WHEEL, evt.getDeltaWheel() < 0), val, globalAxisDeadZone, false);
-        }
     }
 
     /**
@@ -446,11 +409,6 @@ public class InputManager implements RawInputListener {
         }
     }
 
-    private void onMouseButtonEventQueued(MouseButtonEvent evt) {
-        int hash = MouseButtonTrigger.mouseButtonHash(evt.getButtonIndex());
-        invokeActions(hash, evt.isPressed());
-        invokeTimedActions(hash, evt.getTime(), evt.isPressed());
-    }
 
     /**
      * Callback from RawInputListener. Do not use.
@@ -465,15 +423,7 @@ public class InputManager implements RawInputListener {
         inputQueue.add(evt);
     }
 
-    private void onKeyEventQueued(KeyInputEvent evt) {
-        if (evt.isRepeating()) {
-            return; // repeat events not used for bindings
-        }
 
-        int hash = KeyTrigger.keyHash(evt.getKeyCode());
-        invokeActions(hash, evt.isPressed());
-        invokeTimedActions(hash, evt.getTime(), evt.isPressed());
-    }
 
     /**
      * Callback from RawInputListener. Do not use.
@@ -497,7 +447,7 @@ public class InputManager implements RawInputListener {
      * @param deadZone the deadzone for joystick axes.
      */
     public void setAxisDeadZone(float deadZone) {
-        this.globalAxisDeadZone = deadZone;
+        this.globalAxisDeadZone = FastMath.clamp(deadZone, 0f, 0.999f);
     }
 
     /**
@@ -650,8 +600,13 @@ public class InputManager implements RawInputListener {
             throw new IllegalArgumentException("Cannot find mapping: " + mappingName);
         }
 
-        ArrayList<Mapping> maps = bindings.get(trigger.triggerHashCode());
-        maps.remove(mapping);
+        int hash = trigger.triggerHashCode();
+        ArrayList<Mapping> maps = bindings.get(hash);
+        if (maps != null) {
+            maps.remove(mapping);
+            if (maps.isEmpty()) bindings.remove(hash);
+        }
+        mapping.triggers.remove((Integer) hash);
 
     }
 
@@ -671,8 +626,7 @@ public class InputManager implements RawInputListener {
      * Called to reset pressed keys or buttons when focus is restored.
      */
     public void reset() {
-        pressedButtons.clear();
-        axisValues.clear();
+      
     }
 
     /**
@@ -888,68 +842,7 @@ public class InputManager implements RawInputListener {
         }
 
         inputQueue.clear();
-    }
-
-    /**
-     * Updates the <code>InputManager</code>.
-     * This will query current input devices and send
-     * appropriate events to registered listeners.
-     *
-     * @param tpf Time per frame value.
-     */
-    public void update(float tpf) {
-        frameTPF = tpf;
-
-        // Activate safemode if the TPF value is so small
-        // that rounding errors are inevitable
-        safeMode = tpf < 0.015f;
-
-        long currentTime = keys.getInputTimeNanos();
-        frameDelta = currentTime - lastUpdateTime;
-
-        eventsPermitted = true;
-
-        keys.update();
-        mouse.update();
-        if (joystick != null) {
-            joystick.update();
-        }
-        if (touch != null) {
-            touch.update();
-        }
-
-        eventsPermitted = false;
-
-        processQueue();
-        invokeUpdateActions();
-
-        lastLastUpdateTime = lastUpdateTime;
-        lastUpdateTime = currentTime;
-    }
-
-    /**
-     * Dispatches touch events to touch listeners
-     * @param evt The touch event to be dispatched to all onTouch listeners
-     */
-    public void onTouchEventQueued(TouchEvent evt) {
-        ArrayList<Mapping> maps = bindings.get(TouchTrigger.touchHash(evt.getKeyCode()));
-        if (maps == null) {
-            return;
-        }
-
-        int size = maps.size();
-        for (int i = size - 1; i >= 0; i--) {
-            Mapping mapping = maps.get(i);
-            ArrayList<InputListener> listeners = mapping.listeners;
-            int listenerSize = listeners.size();
-            for (int j = listenerSize - 1; j >= 0; j--) {
-                InputListener listener = listeners.get(j);
-                if (listener instanceof TouchListener) {
-                    ((TouchListener) listener).onTouch(mapping.name, evt, frameTPF);
-                }
-            }
-        }
-    }
+    } 
 
     /**
      * Callback from RawInputListener. Do not use.

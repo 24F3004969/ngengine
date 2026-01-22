@@ -32,11 +32,12 @@
 package com.jme3.input.event;
 
 import com.jme3.input.Input;
+import com.jme3.input.InputDevice;
 
 /**
  * An abstract input event.
  */
-public abstract class InputEvent {
+public abstract class InputEvent<T extends InputDevice> {
 
     protected long time;
 
@@ -80,4 +81,5 @@ public abstract class InputEvent {
         this.consumed = true;
     }
     
+    public abstract T getDevice();
 }
