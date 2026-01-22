@@ -767,4 +767,14 @@ public class Geometry extends Spatial {
             }
         }
     }
+
+    private int numInstances = 1;
+
+    public void setNumInstances(int numInstances) {
+        this.numInstances = numInstances;
+    }
+
+    public int getNumInstances() {
+        return numInstances;
+    }
 }

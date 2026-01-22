@@ -70,7 +70,7 @@ public class DefaultTechniqueDefLogic implements TechniqueDefLogic {
                 renderer.renderMesh(mesh, lodLevel, numVisibleInstances, instGeom.getAllInstanceData());
             }
         } else {
-            renderer.renderMesh(mesh, lodLevel, 1, null);
+            renderer.renderMesh(mesh, lodLevel, geom.getNumInstances(), null);
         }
     }
 
