@@ -30,6 +30,7 @@ public class TestGlobalLight extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
+        flyCam.setEnabled(false);
         final PointLight globalPointLight = new PointLight(true);
         final Node lightsAttachedNode = new Node("lightsAttachedNode");
         Vector3f testOffset = new Vector3f(0, 0, 0);
@@ -55,11 +56,17 @@ public class TestGlobalLight extends SimpleApplication {
         getCamera().setLocation(testOffset.add(new Vector3f(0, 0, 10)));
         getCamera().lookAt(testOffset, Vector3f.UNIT_Y);
 
-        getRootNode().attachChild(lightsAttachedNode);
-        getRootNode().attachChild(lightsNotAttachedNode);
+        Node rootNode = new Node();
+        rootNode.attachChild(lightsAttachedNode);
+        rootNode.attachChild(lightsNotAttachedNode);
+      
+        Node rootRootNode = new Node();
+        getRootNode().attachChild(rootRootNode);
 
         lightsAttachedNode.addLight(localPointLight);
         lightsAttachedNode.addLight(globalPointLight);
+        
+        rootRootNode.attachChild(rootNode);
 
         getRootNode().addLight(new AmbientLight(new ColorRGBA(0.01f, 0.01f, 0.01f, 1)));
     }
