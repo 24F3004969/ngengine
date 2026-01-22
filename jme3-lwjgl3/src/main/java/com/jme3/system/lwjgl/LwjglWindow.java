@@ -53,11 +53,9 @@ import com.jme3.util.SafeArrayList;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -834,7 +832,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
     @Override
     public JoyInput getJoyInput() {
         if (joyInput == null) {
-            joyInput = new GlfwJoystickInput();
+            joyInput = new GlfwJoystickInput(settings);
         }
         return joyInput;
     }
