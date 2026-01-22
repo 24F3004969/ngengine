@@ -59,6 +59,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -103,7 +104,6 @@ public class LodGenerator {
     private Vector3f tmpV1 = new Vector3f();
     private Vector3f tmpV2 = new Vector3f();
     private boolean bestQuality = true;
-    private int indexCount = 0;
     private List<Vertex> collapseCostSet = new ArrayList<>();
     private float collapseCostLimit;
     private List<Triangle> triangleList;
@@ -324,14 +324,13 @@ public class LodGenerator {
     
     private void gatherIndexData(Mesh mesh, List<Vertex> vertexLookup) {
         VertexBuffer indexBuffer = mesh.getBuffer(VertexBuffer.Type.Index);
-        indexCount = indexBuffer.getNumElements() * 3;
         Buffer b = indexBuffer.getDataReadOnly();
         b.rewind();
         
         while (b.remaining() != 0) {
             Triangle tri = new Triangle();
             tri.isRemoved = false;
-            triangleList.add(tri);            
+            triangleList.add(tri);  
             for (int i = 0; i < 3; i++) {
                 if (b instanceof IntBuffer) {
                     tri.vertexId[i] = ((IntBuffer) b).get();
@@ -340,20 +339,16 @@ public class LodGenerator {
                     //we need an unsigned int here.
                     tri.vertexId[i] = ((ShortBuffer) b).get()& 0xffff;
                 }
-               // assert (tri.vertexId[i] < vertexLookup.size());
+                assert (tri.vertexId[i] < vertexLookup.size());
                 tri.vertex[i] = vertexLookup.get(tri.vertexId[i]);
                 //debug only;
                 tri.vertex[i].index = tri.vertexId[i];
             }
             if (tri.isMalformed()) {
-                if (!tri.isRemoved) {
-                    if (logger.isLoggable(Level.FINE)) {
-                        logger.log(Level.FINE, "malformed triangle found with ID:{0}\n{1} It will be excluded from LOD calculations.", new Object[]{triangleList.indexOf(tri), tri.toString()});
-                    }
-                    tri.isRemoved = true;
-                    indexCount -= 3;
+                tri.isRemoved = true;
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "malformed triangle found with ID:{0}\n{1} It will be excluded from LOD calculations.", new Object[]{triangleList.indexOf(tri), tri.toString()});
                 }
-                
             } else {
                 tri.computeNormal();
                 addTriangleToEdges(tri);
@@ -508,7 +503,7 @@ public class LodGenerator {
             if (!dest.isSeam) {
                 cost += meshBoundingSphereRadius;
             } else {
-                cost += meshBoundingSphereRadius * 0.5;
+                cost += meshBoundingSphereRadius * 0.5f;
             }
         }
         
@@ -611,6 +606,12 @@ public class LodGenerator {
     public void bakeLods(TriangleReductionMethod reductionMethod, float... reductionValues) {
         mesh.setLodLevels(computeLods(reductionMethod, reductionValues));
     }
+
+    private int aliveTriangles(Collection<Triangle> triangleList) {
+        int c = 0;
+        for (Triangle t : triangleList) if (!t.isRemoved) c++;
+        return c;
+    }
     
     private VertexBuffer makeLod(Mesh mesh) {
         VertexBuffer indexBuffer = mesh.getBuffer(VertexBuffer.Type.Index);
@@ -618,6 +619,7 @@ public class LodGenerator {
         boolean isShortBuffer = indexBuffer.getFormat() == VertexBuffer.Format.UnsignedShort;
         // Create buffers.
         VertexBuffer lodBuffer = new VertexBuffer(VertexBuffer.Type.Index);
+        int indexCount = aliveTriangles(triangleList) * 3;
         int bufsize = indexCount == 0 ? 3 : indexCount;
         
         if (isShortBuffer) {
@@ -730,6 +732,8 @@ public class LodGenerator {
                 break;
             }
         }
+
+        if (ed == null) return;
         
         if (ed.refCount == 1) {
             v.edges.remove(ed);
@@ -754,7 +758,6 @@ public class LodGenerator {
             if (duplicate != null) {
                 if (!tri.isRemoved) {
                     tri.isRemoved = true;
-                    indexCount -= 3;
                     if (logger.isLoggable(Level.FINE)) {
                         logger.log(Level.FINE, "duplicate triangle found{0}{1} It will be excluded from LOD level calculations.", new Object[]{tri, duplicate});
                     }
@@ -803,14 +806,20 @@ public class LodGenerator {
     }
     
     private boolean isDuplicateTriangle(Triangle triangle, Triangle triangle2) {
+        
+        boolean v0 = false, v1 = false, v2 = false;
         for (int i = 0; i < 3; i++) {
-            if (triangle.vertex[i] != triangle2.vertex[0]
-                    || triangle.vertex[i] != triangle2.vertex[1]
-                    || triangle.vertex[i] != triangle2.vertex[2]) {
-                return false;
+            if (triangle.vertex[0] == triangle2.vertex[i]) {
+                v0 = true;
+            }
+            if (triangle.vertex[1] == triangle2.vertex[i]) {
+                v1 = true;
+            }
+            if (triangle.vertex[2] == triangle2.vertex[i]) {
+                v2 = true;
             }
         }
-        return true;
+        return v0 && v1 && v2;
     }
     
     private void replaceVertexID(Triangle triangle, int oldID, int newID, Vertex dst) {
@@ -909,16 +918,13 @@ public class LodGenerator {
                     cEdge.srcID = srcID;
                     cEdge.dstID = triangle.getVertexIndex(dest);
                     tmpCollapsedEdges.add(cEdge);
-                }
+                }  
 
                 // 2. task
-                indexCount -= 3;
-
-                // 3. task
                 triangle.isRemoved = true;
                 nbCollapsedTri++;
 
-                // 4. task
+                // 3. task
                 removeTriangleFromEdges(triangle, src);
                 it.remove();
                 
@@ -944,7 +950,6 @@ public class LodGenerator {
                     // Destroy the triangle.
                     //     if (!triangle.isRemoved) {
                     triangle.isRemoved = true;
-                    indexCount -= 3;
                     removeTriangleFromEdges(triangle, src);
                     it.remove();
                     nbCollapsedTri++;
