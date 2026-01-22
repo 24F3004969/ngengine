@@ -156,6 +156,10 @@ MaterialDef PBR Lighting {
             //   6 - exposure
             //   7 - alpha
             //   8 - geometryNormals
+
+        Texture2D MatCapMap : Common/Textures/fake.png
+        Texture2D MatCapMetalMap : Common/Textures/fakemetal.png
+        Float MatCapIntensity : 0.0   
     }
 
     Technique {
@@ -215,6 +219,8 @@ MaterialDef PBR Lighting {
             FOG_LINEAR : LinearFog
             FOG_EXP : ExpFog
             FOG_EXPSQ : ExpSqFog
+            MATCAP_MAP : MatCapMap
+            MATCAP_METAL_MAP : MatCapMetalMap
         }
     }
 

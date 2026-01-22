@@ -23,6 +23,18 @@ uniform vec3 g_CameraPosition;
     #import "Common/ShaderLib/MaterialFog.glsllib"
 #endif
 
+#if defined(MATCAP_MAP) || defined(MATCAP_METAL_MAP)
+    #if defined(MATCAP_MAP) 
+        uniform sampler2D m_MatCapMap;
+    #endif
+    #if defined(MATCAP_METAL_MAP) 
+        uniform sampler2D m_MatCapMetalMap;
+    #endif
+    uniform float m_MatCapIntensity; 
+    uniform mat4 g_ViewMatrix;
+    #define USE_MATCAP
+#endif
+
 void main(){
     vec3 wpos = PBRLightingUtils_getWorldPosition();
     vec3 worldViewDir = normalize(g_CameraPosition - wpos);
@@ -50,6 +62,44 @@ void main(){
 
     // Calculate env probes
     PBRLightingUtils_computeProbesContribution(surface);
+
+    // Apply MatCap if enabled
+    #ifdef USE_MATCAP
+        float matcapIntensity = clamp(m_MatCapIntensity, 0.0, 1.0);
+        #if NB_PROBES == 0
+            matcapIntensity = 1.0; // if no env probes, matcap fully replaces env lighting
+        #endif
+        if(matcapIntensity > 0.0){
+            vec3 vN = normalize(mat3(g_ViewMatrix)*surface.normal); // view space
+            vec2 uv = vN.xy * 0.5 + 0.5;
+            uv = clamp(uv, 0.001, 0.999);
+            
+            vec3 matCapColor = vec3(0.0);
+            #ifdef MATCAP_MAP
+                vec3 c = texture2D(m_MatCapMap, uv).rgb;
+                c*=surface.albedo.rgb;
+                #if defined(MATCAP_METAL_MAP)
+                    c*=surface.roughness; // mask only non-metal areas
+                #endif
+                matCapColor += c;
+            #endif
+
+            #ifdef MATCAP_METAL_MAP
+                vec3 cMetal = texture2D(m_MatCapMetalMap, uv).rgb;
+                cMetal*=surface.albedo.rgb;
+                #if defined(MATCAP_MAP)
+                    cMetal*=(1.0 - surface.roughness); // mask only metal areas
+                #endif
+                matCapColor += cMetal;
+            #endif
+            
+            surface.envLightContribution.rgb = mix(
+                surface.envLightContribution.rgb,
+                matCapColor,
+                matcapIntensity
+            );
+        }
+    #endif
 
     // Put it all together
     gl_FragColor.rgb = vec3(0.0);
