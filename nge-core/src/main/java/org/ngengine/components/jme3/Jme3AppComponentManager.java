@@ -45,7 +45,6 @@ import org.ngengine.AsyncAssetManager;
 import org.ngengine.ViewPortManager;
 import org.ngengine.components.AbstractComponentManager;
 import org.ngengine.components.ComponentManager;
-import org.ngengine.components.runners.ComponentICHandler;
 import org.ngengine.config.NGEAppSettings;
 import org.ngengine.runner.MainThreadRunner;
 import org.ngengine.runner.Runner;
@@ -93,7 +92,6 @@ public abstract class Jme3AppComponentManager extends AbstractComponentManager{
         mng.getUpdaters().add(new AppViewPortComponentUpdater(app));
         mng.getUpdaters().add(new AppComponentUpdater(app));
         mng.getLoaders().add(new AppComponentLoader(app));
-        mng.getIcHandlers().add(new ComponentICHandler());  
     }
     
     @Override
