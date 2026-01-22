@@ -32,7 +32,7 @@ task updateVersionPropertiesFile {
                           "git.hash=${jmeGitHash}\n" +
                           "git.hash.short=${jmeShortGitHash}\n" +
                           "git.tag=${jmeGitTag}\n" +
-                          "name.full=jMonkeyEngine ${jmeFullVersion}\n" +
+                          "name.full=Nostr Game Engine ${jmeFullVersion}\n" +
                           "version.full=${jmeFullVersion}\n" +
                           "version.number=${jmeVersion}\n" +
                           "version.tag=${jmeVersionTag}"
