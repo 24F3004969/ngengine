@@ -190,6 +190,7 @@ public class TempVars implements Closeable{
      */
     public final Vector2f vect2d = new Vector2f();
     public final Vector2f vect2d2 = new Vector2f();
+    public final Vector2f vect2d3 = new Vector2f();
     /**
      * General matrices.
      */
@@ -201,6 +202,7 @@ public class TempVars implements Closeable{
      */
     public final Quaternion quat1 = new Quaternion();
     public final Quaternion quat2 = new Quaternion();
+    public final Quaternion quat3 = new Quaternion();
     /**
      * Eigen
      */
@@ -228,8 +230,8 @@ public class TempVars implements Closeable{
     public final CollisionResults collisionResults = new CollisionResults();
     public final float[] bihSwapTmp = new float[9];
     public final ArrayList<BIHStackData> bihStack = new ArrayList<>();
-
     public final Transform trans1 = new Transform();
+
 
     @Override
     public void close(){
