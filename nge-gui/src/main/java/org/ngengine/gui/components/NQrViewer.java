@@ -58,14 +58,16 @@ import com.simsilica.lemur.component.SpringGridLayout;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.GuiControlListener;
 import com.simsilica.lemur.core.GuiUpdateListener;
-import com.simsilica.lemur.event.MouseListener;
+import com.simsilica.lemur.focus.FocusListener;
+import com.simsilica.lemur.focus.ScrollDirection;
+// import com.simsilica.lemur.event.MouseListener;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import java.util.function.Consumer;
 import org.ngengine.gui.qr.QrCode;
 import org.ngengine.platform.NGEPlatform;
 
-public class NQrViewer extends Container implements GuiControlListener, GuiUpdateListener, MouseListener {
+public class NQrViewer extends Container implements GuiControlListener, GuiUpdateListener, FocusListener {
 
     public static final String ELEMENT_ID = "qr";
 
@@ -126,7 +128,8 @@ public class NQrViewer extends Container implements GuiControlListener, GuiUpdat
         addChild(label);
         addChild(qrContainer);
 
-        qrCode.addMouseListener(this);
+        qrCode.getControl(GuiControl.class).addFocusChangeListener(this);
+        // qrCode.addMouseListener(this);
         label.setTextHAlignment(HAlignment.Center);
         label.setTextVAlignment(VAlignment.Center);
 
@@ -356,20 +359,42 @@ public class NQrViewer extends Container implements GuiControlListener, GuiUpdat
     }
 
     @Override
-    public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {
-        if (event.isPressed() && event.getButtonIndex() == 0) {
-            if (this.isShown()) {
-                clickAction.accept(value);
-            }
-        }
+    public void focusGained(Spatial target) {
     }
 
     @Override
-    public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {}
+    public void focusLost(Spatial target) {
+    }
 
     @Override
-    public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {}
+    public void focusAction(Spatial target,     boolean pressed) {
+            if (this.isShown()) {
+                clickAction.accept(value);
+            }
+        
+    }
 
     @Override
-    public void mouseMoved(MouseMotionEvent event, Spatial target, Spatial capture) {}
+    public void focusScrollUpdate(Spatial target,  ScrollDirection dir, double value) {
+        
+      
+    }
+
+    // @Override
+    // public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {
+    //     if (event.isPressed() && event.getButtonIndex() == 0) {
+    //         if (this.isShown()) {
+    //             clickAction.accept(value);
+    //         }
+    //     }
+    // }
+
+    // @Override
+    // public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {}
+
+    // @Override
+    // public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {}
+
+    // @Override
+    // public void mouseMoved(MouseMotionEvent event, Spatial target, Spatial capture) {}
 }

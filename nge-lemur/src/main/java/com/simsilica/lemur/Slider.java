@@ -37,6 +37,8 @@ package com.simsilica.lemur;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.Styles;
 import com.simsilica.lemur.core.VersionedReference;
+import com.simsilica.lemur.focus.FocusListener;
+import com.simsilica.lemur.focus.ScrollDirection;
 import com.simsilica.lemur.core.GuiControl;
 import com.jme3.input.MouseInput;
 import com.jme3.math.Vector2f;
@@ -45,10 +47,10 @@ import com.jme3.scene.Spatial;
 
 import com.simsilica.lemur.component.BorderLayout;
 import com.simsilica.lemur.core.AbstractGuiControlListener;
-import com.simsilica.lemur.event.CursorButtonEvent;
-import com.simsilica.lemur.event.CursorEventControl;
-import com.simsilica.lemur.event.CursorMotionEvent;
-import com.simsilica.lemur.event.DefaultCursorListener;
+// import com.simsilica.lemur.event.CursorButtonEvent;
+// import com.simsilica.lemur.event.CursorEventControl;
+// import com.simsilica.lemur.event.CursorMotionEvent;
+// import com.simsilica.lemur.event.DefaultCursorListener;
 
 
 /**
@@ -84,6 +86,7 @@ public class Slider extends Panel {
     private RangedValueModel model;
     private double delta = 1.0f;
     private VersionedReference<Double> state;
+    private final ScrollListener scrollListener = new ScrollListener();
 
     public Slider() {
         this(new DefaultRangedValueModel(), Axis.X, true, new ElementId(ELEMENT_ID), null);
@@ -170,8 +173,9 @@ public class Slider extends Panel {
         setupCommands();
 
         thumb = new Button(null, true, elementId.child(THUMB_ID), style);
-        ButtonDragger dragger = new ButtonDragger();
-        CursorEventControl.addListenersToSpatial(thumb, dragger);
+        thumb.getControl(GuiControl.class).setFocusable(false);
+        // ButtonDragger dragger = new ButtonDragger();
+        // CursorEventControl.addListenersToSpatial(thumb, dragger);
         attachChild(thumb);
 
         // A child that is not managed by the layout will not otherwise lay itself
@@ -181,6 +185,11 @@ public class Slider extends Panel {
         if( applyStyles ) {
             styles.applyStyles(this, elementId, style);
         }
+
+        increment.addFocusListener(scrollListener);
+        decrement.addFocusListener(scrollListener);
+        range.addFocusListener(scrollListener);
+        thumb.addFocusListener(scrollListener);
     }
     @SuppressWarnings("unchecked") // because Java doesn't like var-arg generics
     protected final void setupCommands() {
@@ -336,66 +345,30 @@ public class Slider extends Panel {
         }
     }
 
-    private class ButtonDragger extends DefaultCursorListener {
-
-        private Vector2f drag = null;
-        private double startPercent;
+    private class ScrollListener implements FocusListener{
 
         @Override
-        public void cursorButtonEvent( CursorButtonEvent event, Spatial target, Spatial capture ) {
-            if( event.getButtonIndex() != MouseInput.BUTTON_LEFT )
-                return;
-
-            //if( capture != null && capture != target )
-            //    return;
-
-            event.setConsumed();
-            if( event.isPressed() ) {
-                drag = new Vector2f(event.getX(), event.getY());
-                startPercent = model.getPercent();
-            } else {
-                // Dragging is done.
-                drag = null;
-            }
+        public void focusGained(Spatial target) {
+          
         }
 
         @Override
-        public void cursorMoved( CursorMotionEvent event, Spatial target, Spatial capture ) {
-            if( drag == null )
-                return;
-
-            // Need to figure out how our mouse motion projects
-            // onto the slider axis.  Easiest way is to project
-            // the end points onto the screen to create a vector
-            // against which we can do dot products.
-            Vector3f v1 = null;
-            Vector3f v2 = null;
-            switch( axis ) {
-                case X:
-                    v1 = new Vector3f(thumb.getSize().x*0.5f,0,0);
-                    v2 = v1.add(range.getSize().x - thumb.getSize().x*0.5f, 0, 0);
-                    break;
-                case Y:
-                    v1 = new Vector3f(0,thumb.getSize().y*0.5f,0);
-                    v2 = v1.add(0, (range.getSize().y - thumb.getSize().y*0.5f), 0);
-                    break;
-            }
-                        
-            v1 = event.getRelativeViewCoordinates(range, v1);
-            v2 = event.getRelativeViewCoordinates(range, v2);
-
-            Vector3f dir = v2.subtract(v1);
-            float length = dir.length();
-            dir.multLocal(1/length);
-            Vector3f cursorDir = new Vector3f(event.getX() - drag.x, event.getY() - drag.y, 0);
-
-            float dot = cursorDir.dot(dir);
-            
-            // Now, the actual amount is then dot/length
-            float percent = dot / length;
-            model.setPercent(startPercent + percent);
-
-            event.setConsumed();
+        public void focusLost(Spatial target) {
+           
         }
+
+        @Override
+        public void focusAction(Spatial target, boolean pressed) {
+  
+        }
+
+        @Override
+        public void focusScrollUpdate(Spatial target, ScrollDirection dir, double v) {
+            int dvalue = (int)(dir==ScrollDirection.Up||dir==ScrollDirection.Right?v:-v);
+            double delta = getDelta();
+            double value = getModel().getValue();
+            getModel().setValue(value + delta * dvalue);   
+        }
+
     }
 }

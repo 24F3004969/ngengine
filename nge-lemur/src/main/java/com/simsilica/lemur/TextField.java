@@ -41,10 +41,7 @@ import com.jme3.math.ColorRGBA;
 
 import com.simsilica.lemur.component.TextEntryComponent;
 import com.simsilica.lemur.core.GuiControl;
-import com.simsilica.lemur.event.KeyActionListener;
-import com.simsilica.lemur.event.KeyAction;
-import com.simsilica.lemur.event.FocusMouseListener;
-import com.simsilica.lemur.event.MouseEventControl;
+
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
@@ -105,7 +102,6 @@ public class TextField extends Panel {
 
         setDocumentModel(model);
 
-        addControl(new MouseEventControl(FocusMouseListener.INSTANCE));
 
         if( applyStyles ) {
             Styles styles = GuiGlobals.getInstance().getStyles();
@@ -128,9 +124,7 @@ public class TextField extends Panel {
     }
 
 
-    public Map<KeyAction,KeyActionListener> getActionMap() {
-        return text.getActionMap();
-    }
+
 
     public DocumentModel getDocumentModel() {
         return text.getDocumentModel();

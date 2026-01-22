@@ -52,9 +52,8 @@ import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.VersionedHolder;
 import com.simsilica.lemur.core.VersionedObject;
 import com.simsilica.lemur.core.VersionedReference;
-import com.simsilica.lemur.event.CursorButtonEvent;
-import com.simsilica.lemur.event.CursorEventControl;
-import com.simsilica.lemur.event.DefaultCursorListener;
+import com.simsilica.lemur.focus.FocusListener;
+import com.simsilica.lemur.focus.ScrollDirection;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.Styles;
 import java.awt.Color;
@@ -136,7 +135,8 @@ public class ColorChooser extends Panel {
         colors = new Panel();
         colorPanel.addChild(colors);
         this.swatchComponent = new QuadBackgroundComponent(swatchTexture);
-        CursorEventControl.addListenersToSpatial(colors, new SwatchListener());
+        getControl(GuiControl.class).addFocusChangeListener( new SwatchListener());
+        
         colors.setBackground(swatchComponent);
         colors.setPreferredSize(new Vector3f(256, 64, 0));
         layout.addChild(colorPanel, 2);
@@ -263,17 +263,32 @@ public class ColorChooser extends Panel {
         crosshair.setLocalTranslation(h * range.x - crosshairOffset.x, s * range.y - range.y + crosshairOffset.y, crosshairOffset.z);
     }
 
-    private class SwatchListener extends DefaultCursorListener {
+    private class SwatchListener implements FocusListener {
+
+    
+        @Override
+        public void focusGained(Spatial target) {
+          
+        }
 
         @Override
-        protected void click( CursorButtonEvent event, Spatial target, Spatial capture ) {
+        public void focusLost(Spatial target) {
+            
+        }
 
-            Vector3f world = new Vector3f(event.getX(), event.getY(), 0);
-            Vector3f local = colors.worldToLocal(world, null);
-            Vector3f size = colors.getSize();
-            float h = (local.x / size.x);
-            float s = (size.y + local.y) / size.y;
-            updateModelValue(h, s, bIndex);
+        @Override
+        public void focusAction(Spatial target, boolean pressed) {
+            // Vector3f world = new Vector3f(event.getX(), event.getY(), 0);
+            // Vector3f local = colors.worldToLocal(world, null);
+            // Vector3f size = colors.getSize();
+            // float h = (local.x / size.x);
+            // float s = (size.y + local.y) / size.y;
+            // updateModelValue(h, s, bIndex);
+        }
+
+        @Override
+        public void focusScrollUpdate(Spatial target, ScrollDirection dir,  double value) {
+ 
         }
     }
 }

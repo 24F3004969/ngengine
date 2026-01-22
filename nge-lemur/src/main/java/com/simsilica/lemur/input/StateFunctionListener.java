@@ -43,5 +43,5 @@ package com.simsilica.lemur.input;
  *  @author    Paul Speed
  */
 public interface StateFunctionListener {
-    public void valueChanged( FunctionId func, InputState value, double tpf );
+    public void valueChanged( FunctionId func, InputState value );
 }

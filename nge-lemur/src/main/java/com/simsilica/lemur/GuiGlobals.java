@@ -34,7 +34,6 @@
 
 package com.simsilica.lemur;
 
-import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,31 +45,21 @@ import com.jme3.font.BitmapFont;
 import com.jme3.material.MatParam;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector3f;
-import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.Bucket;
-import com.jme3.scene.Spatial;
 import com.jme3.system.JmeContext.Type;
 import com.jme3.texture.Texture;
-import com.jme3.util.res.Resources;
 import com.simsilica.lemur.anim.AnimationState;
 import com.simsilica.lemur.component.Text2d;
 import com.simsilica.lemur.component.TextComponent;
 import com.simsilica.lemur.core.GuiMaterial;
 import com.simsilica.lemur.core.UnshadedMaterialAdapter;
 import com.simsilica.lemur.core.LightingMaterialAdapter;
-import com.simsilica.lemur.event.KeyListener;
-import com.simsilica.lemur.event.KeyInterceptState;
-import com.simsilica.lemur.event.MouseAppState;
-import com.simsilica.lemur.event.PickState;
+
 import com.simsilica.lemur.event.PopupState;
-import com.simsilica.lemur.event.TouchAppState;
-import com.simsilica.lemur.focus.FocusManagerState;
-import com.simsilica.lemur.focus.FocusNavigationState;
+
 import com.simsilica.lemur.input.InputMapper;
-import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.Styles;
 
 
@@ -111,11 +100,6 @@ public class GuiGlobals {
 
     private AssetManager assets;
     private InputMapper  inputMapper;
-    private KeyInterceptState keyInterceptor;
-    private MouseAppState mouseState;
-    private TouchAppState touchState;
-    private FocusManagerState focusState;
-    private FocusNavigationState focusNavState;
     private AnimationState animationState;
     private PopupState popupState;
     private String iconBase;
@@ -157,40 +141,16 @@ public class GuiGlobals {
             return;
         }
 
-        this.keyInterceptor = new KeyInterceptState(app);
 
-        if (app.getContext().getMouseInput() != null) {
-            this.mouseState = new MouseAppState(app);
-        } 
-        if( app.getContext().getTouchInput() != null) {
-            this.touchState = new TouchAppState(app);
-        }
-
-        this.inputMapper = new InputMapper(app.getInputManager());
-        this.focusState = new FocusManagerState();
-        this.focusNavState = new FocusNavigationState(inputMapper, focusState);
+        this.inputMapper = new InputMapper();
+ 
         this.animationState = new AnimationState();
         this.popupState = new PopupState();
 
-        // Write the app state dependencies directly so that:
-        // a) they are there before initialization
-        // b) so that the states don't have to rely on GuiGlobals to find
-        //    them.
-        // c) so that we might disable them properly even at runtime
-        //    if the user kills or replaces the nav state
-        focusState.setFocusNavigationState(focusNavState);
 
-        app.getStateManager().attach(keyInterceptor);
 
-        if( mouseState != null ) {
-            app.getStateManager().attach(mouseState);
-        }
-        if( touchState != null ) {
-            app.getStateManager().attach(touchState);
-        }
 
-        app.getStateManager().attach(focusState);
-        app.getStateManager().attach(focusNavState);
+
         app.getStateManager().attach(animationState);
         app.getStateManager().attach(popupState);
 
@@ -202,9 +162,7 @@ public class GuiGlobals {
         ViewPort main = app.getViewPort();
         setupGuiComparators(main);
 
-        // By default all of our app picking states are enabled so we should
-        // make a 'formal' request.
-        setCursorEventsEnabled(true);
+        
 
         gammaEnabled = app.getContext().getSettings().isGammaCorrection();
     }
@@ -254,14 +212,7 @@ public class GuiGlobals {
     public PopupState getPopupState() {
         return popupState;
     }
-
-    public FocusManagerState getFocusManagerState() {
-        return focusState;
-    }
-
-    public FocusNavigationState getFocusNavigationState() {
-        return focusNavState;
-    }
+ 
 
     /**
      *  Goes through all of the font page materials and sets
@@ -286,6 +237,9 @@ public class GuiGlobals {
         return (Texture)mp.getValue();
     }
 
+    public AssetManager getAssets() {
+        return assets;
+    }
     public void lightFont( BitmapFont font ) {
         Material[] pages = new Material[font.getPageSize()];
         for( int i = 0; i < pages.length; i++ ) {
@@ -397,175 +351,9 @@ public class GuiGlobals {
         return srgbaColor(srgbColor.r, srgbColor.g, srgbColor.b, srgbColor.a);
     }
 
-    public void requestFocus( Spatial s ) {
-        focusState.setFocus(s);
-    }
-
-    public void releaseFocus( Spatial s ) {
-        focusState.releaseFocus(s);
-    }
-
-    public Spatial getCurrentFocus() {
-        return focusState.getFocus();
-    }
-
-    public void addKeyListener( KeyListener l ) {
-        keyInterceptor.addKeyListener(l);
-    }
-
-    public void removeKeyListener( KeyListener l ) {
-        keyInterceptor.removeKeyListener(l);
-    }
-
-    @Deprecated
-    public ViewPort getCollisionViewPort( Spatial s ) {
-        if( mouseState != null ) {
-            return mouseState.findViewPort(s);
-        }
-        if( touchState != null ) {
-            return touchState.findViewPort(s);
-        }
-        return null;
-    }
-
-    /**
-     *  Indicates that the specified owner requires the cursor
-     *  to be enabled.  This is a way of letting multiple separate
-     *  UI elements manage their need for the cursor.  If one
-     *  particular object indicates that it no longer has a need for
-     *  the cursor then it can be disabled if no other owners
-     *  require it.  This makes it easier to automatically manage
-     *  the enabled/disabled state of the picking behavior in the
-     *  face of complicated UIs.
-     */
-    public void requestCursorEnabled( Object owner ) {
-        if( mouseState != null ) {
-            mouseState.requestEnabled(owner);
-        }
-        if( touchState != null ) {
-            touchState.requestEnabled(owner);
-        }
-        if( focusNavState != null ) {
-            focusNavState.setEnabled(isCursorEventsEnabled());
-        }
-    }
-
-    /**
-     *  Releases a previous cursor request for the specified
-     *  sowner.  Returns true if the cursor is still enabled
-     *  after this call.
-     */
-    public boolean releaseCursorEnabled( Object owner ) {
-        boolean result = false;
-        if( mouseState != null ) {
-            if( mouseState.releaseEnabled(owner) ) {
-                result = true;
-            }
-        }
-        if( touchState != null ) {
-            if( touchState.releaseEnabled(owner) ) {
-                result = true;
-            }
-        }
-        if( focusNavState != null ) {
-            focusNavState.setEnabled(result);
-        }
-        return result;
-    }
-
-    /**
-     *  Returns true if the specified owner has an active cursor
-     *  enabled request pending.
-     */
-    public boolean hasRequestedCursorEnabled( Object owner ) {
-        if( mouseState != null ) {
-            return mouseState.hasRequestedEnabled(owner);
-        }
-        if( touchState != null ) {
-            return touchState.hasRequestedEnabled(owner);
-        }
-        return false;
-    }
-
-    /**
-     *  @deprecated Use setCursorEventsEnabled() instead.
-     */
-    @Deprecated
-    public void setMouseEventsEnabled( boolean f ) {
-        setCursorEventsEnabled(f);
-    }
-
-    public void setCursorEventsEnabled( boolean f ) {
-        setCursorEventsEnabled(f, false);
-    }
-
-    /**
-     *  The same as setCursorEventsEnabled(f) except that this will force
-     *  the cursor enabled state even if there are pending requests otherwise.
-     *  This can be a way to force the enabled/disabled state in the case
-     *  where an application has not converted to the new request/release
-     *  approach and/or has a specific need where counting requests will not
-     *  work.
-     */
-    public void setCursorEventsEnabled( boolean f, boolean force ) {
-        if( force ) {
-            if( mouseState != null ) {
-                mouseState.setEnabled(f);
-            }
-            if( touchState != null ) {
-                touchState.setEnabled(f);
-            }
-            if( focusNavState != null ) {
-                focusNavState.setEnabled(f);
-            }
-        } else {
-            // In an attempt to be backwards compatible with the new
-            // request/release paradigm, we will consider set/get like
-            // a request with GuiGlobals as the owner.
-            if( f ) {
-                requestCursorEnabled(this);
-            } else if( hasRequestedCursorEnabled(this) ) {
-                releaseCursorEnabled(this);
-            }
-        }
-    }
-
-    /**
-     *  @deprecated Use isCursorEventsEnabled() instead.
-     */
-    @Deprecated
-    public boolean isMouseEventsEnabled() {
-        return isCursorEventsEnabled();
-    }
-
-    public boolean isCursorEventsEnabled() {
-        if( mouseState != null ) {
-            return mouseState.isEnabled();
-        } else if( touchState != null ) {
-            return touchState.isEnabled();
-        } else {
-            return false;
-        }
-    }
-
-    @Deprecated
-    public Vector3f getScreenCoordinates( Spatial relativeTo, Vector3f pos ) {
-        ViewPort vp = getCollisionViewPort(relativeTo);
-        if( vp == null ) {
-            throw new RuntimeException("Could not find viewport for:" + relativeTo);
-        }
-
-        // Calculate the world position relative to the spatial
-        pos = relativeTo.localToWorld(pos, null);
-
-        Camera cam = vp.getCamera();
-        if( cam.isParallelProjection() ) {
-            return pos.clone();
-        }
-
-        return cam.getScreenCoordinates(pos);
-    }
-
+  
+ 
+ 
     private static class DefaultTextFactory implements Function<String, Text2d> {
         public Text2d apply( String fontName ) {
             if( log.isLoggable(Level.FINE) ) {

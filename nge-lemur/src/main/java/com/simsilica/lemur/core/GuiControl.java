@@ -41,10 +41,11 @@ import java.util.logging.Logger;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.*;
 import com.jme3.util.SafeArrayList;
-import com.simsilica.lemur.focus.FocusChangeEvent;
-import com.simsilica.lemur.focus.FocusChangeListener;
+import com.simsilica.lemur.Panel;
+import com.simsilica.lemur.focus.FocusListener;
 import com.simsilica.lemur.focus.FocusTarget;
-import com.simsilica.lemur.focus.FocusTraversal;
+import com.simsilica.lemur.focus.NavigatorListener;
+import com.simsilica.lemur.focus.ScrollDirection;
 
 
 /**
@@ -54,24 +55,24 @@ import com.simsilica.lemur.focus.FocusTraversal;
  *  @author    Paul Speed
  */
 public class GuiControl extends AbstractNodeControl<GuiControl>
-                        implements FocusTarget, FocusTraversal {
+                        implements FocusTarget {
 
     static Logger log = Logger.getLogger(GuiControl.class.getName());
 
     private ComponentStack componentStack;
     private GuiLayout layout;
-    private FocusTraversal focusTraversal;
 
     private SafeArrayList<GuiControlListener> listeners;
-    private SafeArrayList<FocusChangeListener> focusListeners;
+    private SafeArrayList<FocusListener> focusListeners;
     private SafeArrayList<GuiUpdateListener> updateListeners;
+    private SafeArrayList<NavigatorListener> navigatorListeners;
 
     private volatile boolean invalid = false;
 
     private Vector3f preferredSizeOverride = null;
     private Vector3f lastSize = new Vector3f();
     private boolean focused = false;
-    private boolean focusable = false;
+    private Boolean focusable = null;
 
     public GuiControl( GuiComponent... components ) {
         this.componentStack = new ComponentStack();
@@ -89,6 +90,27 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
         return super.getNode();
     }
 
+    public void addNavigatorListener( NavigatorListener l ) {
+        if( navigatorListeners == null ) {
+            navigatorListeners = new SafeArrayList<>(NavigatorListener.class);
+        }
+        navigatorListeners.add(l);
+    }
+
+    public void removeNavigatorListener( NavigatorListener l ) {
+        if( navigatorListeners == null ) {
+            return;
+        }
+        navigatorListeners.remove(l);
+    }
+
+    public List<NavigatorListener> getNavigatorListeners() {
+        if(navigatorListeners == null){
+            return Collections.emptyList();
+        }
+        return navigatorListeners;
+    }
+
     public void addListener( GuiControlListener l ) {
         if( listeners == null ) {
             listeners = new SafeArrayList<>(GuiControlListener.class);
@@ -103,14 +125,14 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
         listeners.remove(l);
     }
 
-    public void addFocusChangeListener( FocusChangeListener l ) {
+    public void addFocusChangeListener( FocusListener l ) {
         if( focusListeners == null ) {
-            focusListeners = new SafeArrayList<>(FocusChangeListener.class);
+            focusListeners = new SafeArrayList<>(FocusListener.class);
         }
         focusListeners.add(l);
     }
 
-    public void removeFocusChangeListener( FocusChangeListener l ) {
+    public void removeFocusChangeListener( FocusListener l ) {
         if( focusListeners == null ) {
             return;
         }
@@ -140,7 +162,7 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
      *  Sets the focusable state to true for this control even
      *  if none of the child components are focusable.
      */
-    public void setFocusable( boolean b ) {
+    public void setFocusable( Boolean b ) {
         this.focusable = b;
     }
 
@@ -151,8 +173,8 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
      */
     @Override
     public boolean isFocusable() {
-        if( focusable ) {
-            return true;
+        if( focusable != null ) {
+            return focusable;
         }
         if( layout instanceof FocusTarget ) {
             if( ((FocusTarget)layout).isFocusable() ) {
@@ -166,11 +188,14 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
                 }
             }
         }
+        if(focusListeners!=null&&focusListeners.size() > 0) {
+            return true;
+        }
         return false;
     }
 
     @Override
-    public void focusGained() {
+    public void focusGained(Spatial target) {
         if (log.isLoggable(Level.FINEST)) {
             log.finest(getSpatial() + " focusGained() isFocused:" + focused);
         }
@@ -181,11 +206,11 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
         this.focused = true;
         for( GuiComponent c : componentStack.getArray() ) {
             if( c instanceof FocusTarget ) {
-                ((FocusTarget)c).focusGained();
+                ((FocusTarget)c).focusGained(target);
             }
         }
         if( layout instanceof FocusTarget ) {
-            ((FocusTarget)layout).focusGained();
+            ((FocusTarget)layout).focusGained(target);
         }
         if( listeners != null ) {
             for( GuiControlListener l : listeners.getArray() ) {
@@ -193,16 +218,14 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
             }
         }
         if( focusListeners != null ) {
-            // Now notify any listeners
-            FocusChangeEvent fce = new FocusChangeEvent(this);
-            for( FocusChangeListener l : focusListeners.getArray() ) {
-                l.focusGained(fce);
+            for( FocusListener l : focusListeners.getArray() ) {
+                l.focusGained(target);
             }
         }
     }
 
     @Override
-    public void focusLost() {
+    public void focusLost(Spatial target) {
         if (log.isLoggable(Level.FINEST)) {
             log.finest(getSpatial() + " focusLost() isFocused:" + focused);
         }
@@ -212,11 +235,11 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
         this.focused = false;
         for( GuiComponent c : componentStack.getArray() ) {
             if( c instanceof FocusTarget ) {
-                ((FocusTarget)c).focusLost();
+                ((FocusTarget)c).focusLost(target);
             }
         }
         if( layout instanceof FocusTarget ) {
-            ((FocusTarget)layout).focusLost();
+            ((FocusTarget)layout).focusLost(target);
         }
         if( listeners != null ) {
             for( GuiControlListener l : listeners.getArray() ) {
@@ -224,27 +247,51 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
             }
         }
         if( focusListeners != null ) {
-            // Now notify any listeners
-            FocusChangeEvent fce = new FocusChangeEvent(this);
-            for( FocusChangeListener l : focusListeners.getArray() ) {
-                l.focusLost(fce);
+            for( FocusListener l : focusListeners.getArray() ) {
+                l.focusLost(target);
             }
         }
     }
 
     @Override
-    public Spatial getDefaultFocus() {
-        return focusTraversal == null ? null : focusTraversal.getDefaultFocus();
+    public void focusAction(Spatial target, boolean pressed) {
+        if (log.isLoggable(Level.FINEST)) {
+            log.finest(getSpatial() + " activate()");
+        }
+        for( GuiComponent c : componentStack.getArray() ) {
+            if( c instanceof FocusTarget ) {
+                ((FocusTarget)c).focusAction(target, pressed);
+            }
+        }
+        if( layout instanceof FocusTarget ) {
+            ((FocusTarget)layout).focusAction(target, pressed);
+        }
+        if( focusListeners != null ) {
+            for( FocusListener l : focusListeners.getArray() ) {
+                l.focusAction(target, pressed);
+            }
+        }
     }
 
     @Override
-    public Spatial getRelativeFocus( Spatial from, TraversalDirection direction ) {
-        return focusTraversal == null ? null : focusTraversal.getRelativeFocus(from, direction);
-    }
+    public void focusScrollUpdate(Spatial target,ScrollDirection dir, double value) {
+        if (log.isLoggable(Level.FINEST)) {
+            log.finest(getSpatial() + " focusScrollUpdate(): " + value);
+        }
+        for( GuiComponent c : componentStack.getArray() ) {
+            if( c instanceof FocusTarget ) {
+                ((FocusTarget)c).focusScrollUpdate(target, dir, value);  
+            }
+        }
+        if( layout instanceof FocusTarget ) {
+            ((FocusTarget)layout).focusScrollUpdate(target, dir, value);
+        }
+        if( focusListeners != null ) {
+            for( FocusListener l : focusListeners.getArray() ) {
+                l.focusScrollUpdate(target, dir, value);
+            }
+        }
 
-    @Override
-    public boolean isFocusRoot() {
-        return focusTraversal == null ? false : focusTraversal.isFocusRoot();
     }
 
     public void setLayerOrder( String... layers ) {
@@ -265,11 +312,11 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
             // We are attached so attach the layout too
             layout.attach(this);
         }
-        if( this.layout instanceof FocusTraversal ) {
-            this.focusTraversal = (FocusTraversal)layout;
-        } else if( this.layout != null ) {
-            this.focusTraversal = new FocusTraversalAdapter(layout);
-        }
+        // if( this.layout instanceof FocusTraversal ) {
+        //     this.focusTraversal = (FocusTraversal)layout;
+        // } else if( this.layout != null ) {
+        //     this.focusTraversal = new FocusTraversalAdapter(layout);
+        // }
         invalidate();
     }
 
@@ -453,4 +500,36 @@ public class GuiControl extends AbstractNodeControl<GuiControl>
         }
         componentStack.detach(this);
     }
+
+    @Override
+    public void focusGained() {
+        focusGained(spatial);
+        if(spatial instanceof Panel) {
+            Panel p = (Panel)spatial;
+            System.out.println( "gui element:" + p
+                                + "  elementId:" + p.getElementId()
+                                + "  style:" + p.getStyle() );
+        }
+    }
+
+    @Override
+    public void focusLost() {
+       focusLost(spatial);
+    }
+
+    @Override
+    public void focusAction(boolean pressed) {
+        focusAction(spatial, pressed);
+
+    }
+
+    @Override
+    public void focusScrollUpdate(ScrollDirection dir, double value) {
+        focusScrollUpdate(spatial, dir,  value);
+    }
+
+
+
+
+ 
 }

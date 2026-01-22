@@ -57,14 +57,13 @@ import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.GuiMaterial;
 import com.simsilica.lemur.core.GuiUpdateListener;
 import com.simsilica.lemur.core.VersionedReference;
-import com.simsilica.lemur.event.KeyAction;
-import com.simsilica.lemur.event.KeyActionListener;
-import com.simsilica.lemur.event.KeyListener;
-import com.simsilica.lemur.event.KeyModifiers;
-import com.simsilica.lemur.event.ModifiedKeyInputEvent;
+// import com.simsilica.lemur.event.KeyAction;
+// import com.simsilica.lemur.event.KeyActionListener;
+// import com.simsilica.lemur.event.KeyListener;
+// import com.simsilica.lemur.event.KeyModifiers;
+// import com.simsilica.lemur.event.ModifiedKeyInputEvent;
 import com.simsilica.lemur.focus.FocusTarget;
-import com.simsilica.lemur.focus.FocusNavigationState;
-import com.simsilica.lemur.focus.FocusTraversal.TraversalDirection;
+import com.simsilica.lemur.focus.ScrollDirection;
 import com.simsilica.lemur.text.DocumentModel;
 import com.simsilica.lemur.text.DefaultDocumentModel;
 
@@ -82,43 +81,43 @@ public class TextEntryComponent extends AbstractGuiComponent
 
     static Logger log = Logger.getLogger(TextEntryComponent.class.getName());
 
-    public static final KeyActionListener DOC_HOME = new DocumentHome();
-    public static final KeyActionListener DOC_END = new DocumentEnd();
-    public static final KeyActionListener LINE_HOME = new LineHome();
-    public static final KeyActionListener LINE_END = new LineEnd();
-    public static final KeyActionListener PREV_LINE = new PreviousLine();
-    public static final KeyActionListener NEXT_LINE = new NextLine();
-    public static final KeyActionListener LEFT = new CaratLeft();
-    public static final KeyActionListener RIGHT = new CaratRight();
-    public static final KeyActionListener NO_OP = new NullAction();
-    public static final KeyActionListener BACKSPACE = new Backspace();
-    public static final KeyActionListener NEW_LINE = new NewLine();
-    public static final KeyActionListener DELETE = new Delete();
-    public static final KeyActionListener RELEASE_FOCUS = new ReleaseFocus();
+    // public static final KeyActionListener DOC_HOME = new DocumentHome();
+    // public static final KeyActionListener DOC_END = new DocumentEnd();
+    // public static final KeyActionListener LINE_HOME = new LineHome();
+    // public static final KeyActionListener LINE_END = new LineEnd();
+    // public static final KeyActionListener PREV_LINE = new PreviousLine();
+    // public static final KeyActionListener NEXT_LINE = new NextLine();
+    // public static final KeyActionListener LEFT = new CaratLeft();
+    // public static final KeyActionListener RIGHT = new CaratRight();
+    // public static final KeyActionListener NO_OP = new NullAction();
+    // public static final KeyActionListener BACKSPACE = new Backspace();
+    // public static final KeyActionListener NEW_LINE = new NewLine();
+    // public static final KeyActionListener DELETE = new Delete();
+    // public static final KeyActionListener RELEASE_FOCUS = new ReleaseFocus();
 
-    public static final KeyActionListener FOCUS_NEXT = new FocusChange(TraversalDirection.Next);
-    public static final KeyActionListener FOCUS_PREVIOUS = new FocusChange(TraversalDirection.Previous);
-    public static final KeyActionListener FOCUS_DOWN = new FocusChange(TraversalDirection.Down);
-    public static final KeyActionListener FOCUS_UP = new FocusChange(TraversalDirection.Up);
+    // public static final KeyActionListener FOCUS_NEXT = new FocusChange(TraversalDirection.Next);
+    // public static final KeyActionListener FOCUS_PREVIOUS = new FocusChange(TraversalDirection.Previous);
+    // public static final KeyActionListener FOCUS_DOWN = new FocusChange(TraversalDirection.Down);
+    // public static final KeyActionListener FOCUS_UP = new FocusChange(TraversalDirection.Up);
 
-    private static final Map<KeyAction,KeyActionListener> standardActions = new HashMap<KeyAction,KeyActionListener>();
-    static {
-        standardActions.put(new KeyAction(KeyInput.KEY_HOME), LINE_HOME);
-        standardActions.put(new KeyAction(KeyInput.KEY_END), LINE_END);
-        standardActions.put(new KeyAction(KeyInput.KEY_HOME, KeyModifiers.CONTROL_DOWN), DOC_HOME);
-        standardActions.put(new KeyAction(KeyInput.KEY_END, KeyModifiers.CONTROL_DOWN), DOC_END);
+    // private static final Map<KeyAction,KeyActionListener> standardActions = new HashMap<KeyAction,KeyActionListener>();
+    // static {
+    //     standardActions.put(new KeyAction(KeyInput.KEY_HOME), LINE_HOME);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_END), LINE_END);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_HOME, KeyModifiers.CONTROL_DOWN), DOC_HOME);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_END, KeyModifiers.CONTROL_DOWN), DOC_END);
 
-        standardActions.put(new KeyAction(KeyInput.KEY_UP), PREV_LINE);
-        standardActions.put(new KeyAction(KeyInput.KEY_DOWN), NEXT_LINE);
-        standardActions.put(new KeyAction(KeyInput.KEY_LEFT), LEFT);
-        standardActions.put(new KeyAction(KeyInput.KEY_RIGHT), RIGHT);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_UP), PREV_LINE);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_DOWN), NEXT_LINE);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_LEFT), LEFT);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_RIGHT), RIGHT);
 
-        standardActions.put(new KeyAction(KeyInput.KEY_BACK), BACKSPACE);
-        standardActions.put(new KeyAction(KeyInput.KEY_RETURN), NEW_LINE);
-        standardActions.put(new KeyAction(KeyInput.KEY_NUMPADENTER), NEW_LINE);
-        standardActions.put(new KeyAction(KeyInput.KEY_DELETE), DELETE);
-        standardActions.put(new KeyAction(KeyInput.KEY_ESCAPE), RELEASE_FOCUS);
-    }
+    //     standardActions.put(new KeyAction(KeyInput.KEY_BACK), BACKSPACE);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_RETURN), NEW_LINE);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_NUMPADENTER), NEW_LINE);
+    //     standardActions.put(new KeyAction(KeyInput.KEY_DELETE), DELETE);
+    //     // standardActions.put(new KeyAction(KeyInput.KEY_ESCAPE), RELEASE_FOCUS);
+    // }
 
     private BitmapFont font;
     private BitmapText bitmapText;
@@ -128,7 +127,7 @@ public class TextEntryComponent extends AbstractGuiComponent
     private Vector3f preferredSize;
     private float preferredWidth;
     private int preferredLineCount;
-    private KeyHandler keyHandler = new KeyHandler();
+    // private KeyHandler keyHandler = new KeyHandler();
     private Quad cursorQuad;
     private Geometry cursor;
     private DocumentModel model;
@@ -144,7 +143,7 @@ public class TextEntryComponent extends AbstractGuiComponent
     // This really only works properly in single-line mode.
     private int textOffset = 0;
 
-    private Map<KeyAction,KeyActionListener> actionMap = new HashMap<KeyAction,KeyActionListener>(standardActions);
+    // private Map<KeyAction,KeyActionListener> actionMap = new HashMap<KeyAction,KeyActionListener>(standardActions);
 
     public TextEntryComponent( BitmapFont font ) {
         this( new DefaultDocumentModel(), font );
@@ -185,7 +184,7 @@ public class TextEntryComponent extends AbstractGuiComponent
         result.model = model.clone();
         result.preferredSize = null;
         result.textBox = null;
-        result.keyHandler = result.new KeyHandler();
+        // result.keyHandler = result.new KeyHandler();
         result.cursorQuad = new Quad(getCursorWidth(), bitmapText.getLineHeight());
         result.cursor = new Geometry("cursor", cursorQuad);
         GuiMaterial mat = GuiGlobals.getInstance().createMaterial(new ColorRGBA(1,1,1,0.75f), false);
@@ -206,13 +205,13 @@ public class TextEntryComponent extends AbstractGuiComponent
         resetCursorState();
 
         if( focused ) {
-            GuiGlobals.getInstance().addKeyListener(keyHandler);
+            // GuiGlobals.getInstance().addKeyListener(keyHandler);
         }
     }
 
     @Override
     public void detach( GuiControl parent ) {
-        GuiGlobals.getInstance().removeKeyListener(keyHandler);
+        // GuiGlobals.getInstance().removeKeyListener(keyHandler);
 
         getNode().detachChild(bitmapText);
         parent.removeUpdateListener(updateListener);
@@ -231,25 +230,35 @@ public class TextEntryComponent extends AbstractGuiComponent
 
     @Override
     public void focusGained() {
-        if( this.focused )
-            return;
-        this.focused = true;
-        GuiGlobals.getInstance().addKeyListener(keyHandler);
-        resetCursorState();
+       this.focusGained(getNode());
     }
 
     @Override
     public void focusLost() {
-        if( !this.focused )
+      this.focusLost(getNode());
+    }
+
+     @Override
+    public void focusGained(Spatial target) {
+       if( this.focused )
             return;
-        this.focused = false;
-        GuiGlobals.getInstance().removeKeyListener(keyHandler);
+        this.focused = true;
+        // GuiGlobals.getInstance().addKeyListener(keyHandler);
         resetCursorState();
     }
 
-    public Map<KeyAction,KeyActionListener> getActionMap() {
-        return actionMap;
+    @Override
+    public void focusLost(Spatial target) {
+          if( !this.focused )
+            return;
+        this.focused = false;
+        // GuiGlobals.getInstance().removeKeyListener(keyHandler);
+        resetCursorState();
     }
+
+    // public Map<KeyAction,KeyActionListener> getActionMap() {
+    //     return actionMap;
+    // }
 
     public DocumentModel getDocumentModel() {
         return model;
@@ -257,25 +266,25 @@ public class TextEntryComponent extends AbstractGuiComponent
 
     public void setSingleLine( boolean f ) {
         this.singleLine = f;
-        if( singleLine ) {
-            actionMap.put(new KeyAction(KeyInput.KEY_RETURN), FOCUS_NEXT);
-            actionMap.put(new KeyAction(KeyInput.KEY_NUMPADENTER), FOCUS_NEXT);
-            actionMap.put(new KeyAction(KeyInput.KEY_TAB), FOCUS_NEXT);
-            actionMap.put(new KeyAction(KeyInput.KEY_TAB, KeyModifiers.SHIFT_DOWN), FOCUS_PREVIOUS);
-            actionMap.put(new KeyAction(KeyInput.KEY_UP), FOCUS_UP);
-            actionMap.put(new KeyAction(KeyInput.KEY_DOWN), FOCUS_DOWN);
-        } else {
-            actionMap.put(new KeyAction(KeyInput.KEY_RETURN), NEW_LINE);
-            actionMap.put(new KeyAction(KeyInput.KEY_NUMPADENTER), NEW_LINE);
+        // if( singleLine ) {
+        //     actionMap.put(new KeyAction(KeyInput.KEY_RETURN), FOCUS_NEXT);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_NUMPADENTER), FOCUS_NEXT);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_TAB), FOCUS_NEXT);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_TAB, KeyModifiers.SHIFT_DOWN), FOCUS_PREVIOUS);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_UP), FOCUS_UP);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_DOWN), FOCUS_DOWN);
+        // } else {
+        //     actionMap.put(new KeyAction(KeyInput.KEY_RETURN), NEW_LINE);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_NUMPADENTER), NEW_LINE);
             
-            // We may choose to do something different with tab someday... but 
-            // the user can also just remove the action if they like.
-            actionMap.put(new KeyAction(KeyInput.KEY_TAB), FOCUS_NEXT);
-            actionMap.put(new KeyAction(KeyInput.KEY_TAB, KeyModifiers.SHIFT_DOWN), FOCUS_PREVIOUS);
+        //     // We may choose to do something different with tab someday... but 
+        //     // the user can also just remove the action if they like.
+        //     actionMap.put(new KeyAction(KeyInput.KEY_TAB), FOCUS_NEXT);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_TAB, KeyModifiers.SHIFT_DOWN), FOCUS_PREVIOUS);
             
-            actionMap.put(new KeyAction(KeyInput.KEY_UP), PREV_LINE);
-            actionMap.put(new KeyAction(KeyInput.KEY_DOWN), NEXT_LINE);
-        }
+        //     actionMap.put(new KeyAction(KeyInput.KEY_UP), PREV_LINE);
+        //     actionMap.put(new KeyAction(KeyInput.KEY_DOWN), NEXT_LINE);
+        // }
     }
 
     public boolean isSingleLine() {
@@ -649,174 +658,174 @@ public class TextEntryComponent extends AbstractGuiComponent
         }
     }
 
-    private static class DocumentHome implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.home(false);
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class DocumentHome implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.home(false);
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class LineHome implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.home(true);
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class LineHome implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.home(true);
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class DocumentEnd implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.end(false);
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class DocumentEnd implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.end(false);
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class LineEnd implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.end(true);
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class LineEnd implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.end(true);
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class PreviousLine implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.up();
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class PreviousLine implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.up();
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class NextLine implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.down();
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class NextLine implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.down();
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class CaratLeft implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            if (source.font.isRightToLeft()) {
-                source.model.right();
-            } else {
-                source.model.left();
-            }
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class CaratLeft implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         if (source.font.isRightToLeft()) {
+    //             source.model.right();
+    //         } else {
+    //             source.model.left();
+    //         }
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class CaratRight implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            if (source.font.isRightToLeft()) {
-                source.model.left();
-            } else {
-                source.model.right();
-            }
-            //source.resetCursorPosition(); should be automatic now
-        }
-    }
+    // private static class CaratRight implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         if (source.font.isRightToLeft()) {
+    //             source.model.left();
+    //         } else {
+    //             source.model.right();
+    //         }
+    //         //source.resetCursorPosition(); should be automatic now
+    //     }
+    // }
 
-    private static class NullAction implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-        }
-    }
+    // private static class NullAction implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //     }
+    // }
 
-    private static class Backspace implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.backspace();
-            //source.resetText(); // should be automic now
-        }
-    }
+    // private static class Backspace implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.backspace();
+    //         //source.resetText(); // should be automic now
+    //     }
+    // }
 
-    private static class NewLine implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.insertNewLine();
-            //source.resetText(); // should be automic now
-        }
-    }
+    // private static class NewLine implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.insertNewLine();
+    //         //source.resetText(); // should be automic now
+    //     }
+    // }
 
-    private static class Delete implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            source.model.delete();
-            //source.resetText(); // should be automic now
-        }
-    }
+    // private static class Delete implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         source.model.delete();
+    //         //source.resetText(); // should be automic now
+    //     }
+    // }
     
-    private static class FocusChange implements KeyActionListener {
-        private TraversalDirection dir;
+    // private static class FocusChange implements KeyActionListener {
+    //     private TraversalDirection dir;
         
-        public FocusChange( TraversalDirection dir ) {
-            this.dir = dir;
-        }
+    //     public FocusChange( TraversalDirection dir ) {
+    //         this.dir = dir;
+    //     }
     
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) { 
-            FocusNavigationState nav = GuiGlobals.getInstance().getFocusNavigationState();
-            if( nav == null ) {
-                return;
-            }            
-            Spatial current = GuiGlobals.getInstance().getCurrentFocus();
-            if( current == null ) {
-                // Focus was already lost somewhere... uncommon in normal cases
-                // but it can technically happen.
-                return;
-            }
-            nav.requestChangeFocus(current, dir);    
-        } 
-    }
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) { 
+    //         FocusNavigationState nav = GuiGlobals.getInstance().getFocusNavigationState();
+    //         if( nav == null ) {
+    //             return;
+    //         }            
+    //         Spatial current = GuiGlobals.getInstance().getCurrentFocus();
+    //         if( current == null ) {
+    //             // Focus was already lost somewhere... uncommon in normal cases
+    //             // but it can technically happen.
+    //             return;
+    //         }
+    //         nav.requestChangeFocus(current, dir);    
+    //     } 
+    // }
 
-    private static class ReleaseFocus implements KeyActionListener {
-        @Override
-        public void keyAction( TextEntryComponent source, KeyAction key ) {
-            Spatial current = GuiGlobals.getInstance().getCurrentFocus();
-            if( current == null ) {
-                // Focus was already lost somewhere... uncommon in normal cases
-                // but it can technically happen.
-                return;
-            }
+    // private static class ReleaseFocus implements KeyActionListener {
+    //     @Override
+    //     public void keyAction( TextEntryComponent source, KeyAction key ) {
+    //         Spatial current = GuiGlobals.getInstance().getCurrentFocus();
+    //         if( current == null ) {
+    //             // Focus was already lost somewhere... uncommon in normal cases
+    //             // but it can technically happen.
+    //             return;
+    //         }
 
-            GuiGlobals.getInstance().releaseFocus(current);
-        }
-    }
+    //         GuiGlobals.getInstance().releaseFocus(current);
+    //     }
+    // }
 
-    private class KeyHandler implements KeyListener {
-        private boolean shift = false;
-        private boolean control = false;
+    // private class KeyHandler implements KeyListener {
+    //     private boolean shift = false;
+    //     private boolean control = false;
 
-        @Override
-        public void onKeyEvent( KeyInputEvent evt ) {
-            ModifiedKeyInputEvent mEvt = (ModifiedKeyInputEvent)evt;
-            if( mEvt.isPressed() || mEvt.isRepeating() ) {
-                KeyAction key = mEvt.toKeyAction(); //new KeyAction(code, (control?KeyAction.CONTROL_DOWN:0), (shift?KeyAction.SHIFT_DOWN:0) );
-                KeyActionListener handler = actionMap.get(key);
-                if( handler != null ) {
-                    handler.keyAction(TextEntryComponent.this, key);
-                    evt.setConsumed();
-                    return;
-                }
+    //     @Override
+    //     public void onKeyEvent( KeyInputEvent evt ) {
+    //         ModifiedKeyInputEvent mEvt = (ModifiedKeyInputEvent)evt;
+    //         if( mEvt.isPressed() || mEvt.isRepeating() ) {
+    //             KeyAction key = mEvt.toKeyAction(); //new KeyAction(code, (control?KeyAction.CONTROL_DOWN:0), (shift?KeyAction.SHIFT_DOWN:0) );
+    //             KeyActionListener handler = actionMap.get(key);
+    //             if( handler != null ) {
+    //                 handler.keyAction(TextEntryComponent.this, key);
+    //                 evt.setConsumed();
+    //                 return;
+    //             }
 
-                // Making sure that no matter what, certain
-                // characters never make it directly to the
-                // document
-                if( evt.getKeyChar() >= 32 ) {
-                    model.insert(evt.getKeyChar());
-                    evt.setConsumed();
-                    //resetText(); ...should be automatic now
-                } else if (evt.getKeyChar() == '\0') {
-                    evt.setConsumed();
-                }
-            }
-        }
-    }
+    //             // Making sure that no matter what, certain
+    //             // characters never make it directly to the
+    //             // document
+    //             if( evt.getKeyChar() >= 32 ) {
+    //                 model.insert(evt.getKeyChar());
+    //                 evt.setConsumed();
+    //                 //resetText(); ...should be automatic now
+    //             } else if (evt.getKeyChar() == '\0') {
+    //                 evt.setConsumed();
+    //             }
+    //         }
+    //     }
+    // }
  
     /**
      *  Checks for changes in the model and updates the text display
@@ -833,5 +842,27 @@ public class TextEntryComponent extends AbstractGuiComponent
                 resetCursorPosition();   
             }
         }
+    }
+
+    @Override
+    public void focusAction(boolean pressed) {
+        
+    }
+
+    @Override
+    public void focusScrollUpdate(ScrollDirection dir, double value) {
+    
+    }
+
+   
+
+    @Override
+    public void focusAction(Spatial target, boolean pressed) {
+        
+    }
+
+    @Override
+    public void focusScrollUpdate(Spatial target, ScrollDirection dir, double value) {
+        
     }
 }

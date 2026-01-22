@@ -37,16 +37,17 @@
 package com.simsilica.lemur;
 
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.jme3.material.RenderState.BlendMode;
 import com.jme3.math.*;
 import com.jme3.scene.*;
-
+import com.simsilica.lemur.ListBox.GridModelDelegate;
 import com.simsilica.lemur.component.*;
 import com.simsilica.lemur.core.*;
-import com.simsilica.lemur.event.*;
+import com.simsilica.lemur.focus.FocusListener;
+import com.simsilica.lemur.focus.NavigatorListener;
+import com.simsilica.lemur.focus.ScrollDirection;
+import com.simsilica.lemur.focus.TraversalDirection;
 import com.simsilica.lemur.grid.GridModel;
 import com.simsilica.lemur.list.*;
 import com.simsilica.lemur.style.*;
@@ -56,7 +57,7 @@ import com.simsilica.lemur.style.*;
  *
  *  @author    Paul Speed
  */
-public class ListBox<T> extends Panel {
+public class ListBox<T> extends Panel  {
  
     static Logger log = Logger.getLogger(ListBox.class.getName());
     
@@ -71,9 +72,8 @@ public class ListBox<T> extends Panel {
     public static final String EFFECT_CLICK = "click";
     public static final String EFFECT_ACTIVATE = "activate";
     public static final String EFFECT_DEACTIVATE = "deactivate";
-    
     public enum ListAction { Down, Up, Click, Entered, Exited };
-
+    
     private ElementId baseElementId;
     private BorderLayout layout;
     private VersionedList<T> model;
@@ -83,8 +83,7 @@ public class ListBox<T> extends Panel {
     private SelectionModel selection;
     private VersionedReference<Set<Integer>> selectionRef;
     
-    private ClickListener clickListener = new ClickListener();
-    private BackgroundListener backgroundListener = new BackgroundListener();
+    private Listener listener = new Listener();
     private CommandMap<ListBox, ListAction> commandMap
                                     = new CommandMap<ListBox, ListAction>(this);
 
@@ -98,11 +97,6 @@ public class ListBox<T> extends Panel {
     private VersionedReference<Double> indexRef;
     private int maxIndex;
     
-    /**
-     *  Set to true the mouse wheel will scroll the list if the mouse
-     *  is over the list.
-     */
-    private boolean scrollOnHover = true;
  
     /**
      *  Keeps track of if we've triggered 'activated' effects (and send entered events)
@@ -173,9 +167,8 @@ public class ListBox<T> extends Panel {
             Styles styles = GuiGlobals.getInstance().getStyles();
             styles.applyStyles(this, getElementId(), style);
         }
-
         // Listen to our own mouse events that don't hit something else
-        CursorEventControl.addListenersToSpatial(this, backgroundListener);        
+        addFocusListener(listener);
 
         // Need a spacer so that the 'selector' panel doesn't think
         // it's being managed by this panel.
@@ -192,13 +185,27 @@ public class ListBox<T> extends Panel {
         setModel(model);                
         resetModelRange();
         setSelectionModel(selection);        
+
+        getControl(GuiControl.class).addNavigatorListener(listener);
+
+        // never navigate to slider (they are only for direct cursor selection (ie. mouse))
+        slider.getControl(GuiControl.class).addNavigatorListener(new NavigatorListener() {
+            @Override
+            public boolean beforeNavigatorNavigateTo(TraversalDirection dir, Spatial from, Spatial sp) {
+                if(slider.getThumbButton() == sp || slider.getDecrementButton()  == sp || slider.getIncrementButton() == sp){
+                    return false;
+                } else{
+                    return true;
+                }
+            }            
+        });
     }
     
     
     @Override
     public void updateLogicalState( float tpf ) {
         super.updateLogicalState(tpf);
-        
+       
         if( modelRef.update() ) {
             resetModelRange();
         }
@@ -209,6 +216,7 @@ public class ListBox<T> extends Panel {
             int index = (int)(maxIndex - baseIndex.getValue());
             grid.setRow(index);
         }         
+
         if( selectionUpdate || indexUpdate ) {
             refreshSelector();
         }
@@ -217,6 +225,7 @@ public class ListBox<T> extends Panel {
             refreshActivation();
         }
     }
+
 
     protected void gridResized( Vector3f pos, Vector3f size ) {
         if( pos.equals(selectorAreaOrigin) && size.equals(selectorAreaSize) ) {
@@ -310,7 +319,7 @@ public class ListBox<T> extends Panel {
         }
         selection.setSelection(index);
     }    
-
+ 
     @SuppressWarnings("unchecked") // because Java doesn't like var-arg generics 
     public void addCommands( ListAction a, Command<? super ListBox>... commands ) {
         commandMap.addCommands(a, commands);
@@ -318,20 +327,6 @@ public class ListBox<T> extends Panel {
 
     public List<Command<? super ListBox>> getCommands( ListAction a ) {
         return commandMap.get(a, false);
-    }
-
-    @SuppressWarnings("unchecked") // because Java doesn't like var-arg generics 
-    public void addClickCommands( Command<? super ListBox>... commands ) {
-        commandMap.addCommands(ListAction.Click, commands);
-    }
-
-    @SuppressWarnings("unchecked") // because Java doesn't like var-arg generics 
-    public void removeClickCommands( Command<? super ListBox>... commands ) {
-        getClickCommands().removeAll(Arrays.asList(commands));
-    } 
-
-    public List<Command<? super ListBox>> getClickCommands() {
-        return commandMap.get(ListAction.Click, false);
     }
 
     @StyleAttribute("listCommands")
@@ -342,7 +337,7 @@ public class ListBox<T> extends Panel {
         for( Map.Entry<ListAction, List<Command<? super ListBox>>> e : map.entrySet() ) {
             commandMap.addCommands(e.getKey(), e.getValue());
         }
-    } 
+    }  
         
     @StyleAttribute(value="visibleItems", lookupDefault=false)
     public void setVisibleItems( int count ) {
@@ -378,19 +373,6 @@ public class ListBox<T> extends Panel {
         setChildAlpha(selector, alpha);
     }
 
-    /**
-     *  Set to true to enable mouse-wheel style scrolling when the
-     *  mouse is hovering over the ListBox. (Versus only when the list
-     *  has focus.)  Default is true.
-     */
-    @StyleAttribute(value="scrollOnHover", lookupDefault=false)
-    public void setScrollOnHover( boolean f ) {
-        this.scrollOnHover = f;
-    }
-    
-    public boolean getScrollOnHover() {
-        return scrollOnHover;
-    }
 
     protected void refreshSelector() {    
         if( selectorArea == null ) {
@@ -451,9 +433,13 @@ public class ListBox<T> extends Panel {
         T value = model.get(row);
         Panel cell = cellRenderer.getView(value, false, existing);
         if( cell != existing ) {
-            // Transfer the click listener                  
-            CursorEventControl.addListenersToSpatial(cell, clickListener);
-            CursorEventControl.removeListenersFromSpatial(existing, clickListener);
+
+        //     // Transfer the click listener                  
+        //     CursorEventControl.addListenersToSpatial(cell, clickListener);
+        //     CursorEventControl.removeListenersFromSpatial(existing, clickListener);
+            if (cell!=null) cell.addFocusListener(listener);
+            if(existing!=null) existing.removeFocusListener(listener);    
+
         }         
         return cell;
     }
@@ -466,7 +452,8 @@ public class ListBox<T> extends Panel {
         for( int i = 0; i < grid.getVisibleRows(); i++ ) {
             Panel cell = grid.getCell(base + i, 0);
             if( cell != null ) {
-                CursorEventControl.removeListenersFromSpatial(cell, clickListener);
+                cell.removeFocusListener(listener);
+            //     CursorEventControl.removeListenersFromSpatial(cell, clickListener);
             }
         }
     }
@@ -499,136 +486,82 @@ public class ListBox<T> extends Panel {
     public String toString() {
         return getClass().getName() + "[elementId=" + getElementId() + "]";
     }
-    
-    private class ClickListener extends DefaultCursorListener {
- 
-        // tracks whether we've sent entered events or not
-        //private boolean entered = false;
-        
-        // Tracks whether we've sent pressed events or not
-        private boolean pressed = false;
- 
+    private class Listener implements FocusListener, NavigatorListener {
+        private Spatial lastTarget = null;
         @Override
-        protected void click( CursorButtonEvent event, Spatial target, Spatial capture ) {
-            //if( !isEnabled() )
-            //    return;
-            commandMap.runCommands(ListAction.Click);
-            runEffect(EFFECT_CLICK);
-        }
-    
-        @Override
-        public void cursorButtonEvent( CursorButtonEvent event, Spatial target, Spatial capture ) {
+        public void focusGained(Spatial target) {
+            entered = true;
+            for(Spatial c : grid.getChildren()){
+                GuiControl gc = c.getControl(GuiControl.class);
+                if (gc != null) {
+                    gc.setFocusable(true);
+                }
+            }
+            lastTarget = target;
 
+        }
+
+        private int findCell(Spatial target){
             // Find the element we clicked on
             int base = grid.getRow();
             for( int i = 0; i < grid.getVisibleRows(); i++ ) {
                 Panel cell = grid.getCell( base + i, 0 );
                 if( cell == target ) {
-                    selection.add(base + i);                    
+                    return base + i;                
                 }
             }
-            
-            // List boxes always consume their click events
-            event.setConsumed();
-        
-            // Do our own better handling of 'click' now
-            //if( !isEnabled() )
-            //    return;                                            
-            if( event.isPressed() ) {
-                pressed = true;            
-                commandMap.runCommands(ListAction.Down);
-                runEffect(EFFECT_PRESS);
-            } else {
-                // Adding a target == ListBox.this check because the capture
-                // seems to be the button but the target on release is the list
-                // for some reason.
-                if( target == capture || target == ListBox.this ) {
-                    // Then we are still over the list box and we should run the
-                    // click
-                    click(event, target, capture);
-                }
-                // If we run the up without checking properly then we
-                // potentially get up events with no down event.  This messes
-                // up listeners that are (correctly) expecting an up for every
-                // down and no ups without downs.
-                // So, any time the capture is us then we will run, else not.
-                // ...but that's not right either because if we consume the
-                // event (which we do) then the capture will be the item and not
-                // the list.  Not sure how it ever worked like that... but I'm
-                // leaving it here commented out just in case.
-                //if( capture == ListBox.this ) {
-                //    commandMap.runCommands(ListAction.Up);
-                //    runEffect(EFFECT_RELEASE);
-                //}
-                if( pressed ) {
-                    commandMap.runCommands(ListAction.Up);
-                    runEffect(EFFECT_RELEASE);
-                    pressed = false;            
-                }
-            }
-        }
-    
-        @Override
-        public void cursorEntered( CursorMotionEvent event, Spatial target, Spatial capture ) {
-            entered = true;                        
-            /*
-            Not sure how this code ever worked but it looks like I meant it.  I can
-            find no use-cases in my own codebase so I'm not sure what I was thinking that day.
-            Leaving it just in case.
-            TODO: may need to readdress if we refactor the mouse/cursor events processing.
-            if( capture == ListBox.this || (target == ListBox.this && capture == null) ) {
-                entered = true;
-                commandMap.runCommands(ListAction.Entered);
-                runEffect(EFFECT_ACTIVATE);
-            }*/
+            return -1;            
         }
 
         @Override
-        public void cursorExited( CursorMotionEvent event, Spatial target, Spatial capture ) {
-            entered = false;            
-            /*if( entered ) {
-                commandMap.runCommands(ListAction.Exited);
-                runEffect(EFFECT_DEACTIVATE);
-                entered = false;
-            }*/
-        }
-    }
- 
-    /**
-     *  Listens to the whole list to intercept things like mouse wheel events
-     *  and click to focus.  This should be all we need for hover scrolling as
-     *  long as the cell renderers don't consume the motion events.
-     */   
-    private class BackgroundListener extends DefaultCursorListener {
-    
-        @Override
-        public void cursorEntered( CursorMotionEvent event, Spatial target, Spatial capture ) {
-            entered = true;
-        }
-        
-        @Override
-        public void cursorExited( CursorMotionEvent event, Spatial target, Spatial capture ) {
-            entered = false;
-        }
-        
-        @Override       
-        public void cursorMoved( CursorMotionEvent event, Spatial target, Spatial capture ) {
-            if( event.getScrollDelta() != 0 ) {
-                if( log.isLoggable(Level.FINEST) ) {
-                    log.finest("Scroll delta:" + event.getScrollDelta() + "  value:" + event.getScrollValue());
-                }  
-                if( scrollOnHover ) {
-                    // My wheel moves in multiples of 120... I don't know if that's
-                    // universal so we'll at least always send some value. 
-                    if( event.getScrollDelta() > 0 ) {
-                        scroll(Math.max(1, event.getScrollDelta() / 120));
-                    } else {
-                        scroll(Math.min(-1, event.getScrollDelta() / 120));
-                    }
-                }
+        public void focusAction(Spatial target, boolean pressed) {
+            int cell = findCell(target);
+            if (cell != -1){
+                selection.add(cell);
             }
+            commandMap.runCommands(ListAction.Click);
+            runEffect(EFFECT_CLICK);
         }
-    } 
+
+        @Override
+        public boolean beforeNavigatorNavigate(TraversalDirection dir) {
+            if(lastTarget==null) return true;
+
+            int cell = findCell(lastTarget);
+            int visibleCells = grid.getRow() + grid.getVisibleRows() -1;
+            
+            boolean isLastVisible = visibleCells == cell;
+            boolean isFirstVisible = grid.getRow() == cell;
+            
+            
+            if(isLastVisible&&dir==TraversalDirection.Down){
+                scroll(-1);
+                refreshSelector();
+                return false;
+            }
+
+            if(isFirstVisible&&dir==TraversalDirection.Up){
+                scroll(1);
+                refreshSelector();
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public void focusLost(Spatial target) {
+            entered = false;
+            if(target==lastTarget)lastTarget = null;
+        }
+
+       
+        @Override
+        public void focusScrollUpdate(Spatial target, ScrollDirection dir,  double value) {
+            scroll((int)(dir==ScrollDirection.Up||dir==ScrollDirection.Right?value:-value));
+        }
+
+    }   
 
     private class GridListener extends AbstractGuiControlListener {
         public void reshape( GuiControl source, Vector3f pos, Vector3f size ) {

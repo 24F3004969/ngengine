@@ -31,6 +31,7 @@
  */
 package org.ngengine.gui;
 
+import com.jme3.material.Material;
 import com.jme3.material.RenderState.BlendMode;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
@@ -56,6 +57,8 @@ import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.Styles;
 import java.util.List;
+import java.util.Map;
+
 import org.ngengine.DevMode;
 import org.ngengine.gui.components.NSVGIcon;
 
@@ -117,6 +120,8 @@ public class NGEStyle {
         install(-1, -1);
     }
 
+    
+
     public static void install(int width, int height) {
         if(width>2)NGEStyle.width = 1280 ;
         if(height>2)NGEStyle.height =720 ;
@@ -159,7 +164,23 @@ public class NGEStyle {
 
         Attributes glob = styles.getSelector(NAME);
         glob.set("fontSize", vmin(2.1f));
-        {}
+        
+        {
+            Material highlightMat = new Material(
+                GuiGlobals.getInstance().getAssets(),
+                "Common/MatDefs/Misc/Unshaded.j3md"
+            );
+            highlightMat.getAdditionalRenderState().setBlendMode(BlendMode.Additive);
+            ColorRGBA colorRGBA = neonBlue.clone().multLocal(0.1f);
+            highlightMat.setColor("Color", colorRGBA);
+
+            glob.set("effects", Map.of(
+                "focus", new NGEFocusEffect(true,highlightMat),
+                "unfocus", new NGEFocusEffect(false,highlightMat)
+            ));
+        
+
+        }
 
         {
             Attributes attrs = styles.getSelector(TextField.ELEMENT_ID, NAME);
@@ -189,7 +210,10 @@ public class NGEStyle {
         {
             ElementId parent = new ElementId(Selector.ELEMENT_ID);
             styles.getSelector(parent.child(Selector.EXPANDER_ID), NAME).set("text", "v", false);
-   
+            Attributes optionList  = styles.getSelector(parent.child(Selector.CONTAINER_ID), NAME);
+            QuadBackgroundComponent quad = new QuadBackgroundComponent(darkPurple);
+            quad.getMaterial().getMaterial().getAdditionalRenderState().setBlendMode(BlendMode.Exclusion);
+            optionList.set("background", quad, false);       
 
         }
 
@@ -236,6 +260,8 @@ public class NGEStyle {
             attrs.set("onView", on, false);
             attrs.set("offView", off, false);
             attrs.set("textVAlignment", VAlignment.Center, false);
+                        // attrs.set("focusColor", ColorRGBA.Green, false);       // green should not need srgb conversion
+
         }
 
         {
@@ -243,7 +269,7 @@ public class NGEStyle {
             GuiGlobals globals = GuiGlobals.getInstance();
             attrs.set("background", new QuadBackgroundComponent(new ColorRGBA(0,0,0,0)), false);
             attrs.set("highlightColor", ColorRGBA.Yellow, false);  // yellow should not need srgb conversion
-            attrs.set("focusColor", ColorRGBA.Green, false);       // green should not need srgb conversion
+            // attrs.set("focusColor", ColorRGBA.Green, false);       // green should not need srgb conversion
             attrs.set("shadowColor", globals.srgbaColor(new ColorRGBA(0, 0, 0, 0.5f)), false);
         }
 
@@ -352,7 +378,7 @@ public class NGEStyle {
 
             button.set("background", bg);
             button.set("color", lightPurple);
-            button.set("focusColor", lightPurple);
+            // button.set("focusColor", lightPurple);
             button.set("focusShadowColor", transparent);
             button.set("highlightColor", glowPurple);
             button.set("highlightShadowColor", transparent);

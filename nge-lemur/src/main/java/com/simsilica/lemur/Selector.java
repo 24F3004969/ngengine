@@ -48,6 +48,8 @@ import com.jme3.scene.Spatial;
 import com.simsilica.lemur.core.*;
 import com.simsilica.lemur.component.*;
 import com.simsilica.lemur.event.*;
+import com.simsilica.lemur.focus.FocusListener;
+import com.simsilica.lemur.focus.ScrollDirection;
 import com.simsilica.lemur.list.*;
 import com.simsilica.lemur.style.*;
 import com.simsilica.lemur.value.DefaultValueRenderer;
@@ -151,7 +153,7 @@ public class Selector<T> extends Panel {
 
         this.listBox = new ListBox<>(model, valueRenderer, elementId.child("list"), style);
         listBox.setSelectionModel(selection);
-        listBox.addClickCommands(selectListener);
+        listBox.addCommands(ListBox.ListAction.Click, new SelectListener());
         this.modelRef = listBox.getModel().createReference();
         this.selectionRef = listBox.getSelectionModel().createSelectionReference();
         boundSelection();
@@ -352,8 +354,9 @@ public class Selector<T> extends Panel {
         Panel newView = valueRenderer.getView(getSelectedListValue(), false, view);
         if( newView != view ) {
             // Transfer the click listener
-            CursorEventControl.addListenersToSpatial(newView, clickListener);
-            CursorEventControl.removeListenersFromSpatial(view, clickListener);
+            if(newView!=null) newView.addFocusListener(clickListener);
+            if(view!=null) view.removeFocusListener(clickListener);
+    
 
             this.view = newView;
             layout.addChild(view, BorderLayout.Position.Center);
@@ -426,15 +429,34 @@ public class Selector<T> extends Panel {
         this.expanded = false;
     }
 
-    private class ClickListener extends DefaultCursorListener implements Command<Button> {
+    private class ClickListener  implements FocusListener, Command<Button> {
+ 
+ 
 
         @Override
-        protected void click( CursorButtonEvent event, Spatial target, Spatial capture ) {
+        public void focusGained(Spatial target) {
+            
+        }
+
+        @Override
+        public void focusLost(Spatial target) {
+             
+        }
+
+        @Override
+        public void focusAction(Spatial target, boolean pressed) {
             expand();
         }
 
-        public void execute( Button button ) {
-            expand();
+        @Override
+        public void focusScrollUpdate(Spatial target,  ScrollDirection dir, double value) {
+          
+        }
+
+        @Override
+        public void execute(Button source) {
+            if(expanded) collapse();
+            else expand();
         }
     }
 

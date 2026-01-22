@@ -37,8 +37,7 @@ package com.simsilica.lemur;
 import com.simsilica.lemur.style.ElementId;
 import com.simsilica.lemur.style.StyleAttribute;
 import com.simsilica.lemur.style.Styles;
-import com.simsilica.lemur.event.MouseListener;
-import com.simsilica.lemur.event.MouseEventControl;
+import com.simsilica.lemur.focus.FocusListener;
 import com.simsilica.lemur.core.GuiComponent;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
@@ -201,22 +200,17 @@ public class Panel extends Node {
         return getControl(GuiControl.class).getPreferredSize();
     }
 
-    public void addMouseListener( MouseListener l ) {
-        MouseEventControl mc = getControl(MouseEventControl.class);
-        if( mc == null ) {
-            addControl( new MouseEventControl(l) );
-            return;
-        }
-        mc.addMouseListener(l);
+    public void addFocusListener( FocusListener l ) {
+        GuiControl gc = getControl(GuiControl.class);
+        if(gc!=null){
+            gc.addFocusChangeListener(l);
+        } 
     }
 
-    public void removeMouseListener( MouseListener l ) {
-        MouseEventControl mc = getControl(MouseEventControl.class);
-        if( mc == null )
-            return;
-        mc.removeMouseListener(l);
-        if( mc.isEmpty() ) {
-            removeControl(mc);
+    public void removeFocusListener( FocusListener l ) {
+        GuiControl gc = getControl(GuiControl.class);
+        if(gc!=null){
+            gc.removeFocusChangeListener(l);
         }
     }
 
