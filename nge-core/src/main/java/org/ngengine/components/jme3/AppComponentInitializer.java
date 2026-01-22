@@ -32,13 +32,15 @@
 package org.ngengine.components.jme3;
 
 import com.jme3.app.Application;
+import com.jme3.input.InputManager;
+import com.jme3.input.controls.InputListener;
+import com.jme3.input.controls.Trigger;
 import com.jme3.post.FilterPostProcessor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.ngengine.AsyncAssetManager;
 import org.ngengine.components.Component;
-import org.ngengine.components.ComponentInitializer;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.AppFragment;
 import org.ngengine.components.fragments.AssetLoadingFragment;
@@ -46,6 +48,7 @@ import org.ngengine.components.fragments.GuiViewPortFragment;
 import org.ngengine.components.fragments.InputHandlerFragment;
 import org.ngengine.components.fragments.MainViewPortFragment;
 import org.ngengine.components.fragments.RenderFragment;
+import org.ngengine.components.runners.ComponentInitializer;
 
 /**
  * Initializes components by connecting them to JME3 application resources.
@@ -109,15 +112,56 @@ public class AppComponentInitializer implements ComponentInitializer {
         return i;
     }
 
+    public static class InputActions {
+
+        private final InputManager inputManager;
+        private InputListener listener = null;
+
+        public InputActions(InputManager inputManager) {
+            this.inputManager = inputManager;
+
+        }
+
+        public void setListener(InputListener listener) {
+            this.listener = listener;
+        }
+
+        public void bind(String action, Trigger... triggers) {
+            inputManager.addMapping(action, triggers);
+            inputManager.addListener(listener, action);
+        }
+
+        public void unbind(String action, Trigger... triggers) {
+            if(triggers==null){
+                unbindAll(action);
+                return;
+            }
+            for (Trigger t : triggers) {
+                inputManager.deleteTrigger(action, t);
+            }
+            
+        }
+
+        private void unbindAll(String action) {
+            inputManager.deleteMapping(action);
+        }
+
+    }
+
     @Override
     public int initialize(ComponentManager mng, Component fragment, Runnable markReady) {
         int i = deprecatedInitialize(mng, fragment, markReady);
         if (fragment instanceof InputHandlerFragment) {
+            System.out.println("Initializing InputHandlerFragment: "+fragment);
             i++;
             InputHandlerFragment f = (InputHandlerFragment) fragment;
-            InputHandlerFragment.Wrapper wrapper = new InputHandlerFragment.Wrapper(mng, f);
+            InputHandlerFragment.Wrapper wrapper = new InputHandlerFragment.Wrapper(mng, f, new InputActions(app.getInputManager()));
             inputHandlerWrappers.put(f, wrapper);
-            app.getInputManager().addRawInputListener(wrapper);
+
+            InputManager inputManager = app.getInputManager();
+            inputManager.addRawInputListener(wrapper);
+            inputManager.addJoystickConnectionListener(wrapper);
+
             markReady.run();
         }
 
@@ -130,7 +174,10 @@ public class AppComponentInitializer implements ComponentInitializer {
             InputHandlerFragment f = (InputHandlerFragment) fragment;
             InputHandlerFragment.Wrapper wrapper = inputHandlerWrappers.remove(f);
             if (wrapper != null) {
-                app.getInputManager().removeRawInputListener(wrapper);
+                InputManager inputManager = app.getInputManager();
+                inputManager.removeRawInputListener(wrapper);
+                inputManager.removeListener(wrapper);
+                inputManager.removeJoystickConnectionListener(wrapper);
             }
         }
     }
@@ -146,4 +193,6 @@ public class AppComponentInitializer implements ComponentInitializer {
             fragment instanceof AssetLoadingFragment
         );
     }
+
+    
 }

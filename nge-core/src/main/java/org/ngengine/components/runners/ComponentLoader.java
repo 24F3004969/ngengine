@@ -29,13 +29,16 @@
  * Nostr Game Engine is a fork of the jMonkeyEngine, which is licensed under
  * the BSD 3-Clause License. 
  */
-package org.ngengine.components;
+package org.ngengine.components.runners;
+
+import org.ngengine.components.Component;
+import org.ngengine.components.ComponentManager;
 
 /**
  * An interface to load resources and configurations for components in a component manager.
  */
 
-public interface ComponentLoader {
+public interface ComponentLoader extends ComponentRunner {
     /**
      * Load the component in the given component manager. This method is called after the component is
      * initialized

@@ -47,4 +47,9 @@ public interface LogicFragment extends Fragment {
      * @param tpf time per frame
      */
     void updateAppLogic(ComponentManager mng, float tpf);
+
+
+    default void afterAppLogic(ComponentManager mng){
+        
+    }
 }

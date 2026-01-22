@@ -49,6 +49,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import org.ngengine.ViewPortManager;
+import org.ngengine.components.AbstractComponent;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.LogicFragment;
@@ -69,18 +70,18 @@ import org.ngengine.nostrads.protocol.types.AdPriceSlot;
 import org.ngengine.nostrads.protocol.types.AdSize;
 import org.ngengine.nostrads.protocol.types.AdTaxonomy;
 import org.ngengine.platform.NGEPlatform;
+import org.ngengine.runner.MainThreadRunner;
 import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStore;
 import org.ngengine.store.DataStoreProvider;
 
-public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
+public class ImmersiveAdComponent  extends AbstractComponent implements  LogicFragment {
 
     private static final Logger logger = Logger.getLogger(ImmersiveAdComponent.class.getName());
     private AdsDisplayClient displayClient;
     private AdTaxonomy taxonomy;
     private List<WeakReference<ImmersiveAdGroup>> groups = new ArrayList<>();
-    private Runner mainRunner;
-
+ 
     private final NostrPublicKey appKey;
 
     private final CopyOnWriteArrayList<ImmersiveAdListener> listeners = new CopyOnWriteArrayList<>();
@@ -118,6 +119,11 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
         }
         
         this.relays = relays;
+    }
+
+    @Override
+    public Component newInstance() {
+        return new ImmersiveAdComponent(this.relays, this.appKey, this.userAdKey);
     }
 
     public void setFilter(Function<AdBidEvent, Boolean> filter) {
@@ -230,8 +236,8 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
 
     @Override
     public void updateAppLogic(ComponentManager mng, float tpf) {
-        RenderManager renderManager = mng.getGlobalInstance(RenderManager.class);
-        AssetManager assetManager = mng.getGlobalInstance(AssetManager.class);
+        RenderManager renderManager = mng.getInstanceOf(RenderManager.class);
+        AssetManager assetManager = mng.getInstanceOf(AssetManager.class);
 
         // update and select ad in a single pass
         viewer.beginUpdate();
@@ -264,6 +270,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
 
                     Function<AdBidEvent, Boolean> filter = space.getFilter() != null ? space.getFilter() : this.filter;
 
+                    Runner mainRunner = getInstanceOf(MainThreadRunner.class);
                     this.displayClient.loadNextAd(
                             aspace,
                             space.getSize().getWidth(),
@@ -327,24 +334,23 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     }
 
     @Override
-    public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStore, boolean firstTime, Object arg) {
-        this.mainRunner = runner;
+    protected void onEnable(ComponentManager mng, boolean firstTime) {
         this.pool = new NostrPool();
         
         Collection<String> relays = this.relays;
         if(relays==null){
-            relays = mng.getSettings().getNostrRelays().get("ads");
+            relays = getSettings().getNostrRelays().get("ads");
         }
         for (String relay : relays) {
             pool.connectRelay(new NostrRelay(relay));
         }
       
-
-        DataStore store = dataStore.getDataStore("nostrads");
+        DataStoreProvider dataStoreProvider = getInstanceOf(DataStoreProvider.class);
+        DataStore store = dataStoreProvider.getDataStore("nostrads");
 
         if (viewer == null) {
-            viewer = new ImmersiveAdCameraView(mng, 
-                mng.getGlobalInstance(ViewPortManager.class).getMainSceneViewPort().getCamera()
+            viewer = new ImmersiveAdCameraView(getComponentManager(), 
+                getInstanceOf(ViewPortManager.class).getMainSceneViewPort().getCamera()
             );
         }
 
@@ -383,7 +389,7 @@ public class ImmersiveAdComponent implements Component<Object>, LogicFragment {
     }
 
     @Override
-    public void onDisable(ComponentManager mng, Runner runner, DataStoreProvider dataStore) {
+    public void onDisable( ComponentManager mng) {
         this.pool.close();
         if (displayClient != null) {
             displayClient.close();

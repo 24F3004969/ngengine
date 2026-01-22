@@ -31,16 +31,27 @@
  */
 package org.ngengine.components.fragments;
 
+import com.jme3.input.InputDevice;
 import com.jme3.input.InputManager;
+import com.jme3.input.Joystick;
+import com.jme3.input.JoystickConnectionListener;
 import com.jme3.input.RawInputListener;
+
+import com.jme3.input.controls.UnifiedInputListener;
+import com.jme3.input.event.InputEvent;
 import com.jme3.input.event.JoyAxisEvent;
 import com.jme3.input.event.JoyButtonEvent;
 import com.jme3.input.event.KeyInputEvent;
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.input.event.TouchEvent;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
+import org.ngengine.components.jme3.AppComponentInitializer.InputActions;
 
 /**
  * A fragment that intercept raw input events. It extends {@link RawInputListener} and is automatically
@@ -50,18 +61,21 @@ import org.ngengine.components.ComponentManager;
  *
  * The onXXEvents are called only if the component is enabled.
  *
- * {@link InputHandlerFragment#receiveInputManager(InputManager)} method can be overridden to receive the
  * {@link InputManager} instance and register additional input listeners.
  */
 public interface InputHandlerFragment extends Fragment {
-    class Wrapper implements RawInputListener {
+    class Wrapper implements RawInputListener, UnifiedInputListener, JoystickConnectionListener{
 
         private final InputHandlerFragment fragment;
         private final ComponentManager mng;
+        private final Set<InputDevice> seenDevices = new HashSet<>();
+        private final InputActions binder;
 
-        public Wrapper(ComponentManager fragmentManager, InputHandlerFragment fragment) {
+        public Wrapper(ComponentManager fragmentManager, InputHandlerFragment fragment, InputActions binder) {
             this.fragment = fragment;
             this.mng = fragmentManager;
+            this.binder = binder;   
+            this.binder.setListener(this);
         }
 
         @Override
@@ -70,6 +84,21 @@ public interface InputHandlerFragment extends Fragment {
                 fragment.beginInput(mng);
             }
         }
+
+        private void deviceConnect(InputEvent<?> evt) {
+            InputDevice device = evt.getDevice();
+            if (seenDevices.add(device)) {                
+                fragment.onInputDeviceConnected(mng, mng.getInstanceOf(InputManager.class), binder, device);
+            }
+        }
+
+ 
+        private void deviceDisconnect(InputDevice device) {
+            if (seenDevices.remove(device)) {
+                fragment.onInputDeviceDisconnected(mng, mng.getInstanceOf(InputManager.class), binder,device);
+            }
+        }
+
 
         @Override
         public void endInput() {
@@ -81,6 +110,7 @@ public interface InputHandlerFragment extends Fragment {
         @Override
         public void onJoyAxisEvent(JoyAxisEvent evt) {
             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceConnect(evt);
                 fragment.onJoyAxisEvent(mng, evt);
             }
         }
@@ -88,6 +118,7 @@ public interface InputHandlerFragment extends Fragment {
         @Override
         public void onJoyButtonEvent(JoyButtonEvent evt) {
             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceConnect(evt);
                 fragment.onJoyButtonEvent(mng, evt);
             }
         }
@@ -95,6 +126,7 @@ public interface InputHandlerFragment extends Fragment {
         @Override
         public void onMouseMotionEvent(MouseMotionEvent evt) {
             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceConnect(evt);
                 fragment.onMouseMotionEvent(mng, evt);
             }
         }
@@ -102,6 +134,7 @@ public interface InputHandlerFragment extends Fragment {
         @Override
         public void onMouseButtonEvent(MouseButtonEvent evt) {
             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceConnect(evt);
                 fragment.onMouseButtonEvent(mng, evt);
             }
         }
@@ -109,6 +142,7 @@ public interface InputHandlerFragment extends Fragment {
         @Override
         public void onKeyEvent(KeyInputEvent evt) {
             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceConnect(evt);
                 fragment.onKeyEvent(mng, evt);
             }
         }
@@ -116,11 +150,34 @@ public interface InputHandlerFragment extends Fragment {
         @Override
         public void onTouchEvent(TouchEvent evt) {
             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceConnect(evt);
                 fragment.onTouchEvent(mng, evt);
             }
         }
-    }
 
+
+        @Override
+        public void onUnifiedInput(String name, boolean toggled, float value, InputEvent<?>  event, float tpf) {
+            if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                fragment.onInputAction(mng, name, toggled, value, event, tpf);
+            }
+        }
+
+        @Override
+        public void onConnected(Joystick joystick) {
+           
+        }
+
+        @Override
+        public void onDisconnected(Joystick joystick) {
+             if (!(fragment instanceof Component) || mng.isComponentEnabled((Component) fragment)) {
+                deviceDisconnect(joystick);
+            }
+        }
+
+     
+    }
+ 
     @Deprecated
     default void receiveInputManager(InputManager inputManager) {}
 
@@ -139,4 +196,12 @@ public interface InputHandlerFragment extends Fragment {
     default void onKeyEvent(ComponentManager mng, KeyInputEvent evt) {}
 
     default void onTouchEvent(ComponentManager mng, TouchEvent evt) {}
+
+    void onInputAction(ComponentManager mng, String action, boolean toggled, float value, InputEvent<?>  event, float tpf) ;
+
+    void onInputDeviceConnected(ComponentManager mng, InputManager inputManager, InputActions inputActions, InputDevice device) ;
+
+    void onInputDeviceDisconnected(ComponentManager mng, InputManager inputManager, InputActions inputActions, InputDevice device) ;
+
+ 
 }

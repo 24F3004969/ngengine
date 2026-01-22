@@ -32,9 +32,15 @@
 package org.ngengine.components;
 
 import java.util.List;
+
 import org.ngengine.components.fragments.Fragment;
+import org.ngengine.components.runners.ComponentInitializer;
+import org.ngengine.components.runners.ComponentLoader;
+import org.ngengine.components.runners.ComponentUpdater;
 import org.ngengine.config.NGEAppSettings;
+import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
+
 
 /**
  * The ComponentManager is responsible for managing the lifecycle of components within the application.
@@ -54,6 +60,18 @@ import org.ngengine.store.DataStoreProvider;
  *
  */
 public interface ComponentManager {
+    public static class ComponentDependency {
+        Object dep;
+        boolean includeParents;
+        public ComponentDependency(Object dep, boolean includeParents) {
+            this.dep = dep;
+            this.includeParents = includeParents;
+        }
+        public ComponentDependency(Object dep) {
+            this(dep, true);
+        }
+    }
+    
     /**
      * Retrieves a component by its type.
      *
@@ -72,7 +90,7 @@ public interface ComponentManager {
      *            The ID of the component to retrieve
      * @return The component with the specified ID, or null if not found
      */
-    Component getComponentById(String id);
+    <T extends Component> T  getComponentById(String id);
 
     /**
      * Retrieves all components assigned to a specific slot.
@@ -81,7 +99,7 @@ public interface ComponentManager {
      *            The slot to get components from
      * @return A list of components in the specified slot
      */
-    List<Component> getComponentBySlot(Object slot);
+    List<Component> getComponentsBySlot(Object slot);
 
     /**
      * Gets the currently enabled component in a slot.
@@ -94,7 +112,7 @@ public interface ComponentManager {
      * @return The currently enabled component in the slot, or null if none is enabled
      */
     default Component getCurrentComponentInSlot(Object slot) {
-        List<Component> components = getComponentBySlot(slot);
+        List<Component> components = getComponentsBySlot(slot);
         for (int i = 0; i < components.size(); i++) {
             Component component = components.get(i);
             if (isComponentEnabled(component)) {
@@ -104,12 +122,6 @@ public interface ComponentManager {
         return null;
     }
 
-    /**
-     * Gets all registered components.
-     *
-     * @return A list of all components managed by this ComponentManager
-     */
-    List<Component> getComponents();
 
     /**
      * Adds a component to the manager with optional dependencies.
@@ -134,20 +146,9 @@ public interface ComponentManager {
      */
     void removeComponent(Component component);
 
-    /**
-     * Enables a component without any specific arguments.
-     * <p>
-     * This is a convenience method equivalent to {@code enableComponent(component, null)}.
-     *
-     * @param component
-     *            The component to enable
-     */
-    default void enableComponent(Component component) {
-        enableComponent(component, null);
-    }
 
     /**
-     * Enables a component with the specified argument.
+     * Enables a component 
      * <p>
      * The component will only be enabled if all its dependencies are already enabled.
      *
@@ -155,10 +156,9 @@ public interface ComponentManager {
      *            The type of argument to pass to the component
      * @param component
      *            The component to enable
-     * @param arg
-     *            The argument to pass to the component's onEnable method
+  
      */
-    <T> void enableComponent(Component component, T arg);
+    void enableComponent(Component component);
 
     /**
      * Disables a component.
@@ -200,21 +200,9 @@ public interface ComponentManager {
      *
      * @param id
      *            The ID of the component to enable
-     * @param arg
-     *            The argument to pass to the component's onEnable method
-     */
-    default void enableComponent(String id, Object arg) {
-        enableComponent(getComponentById(id), arg);
-    }
-
-    /**
-     * Enables a component by its ID without arguments.
-     *
-     * @param id
-     *            The ID of the component to enable
      */
     default void enableComponent(String id) {
-        enableComponent(id, null);
+        enableComponent((Component)getComponentById(id));
     }
 
     /**
@@ -224,7 +212,7 @@ public interface ComponentManager {
      *            The ID of the component to disable
      */
     default void disableComponent(String id) {
-        disableComponent(getComponentById(id));
+        disableComponent((Component)getComponentById(id));
     }
 
     /**
@@ -237,21 +225,10 @@ public interface ComponentManager {
      * @param arg
      *            The argument to pass to the component's onEnable method
      */
-    default void enableComponent(Class<? extends Component> type, Object arg) {
-        enableComponent(getComponent(type), arg);
+    default void enableComponent(Class<? extends Component> type) {
+        enableComponent(getComponent(type));
     }
 
-    /**
-     * Enables a component by its type without arguments.
-     *
-     * @param <T>
-     *            The component type
-     * @param type
-     *            The class of the component to enable
-     */
-    default void enableComponent(Class<? extends Component> type) {
-        enableComponent(type, null);
-    }
 
     /**
      * Disables a component by its type.
@@ -278,30 +255,53 @@ public interface ComponentManager {
         enableComponent(component);
     }
 
-    /**
-     * Adds and immediately enables a component with the specified argument.
-     *
-     * @param component
-     *            The component to add and enable
-     * @param arg
-     *            The argument to pass to the component's onEnable method
-     * @param deps
-     *            Zero or more dependencies for the component
-     */
-    default void addAndEnableComponent(Component component, Object arg, Object... deps) {
-        addComponent(component, deps);
-        enableComponent(component, arg);
+    @SuppressWarnings("unchecked")
+    default Boolean tryIsDependencyReady(Object d) {
+        if(d==null) return null;
+        if (d instanceof Component) {
+            Component c = (Component) d;
+            return isComponentEnabled(c);
+        } else if (d instanceof String) {
+            Component c=  getComponentById((String) d);
+            if(c==null)return null;
+            return isComponentEnabled(c);
+        } else if (d instanceof Class<?>) {
+            Component c = getComponent((Class<? extends Component>) d);
+            if(c==null)return null;
+            return isComponentEnabled(c);
+        } else if (d instanceof ComponentDependency) {
+            ComponentDependency cd = (ComponentDependency) d;
+            Boolean v = tryIsDependencyReady(cd.dep);
+            if (v != null) return v;
+            if (cd.includeParents && getParent() != null) {
+                v = getParent().tryIsDependencyReady(cd);
+            }
+            return v;
+        }
+        return null;
     }
 
-    default Component resolveDependency(Object d) {
+    default Component resolveLocalDepencency(Object d) {
         if (d instanceof Component) {
             return (Component) d;
         } else if (d instanceof String) {
             return getComponentById((String) d);
         } else if (d instanceof Class<?>) {
             return getComponent((Class<? extends Component>) d);
+        } else if (d instanceof ComponentDependency) {
+            ComponentDependency cd = (ComponentDependency) d;
+            return resolveLocalDepencency(cd.dep);
+            
         }
         return null;
+    }
+
+
+    default boolean isDependencyReady(Object d) {
+        Boolean v = tryIsDependencyReady(d);
+        if (v != null) return v;
+        // If we cannot resolve the dependency, we assume it is always ready
+        return true;
     }
 
     DataStoreProvider getDataStoreProvider();
@@ -312,8 +312,45 @@ public interface ComponentManager {
      * @param type         The class of the global object to retrieve
      * @return The global object of the specified type, or null if not found
      */
-    <T> T getGlobalInstance(Class<T> type);
+    <T> T getInstanceOf(Class<T> type);
+
+    /**
+     * @deprecated Use {@link #getInstanceOf(Class)} instead.
+     */
+    @Deprecated
+    default <T> T getGlobalInstance(Class<T> type){
+        return getInstanceOf(type);
+
+    }
 
     NGEAppSettings getSettings();
+
+
+    List<ComponentUpdater> getUpdaters();
+    List<ComponentInitializer> getInitializers();
+    List<ComponentLoader> getLoaders();
+
+    boolean hasComponent(Component component);
+    boolean hasComponent(Class<? extends Component> cls) ;
+    boolean hasComponent(String id) ;
+
+    ComponentManager getParent();
+
+    Runner getRunner();
+
+
+    /**
+     * Called to pause or resume the component manager and its components.
+     * When the component manager is paused, all components are temporarily disabled
+     *  to be re-enabled when resumed.
+     */
+    void setEnabled(boolean enabled);
+
+    
+    void addChild(ComponentManager child);
+    void removeChild(ComponentManager child);
+    
+
+    List<Component> getAllComponents();
 }
 

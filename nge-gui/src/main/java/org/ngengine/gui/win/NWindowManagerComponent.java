@@ -31,7 +31,9 @@
  */
 package org.ngengine.gui.win;
 
+import com.jme3.input.InputDevice;
 import com.jme3.input.InputManager;
+import com.jme3.input.event.InputEvent;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
@@ -49,22 +51,24 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.ngengine.ViewPortManager;
+import org.ngengine.components.AbstractComponent;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.components.fragments.InputHandlerFragment;
 import org.ngengine.components.fragments.LogicFragment;
+import org.ngengine.components.jme3.AppComponentInitializer.InputActions;
 import org.ngengine.gui.NGEStyle;
 import org.ngengine.gui.win.NToast.ToastType;
 import org.ngengine.gui.win.std.NErrorWindow;
 import org.ngengine.runner.MainThreadRunner;
-import org.ngengine.runner.Runner;
 import org.ngengine.store.DataStoreProvider;
 
-public class NWindowManagerComponent implements Component<Object>, LogicFragment, InputHandlerFragment {
+public class NWindowManagerComponent extends AbstractComponent implements  LogicFragment, InputHandlerFragment {
 
     private static final Logger log = Logger.getLogger(NWindowManagerComponent.class.getName());
     private final ArrayList<NWindow<?>> windowsStack = new ArrayList<>();
@@ -72,59 +76,63 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
 
     
     private Container toastContainer;
-    private DataStoreProvider dataStoreProvider;
-    private ComponentManager mng;
-
+  
     private int width = 0;
     private int height = 0;
 
+    @Override
+    public Component newInstance() {
+        return new NWindowManagerComponent();
+    }
+
     public void showCursor(boolean v) {
-        mng.getGlobalInstance(InputManager.class).setCursorVisible(v);
+        getInstanceOf(InputManager.class).setCursorVisible(v);
     }
 
     private Node getGuiNode(){
-        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPortManager vpm = getInstanceOf(ViewPortManager.class);
         return vpm.getRootNode(vpm.getGuiViewPort());
     }
 
-    
-  public void enqueueInThread(Runnable task) {
-        MainThreadRunner r = this.mng.getGlobalInstance(MainThreadRunner.class);
+    public ViewPort getViewPort(){
+        ViewPortManager vpm = getInstanceOf(ViewPortManager.class);
+        return vpm.getGuiViewPort();
+    }
+
+    public void enqueueInThread(Runnable task) {
+        MainThreadRunner r = getInstanceOf(MainThreadRunner.class);
         r.enqueue(task);
     }
 
     public void runInThread(Runnable task) {
-        MainThreadRunner r = this.mng.getGlobalInstance(MainThreadRunner.class);
+        MainThreadRunner r = getInstanceOf(MainThreadRunner.class);
         r.run(task);
     }
 
-    @Override
-    public void onAttached(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider) {
-        this.dataStoreProvider = dataStoreProvider;
-    }
+  
 
     public DataStoreProvider getDataStoreProvider() {
-        return dataStoreProvider;
+        return getInstanceOf(DataStoreProvider.class);
     }
 
     
 
     public int getWidth() {
-        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPortManager vpm = getInstanceOf(ViewPortManager.class);
         ViewPort guiVp= vpm.getGuiViewPort();
         Camera cam = guiVp.getCamera();
         return cam.getWidth();
     }
 
     public int getHeight() {
-        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPortManager vpm = getInstanceOf(ViewPortManager.class);
         ViewPort guiVp= vpm.getGuiViewPort();
         Camera cam = guiVp.getCamera();
         return cam.getHeight();
     }
 
     protected void checkThread() {
-        MainThreadRunner r = this.mng.getGlobalInstance(MainThreadRunner.class);
+        MainThreadRunner r = getInstanceOf(MainThreadRunner.class);
         r.checkThread();
     }
 
@@ -163,7 +171,7 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
         });
 
         try {
-            for (NWindow window : windowsStack) {
+            for (NWindow<?> window : windowsStack) {
                 window.removeFromParent();
             }
 
@@ -207,6 +215,19 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
 
     }
 
+    public <T extends NWindow<?>> T getWindow(Predicate<NWindow<?>> filter){
+        for (NWindow<?> window : windowsStack) {
+            if(filter.test(window))return (T) window;
+        }
+        return null;
+    }
+
+    public <T extends NWindow<?>> T getWindow(Class<T> windowClass){
+        return getWindow(w->{
+            return windowClass.isInstance(w);
+        });
+    }
+
     public NErrorWindow showFatalError(Throwable exc) {
         checkThread();
         log.log(Level.SEVERE, "Fatal error", exc);
@@ -244,7 +265,6 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
                 finalDuration = Duration.ofSeconds(5);
             }
         }
-        System.out.println("Showing toast: " + message);
         NToast toast = new NToast(type, message, finalDuration);
         toastContainer.addChild(toast);
         toastsStack.add(toast);
@@ -308,11 +328,10 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
     }
 
     @Override
-    public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider,
-            boolean firstTime, Object slot) {
+    public void onEnable(ComponentManager mng,
+            boolean firstTime ) {
 
-        this.mng = mng;
-        int width = getWidth();
+         int width = getWidth();
         int height = getHeight();
         NGEStyle.installAndUse(width,height);
 
@@ -330,7 +349,7 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
     }
 
     @Override
-    public void onDisable(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider) {
+    public void onDisable(ComponentManager mng) {
         closeAll();
         {
             toastContainer.getParent().removeFromParent();
@@ -341,7 +360,7 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
     
     @Override
     public void updateAppLogic(ComponentManager mng, float tpf){
-        ViewPortManager vpm = mng.getGlobalInstance(ViewPortManager.class);
+        ViewPortManager vpm = mng.getInstanceOf(ViewPortManager.class);
         ViewPort vp= vpm.getGuiViewPort();
         
         if (toastsStack.size() > 0) {
@@ -393,5 +412,22 @@ public class NWindowManagerComponent implements Component<Object>, LogicFragment
             NToast toast = toastsStack.get(toastsStack.size() - 1);
             toast.onAction(id);
         }
+    }
+
+ 
+    @Override
+    public void onInputDeviceConnected(ComponentManager mng, InputManager inputManager, InputActions actions, InputDevice device) {
+      
+    }
+
+    @Override
+    public void onInputDeviceDisconnected(ComponentManager mng, InputManager inputManager, InputActions actions, InputDevice device) {
+    
+    }
+
+    @Override
+    public void onInputAction(ComponentManager mng, String action, boolean toggled,  float value, InputEvent<?> event,
+            float tpf) {
+         
     }
 }

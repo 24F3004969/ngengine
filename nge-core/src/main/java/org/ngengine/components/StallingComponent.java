@@ -31,17 +31,23 @@
  */
 package org.ngengine.components;
 
-import org.ngengine.runner.Runner;
-import org.ngengine.store.DataStoreProvider;
-
 /**
  * A component that is never enabled and does nothing.
  */
-public class StallingComponent implements Component<Object> {
+public class StallingComponent extends AbstractComponent {
 
     @Override
-    public void onEnable(ComponentManager mng, Runner runner, DataStoreProvider dataStore, boolean firstTime, Object arg) {}
+    protected void onEnable(ComponentManager mng, boolean firstTime) {
+       
+    }
 
     @Override
-    public void onDisable(ComponentManager mng, Runner runner, DataStoreProvider dataStore) {}
+    protected void onDisable(ComponentManager mng) {
+       
+    }
+
+   
+ 
+   
+ 
 }

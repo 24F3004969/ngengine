@@ -32,12 +32,14 @@
 package org.ngengine.player;
 
 import com.jme3.network.HostedConnection;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.ngengine.AsyncAssetManager;
+import org.ngengine.components.AbstractComponent;
 import org.ngengine.components.Component;
 import org.ngengine.components.ComponentManager;
 import org.ngengine.network.P2PChannel;
@@ -46,10 +48,9 @@ import org.ngengine.nostr4j.NostrPool;
 import org.ngengine.nostr4j.NostrRelay;
 import org.ngengine.nostr4j.keypair.NostrPublicKey;
 import org.ngengine.nostr4j.signer.NostrSigner;
-import org.ngengine.runner.Runner;
-import org.ngengine.store.DataStoreProvider;
+import org.ngengine.runner.MainThreadRunner;
 
-public class PlayerManagerComponent implements Component<Object> {
+public class PlayerManagerComponent extends AbstractComponent {
 
     private static final Logger log = Logger.getLogger(PlayerManagerComponent.class.getName());
     protected Collection<String> connectToRelays;
@@ -57,9 +58,7 @@ public class PlayerManagerComponent implements Component<Object> {
     protected boolean externalPool = false;
     protected Map<NostrPublicKey, Player> players = new WeakHashMap<>();
     protected Map<NostrPublicKey, LocalPlayer> localPlayers = new WeakHashMap<>();
-    protected Runner runner;
-    protected ComponentManager mng;
-
+ 
     public PlayerManagerComponent() {}
 
     public PlayerManagerComponent(Collection<String> idRelays) {
@@ -72,8 +71,16 @@ public class PlayerManagerComponent implements Component<Object> {
         this.connectToRelays = null;
     }
 
+    public Component newInstance(){
+        if(this.connectToRelays!=null) return new PlayerManagerComponent(this.connectToRelays);
+        if(this.externalPool) return new PlayerManagerComponent(this.nostrPool);
+        return new PlayerManagerComponent();
+    }
+
+    
+
     public void enqueueToRenderThread(Runnable act) {
-        runner.run(act);
+        getInstanceOf(MainThreadRunner.class).run(act);
     }
 
     public NostrPool getPool() {
@@ -81,14 +88,10 @@ public class PlayerManagerComponent implements Component<Object> {
     }
 
     @Override
-    public void onEnable(
+    protected void onEnable(
         ComponentManager mng,
-        Runner runner,
-        DataStoreProvider dataStoreProvider,
-        boolean firstTime,
-        Object slot
+        boolean firstTime
     ) {
-        this.mng = mng;
         if (!externalPool) {
             this.nostrPool = new NostrPool();
             if (connectToRelays == null) {
@@ -105,7 +108,7 @@ public class PlayerManagerComponent implements Component<Object> {
     }
 
     @Override
-    public void onDisable(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider) {
+    protected void onDisable(ComponentManager mng) {
         if (!externalPool) {
             if (nostrPool != null) {
                 // close and disconnect all relays
@@ -119,13 +122,10 @@ public class PlayerManagerComponent implements Component<Object> {
     }
 
     public AsyncAssetManager getAssetManager() {
-        return this.mng.getGlobalInstance(AsyncAssetManager.class);
+        return getInstanceOf(AsyncAssetManager.class);
     }
 
-    @Override
-    public void onAttached(ComponentManager mng, Runner runner, DataStoreProvider dataStoreProvider) {
-        this.runner = runner;
-    }
+  
 
     public Player getPlayer(NostrPublicKey pubkey) {
         Player player = localPlayers.get(pubkey);

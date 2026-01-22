@@ -65,6 +65,24 @@ public class Player {
     protected AsyncTask<Nip24ExtraMetadata> metadata;
     protected Texture2D image;
 
+
+    public NostrPublicKey getPublicKey(){
+        return pubkey;
+    }
+
+    @Override
+    public int hashCode() {
+        return pubkey.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Player other = (Player) obj;
+        return pubkey.equals(other.pubkey);
+    }
+
     protected Player(PlayerManagerComponent mng, NostrPublicKey pub) {
         this.pubkey = pub;
         this.playerManager = mng;
