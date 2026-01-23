@@ -93,6 +93,18 @@ public abstract class AbstractJoystick implements Joystick {
     }
 
     /**
+     * Rumbles the joystick for the given amount/magnitude and time
+     *
+     * @param amountHigh The amount to rumble the high frequency motor. Should be between 0 and 1.
+     * @param amountLow The amount to rumble the low frequency motor. Should be between 0 and 1.
+     * @param duration The duration to rumble in seconds.
+     */
+    @Override
+    public void rumble(float amountHigh, float amountLow, float duration) {
+        joyInput.setJoyRumble(joyId, amountHigh, amountLow, duration);
+    }
+
+    /**
      * Assign the mapping name to receive events from the given button index
      * on the joystick.
      *

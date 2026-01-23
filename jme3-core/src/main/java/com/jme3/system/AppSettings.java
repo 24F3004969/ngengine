@@ -261,6 +261,34 @@ public final class AppSettings extends HashMap<String, Object> {
      */
     public static final String JOAL = "JOAL";
 
+
+    /**
+     * Map gamepads to Xbox-like layout.
+     */
+    public static final String JOYSTICKS_XBOX_MAPPER = "JOYSTICKS_XBOX_MAPPER";
+    
+    /**
+     * Map gamepads to an Xbox-like layout, with fallback to raw if the gamepad is not recognized.
+     */
+    public static final String JOYSTICKS_XBOX_WITH_FALLBACK_MAPPER = "JOYSTICKS_XBOX_WITH_FALLBACK_MAPPER";
+
+    /**
+     *  Map gamepads to an Xbox-like layout using the legacy jME input
+     */
+    public static final String JOYSTICKS_XBOX_LEGACY_MAPPER = "JOYSTICKS_XBOX_LEGACY_MAPPER";
+
+    /**
+     * Map gamepads using the legacy jME mapper and input.
+     */
+    public static final String JOYSTICKS_LEGACY_MAPPER = "JOYSTICKS_LEGACY_MAPPER";
+
+    /**
+     * Don't map gamepads, use raw events instead (ie. bring your own mapper)
+     */
+    public static final String JOYSTICKS_RAW_MAPPER = "JOYSTICKS_RAW_MAPPER";
+    
+    
+
     static {
         defaults.put("Display", 0);
         defaults.put("CenterWindow", true);
@@ -293,8 +321,9 @@ public final class AppSettings extends HashMap<String, Object> {
         defaults.put("WindowYPosition", 0);
         defaults.put("WindowXPosition", 0);
         defaults.put("X11PlatformPreferred", true);
-        defaults.put("XboxLikeControllerLayout", true);
-        defaults.put("TriggerToButtonThreshold", 0.5f);
+        defaults.put("JoysticksMapper", JOYSTICKS_XBOX_MAPPER);
+        defaults.put("JoysticksTriggerToButtonThreshold", 0.5f);
+        defaults.put("JoysticksAxisJitterThreshold", 0.0001f);
         //  defaults.put("Icons", null);
     }
 
@@ -1495,27 +1524,19 @@ public final class AppSettings extends HashMap<String, Object> {
     }
 
     /**
-     * Enable/disable automatic normalization of gamepad mappings to an Xbox-like layout,
-     * when possible.
+     * Set which joystick mapping to use for normalization of controller inputs
      *
-     * <p>
-     * Depending on the platform and controller model, this setting might have no effect.
-     * It is primarily intended to provide a consistent default button/axis layout across common
-     * controllers.
-     *
-     * @param enabled true to enable, false to disable (default: true)
+     * @param mapper JOYSTICKS_MAPPER_* constant defining which mapping to use
      */
-    public void setXboxLikeControllerLayout(boolean enabled){
-        putBoolean("XboxLikeControllerLayout", enabled);
+    public void setJoysticksMapper(String mapper){
+        putString("JoysticksMapper", mapper);
     }
 
     /**
-     * Whether automatic normalization of controller mappings to an Xbox-like layout is enabled.
-     *
-     * @return true if enabled, otherwise false
+     * Get which joystick mapping to use for normalization of controller inputs
      */
-    public boolean isXboxLikeControllerLayout(){
-        return getBoolean("XboxLikeControllerLayout");
+    public String getJoysticksMapper(){
+        return getString("JoysticksMapper");
     }
 
     /**
@@ -1528,17 +1549,40 @@ public final class AppSettings extends HashMap<String, Object> {
      *
      * @param threshold the trigger threshold in the range [0, 1] (default: 0.5f) 
      */
-    public void setTriggerToButtonThreshold(float threshold) {
-        putFloat("TriggerToButtonThreshold", threshold);
+    public void setJoysticksTriggerToButtonThreshold(float threshold) {
+        putFloat("JoysticksTriggerToButtonThreshold", threshold);
     }
 
     /**
      * Gets the threshold above which an analog trigger should also generate a button-press event.
      *
      * @return the trigger threshold in the range [0, 1] (default: 0.5f)
-     * @see #setTriggerToButtonThreshold(float)
+     * @see #setJoysticksTriggerToButtonThreshold(float)
      */
-    public float getTriggerToButtonThreshold() {
-        return getFloat("TriggerToButtonThreshold");
+    public float getJoysticksTriggerToButtonThreshold() {
+        return getFloat("JoysticksTriggerToButtonThreshold");
     }
+
+    /**
+     * Sets the jitter threshold for joystick axes.
+     * 
+     * <p>
+     * Axis movements with a delta smaller than this threshold will be ignored.
+     * This is intended to reduce noise from analog joysticks.
+     */
+    public void setJoysticksAxisJitterThreshold(float threshold) {
+        putFloat("JoysticksAxisJitterThreshold", threshold);
+    }
+
+    /**
+     * Gets the jitter threshold for joystick axes.
+     * 
+     * @return the jitter threshold
+     * @see #setJoysticksAxisJitterThreshold(float)
+     */   
+    public float getJoysticksAxisJitterThreshold() {
+        return getFloat("JoysticksAxisJitterThreshold");    
+    }
+
 }
+

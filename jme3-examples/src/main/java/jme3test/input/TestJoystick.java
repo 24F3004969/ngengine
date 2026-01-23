@@ -155,7 +155,7 @@ public class TestJoystick extends SimpleApplication {
             
         } 
     }
- 
+
     /**
      *  Easier to watch for all button and axis events with a raw input listener.
      */   
@@ -184,6 +184,7 @@ public class TestJoystick extends SimpleApplication {
             gamepad.setAxisValue( evt.getAxis(), value );
             if( value != 0 ) {
                 lastValues.put(evt.getAxis(), value);
+                evt.getDevice().rumble(1f, 0, 0.1f);
             } 
         }
 
@@ -191,6 +192,7 @@ public class TestJoystick extends SimpleApplication {
         public void onJoyButtonEvent(JoyButtonEvent evt) {
             setViewedJoystick( evt.getButton().getJoystick() );
             gamepad.setButtonValue( evt.getButton(), evt.isPressed() ); 
+            evt.getDevice().rumble(0, 1f, 0.1f);
         }
 
         @Override
@@ -299,7 +301,7 @@ public class TestJoystick extends SimpleApplication {
         }
  
         public void setAxisValue( JoystickAxis axis, float value ) {
-                
+        
             if( axis == axis.getJoystick().getAxis(JoystickAxis.AXIS_XBOX_LEFT_THUMB_STICK_X)){
                 setXAxis(value);
             } else if( axis == axis.getJoystick().getAxis(JoystickAxis.AXIS_XBOX_LEFT_THUMB_STICK_Y)){
@@ -363,7 +365,7 @@ public class TestJoystick extends SimpleApplication {
         }
 
         protected void setButtonValue( String name, boolean isPressed ) {
-            ButtonView view = buttons.get(name);
+             ButtonView view = buttons.get(name);
             if( view != null ) {
                 if( isPressed ) {
                     view.down();

@@ -90,3 +90,10 @@ task dist (dependsOn: ['build', ':jme3-android:jar', ':jme3-android-native:jar']
         }
     }
 }
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}

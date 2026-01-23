@@ -55,6 +55,10 @@ public interface JoyInput extends Input {
      */
     public void setJoyRumble(int joyId, float amount);
     
+    public default void setJoyRumble(int joyId, float highFrequency, float lowFrequency, float duration) {
+        setJoyRumble(joyId, Math.max(highFrequency, lowFrequency));
+    }
+
     /**
      * Loads a list of joysticks from the system.
      * 
